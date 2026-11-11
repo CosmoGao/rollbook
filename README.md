@@ -1,0 +1,25 @@
+# Rollbook 清册
+
+Rollbook 是面向家庭与小企业的自建服务和资产清册。目前只有可运行骨架；清册业务、登录和 API 会在后续阶段实现。请只在可信内网运行。
+
+## 本地运行
+
+需要 Go 1.24 或更新版本。
+
+```sh
+go test ./...
+go run ./cmd/rollbook serve
+```
+
+默认监听 `127.0.0.1:8080`，数据库写入 `./data/rollbook.db`。访问 `/` 可看到占位页，`/healthz` 返回 `ok`。环境变量 `ROLLBOOK_LISTEN_ADDR` 和 `ROLLBOOK_DB_PATH` 可修改监听地址与数据库路径。首次启动自动迁移；再次启动不会重复执行已应用的迁移。数据库使用 WAL、外键约束和 FTS5。
+
+## 容器运行
+
+```sh
+docker build -t rollbook:local .
+docker run --rm -p 127.0.0.1:8080:8080 -v rollbook-data:/data rollbook:local
+```
+
+容器内使用 `/data/rollbook.db`，监听 8080。示例只把端口发布到宿主机回环地址。实际部署应由内网反向代理接入，并持久化 `/data`。
+
+GitHub Actions 在 PR 上运行测试、vet 和镜像构建；推送 main 后使用仓库自带的 `GITHUB_TOKEN` 发布 `ghcr.io/<owner>/<repo>:latest`。工作流不部署服务。
