@@ -6,3 +6,5 @@
 /secrets/
 /snapshot-data/
 /snapshot-backups/
+/node_modules/
+/.browser-libs/

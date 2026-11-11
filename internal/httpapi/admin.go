@@ -70,6 +70,71 @@ func (e Engine) admin(w http.ResponseWriter, r *http.Request, p auth.Principal) 
 	}
 	path := r.URL.Path
 	switch {
+	case strings.HasPrefix(path, "/api/hosts/") && strings.HasSuffix(path, "/offline") && r.Method == http.MethodGet:
+		id := strings.TrimSuffix(strings.TrimPrefix(path, "/api/hosts/"), "/offline")
+		preview, err := e.Catalog.OfflinePreview(r.Context(), p, id)
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+		op, err := e.Catalog.LatestOfflineOperation(r.Context(), p, id)
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+		WriteJSON(w, 200, map[string]any{"preview": preview, "operation_id": op})
+		return
+	case strings.HasPrefix(path, "/api/hosts/") && strings.HasSuffix(path, "/offline") && r.Method == http.MethodPost:
+		id := strings.TrimSuffix(strings.TrimPrefix(path, "/api/hosts/"), "/offline")
+		var input struct {
+			Rev     int64                  `json:"rev"`
+			Reason  string                 `json:"reason"`
+			Options catalog.OfflineOptions `json:"options"`
+		}
+		if err := decodeBody(w, r, &input); err != nil {
+			WriteError(w, err)
+			return
+		}
+		op, err := e.Catalog.OfflineHost(r.Context(), p, id, input.Rev, input.Options, input.Reason)
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+		WriteJSON(w, 200, map[string]string{"operation_id": op})
+		return
+	case strings.HasPrefix(path, "/api/hosts/") && strings.HasSuffix(path, "/restore") && r.Method == http.MethodPost:
+		id := strings.TrimSuffix(strings.TrimPrefix(path, "/api/hosts/"), "/restore")
+		var input struct {
+			OperationID string `json:"operation_id"`
+			Reason      string `json:"reason"`
+		}
+		if err := decodeBody(w, r, &input); err != nil {
+			WriteError(w, err)
+			return
+		}
+		result, err := e.Catalog.RestoreHost(r.Context(), p, id, input.OperationID, input.Reason)
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+		WriteJSON(w, 200, result)
+		return
+	case strings.HasPrefix(path, "/api/assets/") && r.Method == http.MethodDelete:
+		id := strings.TrimPrefix(path, "/api/assets/")
+		var input struct {
+			Rev    int64  `json:"rev"`
+			Reason string `json:"reason"`
+		}
+		if err := decodeBody(w, r, &input); err != nil {
+			WriteError(w, err)
+			return
+		}
+		if err := e.Catalog.DeleteAsset(r.Context(), p, id, input.Rev, input.Reason); err != nil {
+			WriteError(w, err)
+			return
+		}
+		WriteJSON(w, 200, map[string]bool{"ok": true})
+		return
 	case path == "/api/auth/session" && r.Method == http.MethodGet:
 		WriteJSON(w, 200, map[string]string{"login": p.Login})
 		return
