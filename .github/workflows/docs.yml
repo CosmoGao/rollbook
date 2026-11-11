@@ -1,0 +1,22 @@
+name: docs
+
+on:
+  pull_request:
+    paths:
+      - docs/**
+      - .github/workflows/docs.yml
+  push:
+    branches: [main]
+    paths:
+      - docs/**
+      - .github/workflows/docs.yml
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check design document
+        run: |
+          test -s docs/design.md
+          git diff --check
