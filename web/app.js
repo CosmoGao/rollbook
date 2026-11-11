@@ -104,7 +104,7 @@ const originalService=renderService;renderService=async function(id){await origi
 // 初次登录只在空清册显示引导。示例全部使用保留的文档地址与虚构名称。
 let firstRunOpen=false;
 async function showFirstRun(){if(firstRunOpen)return;try{const sites=await api('/api/browse?type=location');if(sites.length)return;firstRunOpen=true;modal('欢迎使用清册',(box,close,overlay)=>{close.textContent='稍后再说';close.onclick=()=>{firstRunOpen=false;overlay.remove()};box.append(el('p','muted','清册还是空的。可以建立第一个站点，或导入明确标记的虚构示例数据。示例使用文档专用 IP 和 .invalid 域名，不代表真实资产。'));const actions=el('div','controls');const site=el('button','primary','建立第一个站点');site.onclick=()=>{firstRunOpen=false;overlay.remove();assetForm('location')};const sample=el('button','ghost','导入虚构示例数据');const err=el('div','error');sample.onclick=async()=>{sample.disabled=true;try{await importSample();firstRunOpen=false;overlay.remove();await navigate('sites')}catch(e){err.textContent=e.message;sample.disabled=false}};add(actions,site,sample);add(box,actions,err,close)})}catch(e){console.error('首次引导检查失败',e)}}
-async function importSample(){const suffix=crypto.randomUUID().slice(0,8);const id=type=>type+':sample-'+suffix;const examples=[
+async function importSample(){const suffix=Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');const id=type=>type+':sample-'+suffix;const examples=[
  {type:'location',name:'【示例】云杉站点',fields:{kind:'站点'}},
  {type:'network',name:'【示例】文档网段',fields:{cidr:'192.0.2.0/24',location_id:id('location')}},
  {type:'host',name:'【示例】演示主机',fields:{kind:'虚拟机',location_id:id('location')}},

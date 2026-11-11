@@ -100,16 +100,25 @@ test('空库引导导入虚构数据并展示可复制的客户端配置',async(
    return reply({message:'Unexpected request '+m+' '+p},404);
   });
   await page.goto('http://rollbook.test/');
+  assert.equal(await page.evaluate(()=>window.isSecureContext),false);
+  assert.equal(await page.evaluate(()=>typeof crypto.randomUUID),'undefined');
   await page.getByRole('button',{name:'导入虚构示例数据'}).click();
   await page.locator('.modal').waitFor({state:'detached'});
   assert.equal(objects.size,6);
   for(const o of objects.values())assert.match(o.name,/【示例】/);
   assert.equal([...objects.values()].find(o=>o.type==='ip').fields.address,'192.0.2.10');
+  assert.equal([...objects.values()].find(o=>o.type==='network').fields.cidr,'192.0.2.0/24');
+  assert.equal([...objects.values()].find(o=>o.type==='endpoint').fields.url,'https://demo.example.invalid');
+  for(const [view,name] of [['sites','【示例】云杉站点'],['hosts','【示例】演示主机'],['networks','【示例】文档网段']]){
+   await page.locator(`#nav button[data-view="${view}"]`).click();
+   await page.locator('#content').getByText(name).waitFor();
+  }
   await page.getByRole('button',{name:/Key 管理/}).click();
   await page.getByRole('button',{name:'创建 Key'}).click();
   await page.locator('.modal input').first().fill('agent');
   await page.locator('.modal button[type=submit]').click();
   const setup=page.locator('.modal');
+  await setup.locator('.setup-block').first().waitFor();
   for(const label of ['CLI 环境变量','Claude Code（.mcp.json）','Codex（config.toml）','Cursor（mcp.json）'])assert.match(await setup.innerText(),new RegExp(label.split('（')[0]));
   const snippets=await setup.locator('.setup-block pre').allTextContents();
   for(const snippet of snippets)assert.match(snippet,/rb_test_token/);
