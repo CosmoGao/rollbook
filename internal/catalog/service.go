@@ -211,9 +211,7 @@ func (s Service) applyUpdate(ctx context.Context, tx *sql.Tx, id string, rev int
 		return o, auth.ErrForbidden
 	}
 	if o.Type == "note" {
-		if _, ok := patch.Fields["author"]; ok {
-			return o, invalidField("fields.author", "作者由服务端维护", "省略此字段")
-		}
+		return o, invalidField("fields.body_md", "笔记只允许追加，不能编辑", "新增笔记")
 	}
 	if o.Type == "dependency" {
 		if _, ok := patch.Fields["generated"]; ok {

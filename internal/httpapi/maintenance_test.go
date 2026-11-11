@@ -67,13 +67,27 @@ func TestBrowserMaintenanceAPI(t *testing.T) {
 			t.Fatal(item.id, w.Code, w.Body)
 		}
 	}
-	w := call("POST", "/api/assets/host:box/verify", `{"rev":1,"reason":"现场核实"}`)
+	w := call("POST", "/api/assets", `{"object":{"id":"location:source","type":"location","name":"来源枚举","source":"自动发现","fields":{"kind":"站点"}},"base_rev":0,"reason":"验证来源"}`)
+	if w.Code != 200 {
+		t.Fatal("来源枚举被拒绝", w.Code, w.Body)
+	}
+	w = call("POST", "/api/assets/host:box/verify", `{"rev":1,"reason":"现场核实"}`)
 	if w.Code != 200 {
 		t.Fatal(w.Code, w.Body)
 	}
 	w = call("POST", "/api/notes", `{"id":"host:box","rev":2,"kind":"运维笔记","body_md":"已检查","reason":"记录检查"}`)
 	if w.Code != 200 {
 		t.Fatal(w.Code, w.Body)
+	}
+	var note struct {
+		ID string `json:"id"`
+	}
+	if err = json.Unmarshal(w.Body.Bytes(), &note); err != nil {
+		t.Fatal(err)
+	}
+	w = call("PATCH", "/api/assets/"+note.ID, `{"rev":1,"patch":{"fields":{"body_md":"覆盖"}},"reason":"修改笔记"}`)
+	if w.Code != 422 || !strings.Contains(w.Body.String(), "fields.body_md") {
+		t.Fatal("笔记编辑未返回字段错误", w.Code, w.Body)
 	}
 	w = call("GET", "/api/hosts/host:box/offline", "")
 	if w.Code != 200 || !strings.Contains(w.Body.String(), "ip:one") {

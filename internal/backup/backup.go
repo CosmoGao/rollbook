@@ -28,7 +28,7 @@ var ErrInvalid = errors.New("invalid backup")
 var ErrConflict = errors.New("merge conflict")
 
 // 表名固定，避免导入文件控制 SQL；顺序只用于稳定输出。
-var catalogTables = []string{"objects", "locations", "uplinks", "hosts", "networks", "ips", "services", "ports", "endpoints", "dependencies", "versions", "credentials", "notes", "contexts", "changes", "version_checks"}
+var catalogTables = []string{"objects", "locations", "uplinks", "hosts", "networks", "ips", "services", "ports", "endpoints", "dependencies", "versions", "credentials", "notes", "contexts", "changes", "version_checks", "host_offline_operations"}
 var fullTables = append(append([]string{}, catalogTables...), "users", "api_keys")
 
 type File struct {
@@ -145,6 +145,10 @@ func Parse(data []byte) (File, Preview, error) {
 			return f, p, err
 		}
 		return parseMerge(f)
+	}
+	// 旧版备份没有停用快照表。允许缺省并在恢复时清空当前快照，避免误用旧操作。
+	if _, ok := f.Tables["host_offline_operations"]; !ok && len(f.Tables) == len(names)-1 {
+		f.Tables["host_offline_operations"] = []map[string]any{}
 	}
 	if len(f.Tables) != len(names) {
 		return f, p, ErrInvalid
@@ -351,6 +355,37 @@ type relationQuerier interface {
 }
 
 func validateRelations(ctx context.Context, d relationQuerier) error {
+	// 释放后的地址占位符必须对应已保存的操作快照，且原地址仍在网段内。
+	released := map[string]string{}
+	snapshots, err := d.QueryContext(ctx, "SELECT snapshot_json FROM host_offline_operations ORDER BY created_at,id")
+	if err != nil {
+		return err
+	}
+	for snapshots.Next() {
+		var raw string
+		if err = snapshots.Scan(&raw); err != nil {
+			snapshots.Close()
+			return err
+		}
+		var items []struct {
+			ID            string `json:"id"`
+			BeforeAddress string `json:"before_address"`
+		}
+		if json.Unmarshal([]byte(raw), &items) != nil {
+			snapshots.Close()
+			return ErrInvalid
+		}
+		for _, item := range items {
+			if item.BeforeAddress != "" {
+				released[item.ID] = item.BeforeAddress
+			}
+		}
+	}
+	err = snapshots.Err()
+	snapshots.Close()
+	if err != nil {
+		return err
+	}
 	rows, err := d.QueryContext(ctx, "SELECT cidr FROM networks")
 	if err != nil {
 		return err
@@ -371,15 +406,22 @@ func validateRelations(ctx context.Context, d relationQuerier) error {
 	if err != nil {
 		return err
 	}
-	rows, err = d.QueryContext(ctx, "SELECT ips.address, networks.cidr FROM ips JOIN networks ON networks.id=ips.network_id")
+	rows, err = d.QueryContext(ctx, "SELECT ips.id, ips.address, objects.status, networks.cidr FROM ips JOIN networks ON networks.id=ips.network_id JOIN objects ON objects.id=ips.id")
 	if err != nil {
 		return err
 	}
 	for rows.Next() {
-		var address, cidr string
-		if err = rows.Scan(&address, &cidr); err != nil {
+		var id, address, status, cidr string
+		if err = rows.Scan(&id, &address, &status, &cidr); err != nil {
 			rows.Close()
 			return err
+		}
+		if address == "released:"+id {
+			if status != "停用" || released[id] == "" {
+				rows.Close()
+				return ErrInvalid
+			}
+			address = released[id]
 		}
 		addr, e := netip.ParseAddr(address)
 		if e != nil {
