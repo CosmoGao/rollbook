@@ -182,6 +182,8 @@ func Error(err error) (int, APIError) {
 		return 403, APIError{Code: "forbidden", Message: "Permission denied"}
 	case errors.Is(err, catalog.ErrConflict):
 		return 409, APIError{Code: "conflict", Message: "Revision conflict"}
+	case errors.Is(err, backup.ErrConflict):
+		return 409, APIError{Code: "conflict", Message: err.Error()}
 	case errors.Is(err, versioncheck.ErrRunning):
 		return 409, APIError{Code: "conflict", Message: "Version check already running"}
 	case errors.Is(err, catalog.ErrInvalid), errors.Is(err, auth.ErrInvalid), errors.Is(err, backup.ErrInvalid), strings.Contains(err.Error(), "unsupported schema_version"):

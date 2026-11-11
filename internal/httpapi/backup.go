@@ -50,11 +50,16 @@ func (e Engine) backup(w http.ResponseWriter, r *http.Request, p auth.Principal)
 			WriteError(w, backup.ErrInvalid)
 			return
 		}
-		proposer := p.Login
-		if !p.IsUser() {
-			proposer = p.KeyName + " (" + p.IssuerName + ")"
+		f, _, err := backup.Parse(data)
+		if err != nil {
+			WriteError(w, err)
+			return
 		}
-		item, err := service.Submit(r.Context(), data, proposer, p.IsUser())
+		if !p.IsUser() && f.Kind != "merge" {
+			WriteError(w, auth.ErrForbidden)
+			return
+		}
+		item, err := service.Submit(r.Context(), data, p)
 		if err != nil {
 			WriteError(w, err)
 			return
@@ -82,7 +87,7 @@ func (e Engine) backup(w http.ResponseWriter, r *http.Request, p auth.Principal)
 			WriteError(w, catalog.ErrInvalid)
 			return
 		}
-		err := service.Review(r.Context(), id, action == "approve")
+		err := service.Review(r.Context(), id, action == "approve", p.Login)
 		if err != nil {
 			WriteError(w, err)
 			return

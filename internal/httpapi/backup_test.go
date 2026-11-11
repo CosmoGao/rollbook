@@ -17,7 +17,8 @@ import (
 
 func TestBackupPermissionAndApproval(t *testing.T) {
 	ctx := context.Background()
-	d, e := db.Open(ctx, filepath.Join(t.TempDir(), "test.db"))
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	d, e := db.Open(ctx, dbPath)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -79,7 +80,14 @@ func TestBackupPermissionAndApproval(t *testing.T) {
 	if w := call("POST", "/api/backup/import", catalogFile.Body.String(), readToken, "", nil); w.Code != 403 {
 		t.Fatal("read key submitted import", w.Code)
 	}
-	submitted := call("POST", "/api/backup/import", catalogFile.Body.String(), proposeToken, "", nil)
+	if w := call("POST", "/api/backup/import", catalogFile.Body.String(), proposeToken, "", nil); w.Code != 403 {
+		t.Fatal("proposal key submitted restore", w.Code)
+	}
+	merge := "schema_version: 1\nkind: merge\ntables:\n  objects:\n    - id: location:b\n      type: location\n      name: 上海\n  locations:\n    - id: location:b\n      kind: 站点\n"
+	if w := call("POST", "/api/backup/import", merge, readToken, "", nil); w.Code != 403 {
+		t.Fatal("read key submitted merge", w.Code)
+	}
+	submitted := call("POST", "/api/backup/import", merge, proposeToken, "", nil)
 	if submitted.Code != 201 {
 		t.Fatal(submitted.Code, submitted.Body)
 	}
@@ -94,6 +102,23 @@ func TestBackupPermissionAndApproval(t *testing.T) {
 	}
 	if w := call("POST", "/api/backup/imports/"+pending.ID+"/approve", "", "", csrf, cookies); w.Code != 200 {
 		t.Fatal(w.Code, w.Body)
+	}
+	if w := call("GET", "/api/auth/session", "", "", "", cookies); w.Code != 200 {
+		t.Fatal("merge invalidated session", w.Code)
+	}
+	restore := call("POST", "/api/backup/import", catalogFile.Body.String(), "", csrf, cookies)
+	if restore.Code != 201 {
+		t.Fatal("user restore submit", restore.Code, restore.Body)
+	}
+	if e = json.Unmarshal(restore.Body.Bytes(), &pending); e != nil {
+		t.Fatal(e)
+	}
+	if w := call("POST", "/api/backup/imports/"+pending.ID+"/approve", "", "", csrf, cookies); w.Code != 200 {
+		t.Fatal("restore approve", w.Code, w.Body)
+	}
+	files, e := filepath.Glob(filepath.Join(filepath.Dir(dbPath), "before-restore-*.yaml"))
+	if e != nil || len(files) != 1 {
+		t.Fatal("backup before restore", files, e)
 	}
 	if w := call("GET", "/api/auth/session", "", "", "", cookies); w.Code != 401 {
 		t.Fatal("session survived restore", w.Code)
