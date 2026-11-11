@@ -33,6 +33,10 @@ func (s Store) Search(ctx context.Context, q string) ([]Result, error) {
 	if len(tokens) > 0 {
 		for i, t := range tokens {
 			tokens[i] = `"` + strings.ReplaceAll(t, `"`, ``) + `"`
+			// unicode61 将连续汉字作为一个词；前缀匹配允许「香河」找到「香河站点」。
+			if strings.IndexFunc(t, func(r rune) bool { return unicode.Is(unicode.Han, r) }) >= 0 {
+				tokens[i] += "*"
+			}
 		}
 		rows, e := s.DB.QueryContext(ctx, `SELECT object_id FROM search_documents WHERE search_documents MATCH ? LIMIT 100`, strings.Join(tokens, " AND "))
 		if e != nil {
@@ -214,7 +218,7 @@ type Site struct {
 
 func (s Store) GetSite(ctx context.Context, idOrName string) (Site, error) {
 	var site Site
-	e := s.DB.QueryRowContext(ctx, `SELECT l.id,o.name FROM locations l JOIN objects o ON o.id=l.id WHERE l.kind='站点' AND (l.id=? OR o.name=?)`, idOrName, idOrName).Scan(&site.ID, &site.Name)
+	e := s.DB.QueryRowContext(ctx, `SELECT l.id,o.name FROM locations l JOIN objects o ON o.id=l.id WHERE l.kind='站点' AND (l.id=? OR o.name=? OR l.city=?)`, idOrName, idOrName, idOrName).Scan(&site.ID, &site.Name)
 	if e != nil {
 		return site, e
 	}

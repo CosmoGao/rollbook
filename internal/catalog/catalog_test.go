@@ -34,8 +34,9 @@ func add(t *testing.T, ctx context.Context, s catalog.Store, id, typ, name strin
 func TestCatalogRelationsSearchAndArchive(t *testing.T) {
 	ctx, d, s := setup(t)
 	add(t, ctx, s, "location:beijing", "location", "北京", map[string]any{"kind": "站点"})
-	add(t, ctx, s, "location:xianghe", "location", "香河", map[string]any{"kind": "站点", "city": "香河"})
+	add(t, ctx, s, "location:xianghe", "location", "香河站点", map[string]any{"kind": "站点", "city": "香河"})
 	add(t, ctx, s, "uplink:xianghe", "uplink", "联通接入", map[string]any{"location_id": "location:xianghe", "isp": "联通", "type": "光纤宽带", "public_ipv4": "待核实"})
+	add(t, ctx, s, "uplink:mobile", "uplink", "移动备用接入", map[string]any{"location_id": "location:xianghe", "isp": "移动", "type": "4G·5G"})
 	add(t, ctx, s, "host:router", "host", "香河路由器", map[string]any{"kind": "网络设备", "net_role": "主路由", "location_id": "location:xianghe"})
 	add(t, ctx, s, "network:xianghe", "network", "192.168.10 网段", map[string]any{"cidr": "192.168.10.0/24", "location_id": "location:xianghe", "router_id": "host:router", "uplink_id": "uplink:xianghe"})
 	add(t, ctx, s, "host:multica", "host", "Multica 服务端", map[string]any{"kind": "物理机", "location_id": "location:beijing"})
@@ -46,6 +47,7 @@ func TestCatalogRelationsSearchAndArchive(t *testing.T) {
 		t.Fatal(ip.Fields)
 	}
 	add(t, ctx, s, "service:multica", "service", "Multica", map[string]any{"host_id": "host:multica"})
+	add(t, ctx, s, "port:multica", "port", "Multica 端口", map[string]any{"service_id": "service:multica", "port": 8080, "protocol": "tcp"})
 	add(t, ctx, s, "service:zoraxy", "service", "Zoraxy", map[string]any{"host_id": "host:multica"})
 	add(t, ctx, s, "service:caddy", "service", "Caddy", map[string]any{"host_id": "host:multica"})
 	add(t, ctx, s, "endpoint:multica", "endpoint", "Multica 入口", map[string]any{"service_id": "service:multica", "kind": "反向代理", "url": "https://multica.app.v2rich.com:5443", "via_json": []string{"service:zoraxy", "service:caddy"}})
@@ -57,12 +59,16 @@ func TestCatalogRelationsSearchAndArchive(t *testing.T) {
 	if len(res) != 1 || res[0].HostID != "host:multica" || res[0].NetworkID != "network:beijing-sub" || !contains(res[0].RelatedIDs, "endpoint:multica") {
 		t.Fatalf("bad IP result: %+v", res)
 	}
+	res, e = searcher.Search(ctx, "8080")
+	if e != nil || len(res) != 1 || res[0].ID != "port:multica" || res[0].HostID != "host:multica" {
+		t.Fatalf("bad port result: %+v, %v", res, e)
+	}
 	res, e = searcher.Search(ctx, "香河")
 	if e != nil {
 		t.Fatal(e)
 	}
-	if len(res) == 0 {
-		t.Fatal("site not found")
+	if len(res) == 0 || !hasResult(res, "location:xianghe") {
+		t.Fatalf("site not found: %+v", res)
 	}
 	site, e := searcher.GetSite(ctx, "香河")
 	if e != nil {
@@ -146,6 +152,14 @@ func TestIPUsesSiteTreeAndRejectsEqualPrefix(t *testing.T) {
 func contains(xs []string, x string) bool {
 	for _, v := range xs {
 		if v == x {
+			return true
+		}
+	}
+	return false
+}
+func hasResult(xs []search.Result, id string) bool {
+	for _, x := range xs {
+		if x.ID == id {
 			return true
 		}
 	}
