@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/netip"
 	"sort"
@@ -58,29 +57,40 @@ func (s Store) Create(ctx context.Context, o Object, actor string) (Object, erro
 	return s.create(ctx, o, actor, nil)
 }
 func (s Store) create(ctx context.Context, o Object, actor string, after func(*sql.Tx, Object) error) (Object, error) {
-	for _, value := range []any{o.Name, o.Aliases, o.Tags, o.Fields} {
-		if err := CheckSecrets(value); err != nil {
-			return o, err
-		}
-	}
-	if _, ok := columns[o.Type]; !ok {
-		return o, fmt.Errorf("unknown type %q", o.Type)
-	}
-	if o.ID == "" || o.Name == "" || actor == "" || !strings.HasPrefix(o.ID, o.Type+":") {
-		return o, errors.New("id, name, actor and type prefix required")
-	}
-	if o.Rev != 0 || !o.CreatedAt.IsZero() || !o.UpdatedAt.IsZero() {
-		return o, errors.New("client audit fields are not accepted")
-	}
-	if o.Fields == nil {
-		o.Fields = map[string]any{}
-	}
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return o, err
 	}
 	defer tx.Rollback()
-	if err = validate(ctx, tx, &o); err != nil {
+	o, err = s.createTx(ctx, tx, o, actor, after)
+	if err != nil {
+		return o, err
+	}
+	return o, tx.Commit()
+}
+func (s Store) createTx(ctx context.Context, tx *sql.Tx, o Object, actor string, after func(*sql.Tx, Object) error) (Object, error) {
+	if err := checkCreateSecrets(o); err != nil {
+		return o, err
+	}
+	if _, ok := columns[o.Type]; !ok {
+		return o, invalidField("object.type", "未知对象类型", "现有模型类型")
+	}
+	if o.ID == "" || !strings.HasPrefix(o.ID, o.Type+":") {
+		return o, invalidField("object.id", "ID 缺失或类型前缀不符", o.Type+":...")
+	}
+	if o.Name == "" {
+		return o, invalidField("object.name", "名称必填", "非空字符串")
+	}
+	if actor == "" {
+		return o, ErrInvalid
+	}
+	if o.Rev != 0 || !o.CreatedAt.IsZero() || !o.UpdatedAt.IsZero() {
+		return o, invalidField("object", "审计字段由服务端生成", "省略 rev 和时间字段")
+	}
+	if o.Fields == nil {
+		o.Fields = map[string]any{}
+	}
+	if err := validate(ctx, tx, &o); err != nil {
 		return o, err
 	}
 	now := time.Now().UTC()
@@ -100,9 +110,9 @@ func (s Store) create(ctx context.Context, o Object, actor string, after func(*s
 	}
 	aliases, _ := json.Marshal(nonNil(o.Aliases))
 	tags, _ := json.Marshal(nonNil(o.Tags))
-	_, err = tx.ExecContext(ctx, `INSERT INTO objects(id,type,name,aliases_json,tags_json,status,source,confidence,verified_at,verified_by,rev,created_at,created_by,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, o.ID, o.Type, o.Name, string(aliases), string(tags), o.Status, o.Source, o.Confidence, timeText(o.VerifiedAt), null(o.VerifiedBy), o.Rev, now.Format(time.RFC3339Nano), actor, now.Format(time.RFC3339Nano), actor)
+	_, err := tx.ExecContext(ctx, `INSERT INTO objects(id,type,name,aliases_json,tags_json,status,source,confidence,verified_at,verified_by,rev,created_at,created_by,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, o.ID, o.Type, o.Name, string(aliases), string(tags), o.Status, o.Source, o.Confidence, timeText(o.VerifiedAt), null(o.VerifiedBy), o.Rev, now.Format(time.RFC3339Nano), actor, now.Format(time.RFC3339Nano), actor)
 	if err != nil {
-		return o, err
+		return o, storageError(err, o)
 	}
 	cols := columns[o.Type]
 	args := []any{o.ID}
@@ -114,7 +124,7 @@ func (s Store) create(ctx context.Context, o Object, actor string, after func(*s
 			switch x := v.(type) {
 			case string:
 				if !json.Valid([]byte(x)) {
-					return o, fmt.Errorf("invalid JSON in %s", c)
+					return o, invalidField("fields."+c, "JSON 格式无效", "有效 JSON")
 				}
 			default:
 				b, e := json.Marshal(v)
@@ -141,7 +151,7 @@ func (s Store) create(ctx context.Context, o Object, actor string, after func(*s
 	}
 	_, err = tx.ExecContext(ctx, "INSERT INTO "+tables[o.Type]+"("+strings.Join(names, ",")+") VALUES("+strings.Join(marks, ",")+")", args...)
 	if err != nil {
-		return o, err
+		return o, storageError(err, o)
 	}
 	if err = generate(ctx, tx, o, actor); err != nil {
 		return o, err
@@ -153,9 +163,6 @@ func (s Store) create(ctx context.Context, o Object, actor string, after func(*s
 		if err = after(tx, o); err != nil {
 			return o, err
 		}
-	}
-	if err = tx.Commit(); err != nil {
-		return o, err
 	}
 	return o, nil
 }
@@ -192,25 +199,42 @@ func validate(ctx context.Context, tx *sql.Tx, o *Object) error {
 	}
 	for k := range o.Fields {
 		if !allowed[k] {
-			return fmt.Errorf("unknown %s field %q", o.Type, k)
+			return invalidField("fields."+k, "对象类型不支持该字段", o.Type)
+		}
+	}
+	refTypes := map[string]string{"parent_id": "location", "location_id": "location", "uplink_id": "uplink", "edge_device_id": "host", "parent_host_id": "host", "router_id": "host", "host_id": "host", "network_id": "network", "service_id": "service", "from_id": "*", "to_id": "*", "target_id": "*", "account_ref": "credential"}
+	for field, expected := range refTypes {
+		if !allowed[field] || str(o.Fields[field]) == "" {
+			continue
+		}
+		var actual string
+		err := tx.QueryRowContext(ctx, "SELECT type FROM objects WHERE id=?", str(o.Fields[field])).Scan(&actual)
+		if err == sql.ErrNoRows {
+			return invalidField("fields."+field, "关联对象不存在", expected)
+		}
+		if err != nil {
+			return err
+		}
+		if expected != "*" && actual != expected {
+			return invalidField("fields."+field, "关联对象类型不符", expected)
 		}
 	}
 	if o.Type == "network" {
 		p, e := netip.ParsePrefix(str(o.Fields["cidr"]))
 		if e != nil {
-			return e
+			return invalidField("fields.cidr", "CIDR 格式无效", "规范网段地址/前缀")
 		}
 		if p != p.Masked() {
-			return errors.New("CIDR must be canonical")
+			return invalidField("fields.cidr", "CIDR 必须使用规范网段地址", "网络地址/前缀")
 		}
 	}
 	if o.Type == "ip" {
 		a, e := netip.ParseAddr(str(o.Fields["address"]))
 		if e != nil {
-			return e
+			return invalidField("fields.address", "IP 地址格式无效", "IPv4 或 IPv6 地址")
 		}
 		if a.Is4In6() {
-			return errors.New("mapped IPv4 is not supported")
+			return invalidField("fields.address", "不支持映射 IPv4", "IPv4 或 IPv6 地址")
 		}
 		var site string
 		e = tx.QueryRowContext(ctx, `WITH RECURSIVE parents(id,parent_id,kind) AS (
@@ -218,7 +242,7 @@ func validate(ctx context.Context, tx *sql.Tx, o *Object) error {
  UNION ALL SELECT l.id,l.parent_id,l.kind FROM locations l JOIN parents p ON p.parent_id=l.id
  ) SELECT id FROM parents WHERE kind='站点' LIMIT 1`, str(o.Fields["host_id"])).Scan(&site)
 		if e != nil {
-			return fmt.Errorf("host: %w", e)
+			return invalidField("fields.host_id", "主机不存在或不属于站点", "站点内现有主机")
 		}
 		rows, e := tx.QueryContext(ctx, `WITH RECURSIVE places(id) AS (SELECT ? UNION ALL SELECT l.id FROM locations l JOIN places p ON l.parent_id=p.id)
  SELECT n.id,n.cidr FROM networks n JOIN places p ON n.location_id=p.id`, site)
@@ -251,10 +275,10 @@ func validate(ctx context.Context, tx *sql.Tx, o *Object) error {
 			return e
 		}
 		if len(matches) != 1 {
-			return fmt.Errorf("IP must match exactly one longest-prefix network in host site (got %d)", len(matches))
+			return invalidField("fields.address", "IP 不在主机站点的唯一最长前缀网段内", "站点网段内地址")
 		}
 		if supplied := str(o.Fields["network_id"]); supplied != "" && supplied != matches[0] {
-			return errors.New("network_id disagrees with longest-prefix match")
+			return invalidField("fields.network_id", "所选网段与 IP 地址不符", matches[0])
 		}
 		o.Fields["network_id"] = matches[0]
 	}
@@ -269,13 +293,16 @@ func validate(ctx context.Context, tx *sql.Tx, o *Object) error {
 		seen := map[string]bool{o.ID: true}
 		for parent != "" {
 			if seen[parent] {
-				return errors.New("parent cycle")
+				return invalidField("fields."+field, "父级关系形成循环", "不形成循环的父级")
 			}
 			seen[parent] = true
 			var next sql.NullString
 			e := tx.QueryRowContext(ctx, "SELECT "+field+" FROM "+table+" WHERE id=?", parent).Scan(&next)
+			if e == sql.ErrNoRows {
+				return invalidField("fields."+field, "父级对象不存在", "现有父级对象")
+			}
 			if e != nil {
-				return fmt.Errorf("parent reference: %w", e)
+				return e
 			}
 			parent = next.String
 		}
@@ -283,27 +310,29 @@ func validate(ctx context.Context, tx *sql.Tx, o *Object) error {
 	if o.Type == "endpoint" {
 		ids, e := stringList(o.Fields["via_json"])
 		if e != nil {
-			return e
+			return invalidField("fields.via_json", "反代列表格式无效", "服务 ID 数组")
 		}
 		seen := map[string]bool{}
 		for _, id := range ids {
 			if seen[id] {
-				return errors.New("repeated proxy in via")
+				return invalidField("fields.via_json", "反代列表不能重复", "不重复的服务 ID 数组")
 			}
 			seen[id] = true
 			var typ string
-			if e = tx.QueryRowContext(ctx, "SELECT type FROM objects WHERE id=?", id).Scan(&typ); e != nil {
-				return fmt.Errorf("via reference: %w", e)
+			if e = tx.QueryRowContext(ctx, "SELECT type FROM objects WHERE id=?", id).Scan(&typ); e == sql.ErrNoRows {
+				return invalidField("fields.via_json", "反代服务不存在", "现有服务 ID")
+			} else if e != nil {
+				return e
 			}
 			if typ != "service" {
-				return errors.New("via must reference services")
+				return invalidField("fields.via_json", "反代必须引用服务", "服务 ID")
 			}
 		}
 	}
 	if o.Type == "context" {
 		ids, e := stringList(o.Fields["related_ids_json"])
 		if e != nil {
-			return e
+			return invalidField("fields.related_ids_json", "关联列表格式无效", "对象 ID 数组")
 		}
 		for _, id := range ids {
 			var n int
@@ -311,7 +340,7 @@ func validate(ctx context.Context, tx *sql.Tx, o *Object) error {
 				return e
 			}
 			if n == 0 {
-				return fmt.Errorf("missing related object %s", id)
+				return invalidField("fields.related_ids_json", "关联对象不存在", "现有对象 ID")
 			}
 		}
 		if o.Fields["expires_at"] == nil {
@@ -326,7 +355,7 @@ func validate(ctx context.Context, tx *sql.Tx, o *Object) error {
 	if o.Type == "dependency" {
 		from, to := str(o.Fields["from_id"]), str(o.Fields["to_id"])
 		if from == to {
-			return errors.New("self dependency")
+			return invalidField("fields.to_id", "依赖不能指向自身", "与 from_id 不同的对象 ID")
 		}
 		if e := checkCycle(ctx, tx, from, to); e != nil {
 			return e
@@ -358,7 +387,7 @@ func stringList(v any) ([]string, error) {
 }
 func checkCycle(ctx context.Context, tx *sql.Tx, from, to string) error {
 	if from == to {
-		return errors.New("dependency cycle")
+		return invalidField("fields.to_id", "依赖形成循环", "不形成循环的对象 ID")
 	}
 	var n int
 	e := tx.QueryRowContext(ctx, `WITH RECURSIVE reach(id) AS (SELECT to_id FROM dependencies WHERE from_id=? UNION SELECT d.to_id FROM dependencies d JOIN reach r ON d.from_id=r.id) SELECT count(*) FROM reach WHERE id=?`, to, from).Scan(&n)
@@ -366,7 +395,7 @@ func checkCycle(ctx context.Context, tx *sql.Tx, from, to string) error {
 		return e
 	}
 	if n > 0 {
-		return errors.New("dependency cycle")
+		return invalidField("fields.to_id", "依赖形成循环", "不形成循环的对象 ID")
 	}
 	return nil
 }

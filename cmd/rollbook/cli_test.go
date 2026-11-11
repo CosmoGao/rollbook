@@ -34,6 +34,17 @@ func TestCLIUsesBearerAndREST(t *testing.T) {
 			if v["rev"] != float64(2) || v["reason"] != "修正" {
 				t.Error(v)
 			}
+		case 4:
+			if r.Method != "POST" || r.URL.Path != "/api/assets" {
+				t.Errorf("create: %s %s", r.Method, r.URL)
+			}
+			var v map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
+				t.Error(err)
+			}
+			if v["base_rev"] != float64(0) || v["reason"] != "新建" {
+				t.Error(v)
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte("{}\n"))
@@ -41,12 +52,12 @@ func TestCLIUsesBearerAndREST(t *testing.T) {
 	defer server.Close()
 	t.Setenv("ROLLBOOK_URL", server.URL)
 	t.Setenv("ROLLBOOK_KEY", "test-key")
-	for _, args := range [][]string{{"search", "Overleaf"}, {"get", "service:overleaf"}, {"update", "service:overleaf", "2", `{"name":"新名称"}`, "修正"}} {
+	for _, args := range [][]string{{"search", "Overleaf"}, {"get", "service:overleaf"}, {"update", "service:overleaf", "2", `{"name":"新名称"}`, "修正"}, {"create", `{"id":"location:test","type":"location","name":"站点","fields":{"kind":"站点"}}`, "新建"}} {
 		if err := runCLI(args); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if calls != 3 {
+	if calls != 4 {
 		t.Fatal(calls)
 	}
 }

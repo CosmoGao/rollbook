@@ -104,7 +104,7 @@ func TestToolsAndREST(t *testing.T) {
 	}
 	_, listing := request("POST", "/mcp", keys[auth.Read], map[string]any{"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
 	listed := listing["result"].(map[string]any)["tools"].([]any)
-	if len(listed) != 16 {
+	if len(listed) != 17 {
 		t.Fatalf("tools=%d", len(listed))
 	}
 	reads := []struct{ name, path, id string }{
@@ -207,6 +207,71 @@ func TestToolsAndREST(t *testing.T) {
 	status, _ = request("POST", "/api/changes/anything/approve", keys[auth.Write], map[string]any{})
 	if status != 403 {
 		t.Fatal(status)
+	}
+	create := map[string]any{"object": map[string]any{"id": "location:new", "type": "location", "name": "新站点", "fields": map[string]any{"kind": "站点"}}, "base_rev": 0, "reason": "新建站点"}
+	status, response := request("POST", "/api/assets", keys[auth.Read], create)
+	if status != 403 {
+		t.Fatal(status, response)
+	}
+	status, response = request("POST", "/api/assets", keys[auth.Write], create)
+	if status != 200 || response["id"] != "location:new" {
+		t.Fatal(status, response)
+	}
+	create["object"].(map[string]any)["id"] = "location:proposed"
+	structured, failed := call("create", keys[auth.Propose], create)
+	if failed {
+		t.Fatal(structured)
+	}
+	change := structured.(map[string]any)["id"].(string)
+	if _, err := store.Get(ctx, "location:proposed"); err == nil {
+		t.Fatal("proposal became visible")
+	}
+	if _, err := e.Catalog.Review(ctx, user, change, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Get(ctx, "location:proposed"); err != nil {
+		t.Fatal(err)
+	}
+	create["object"].(map[string]any)["id"] = "host:invalid"
+	create["object"].(map[string]any)["type"] = "host"
+	create["object"].(map[string]any)["fields"] = map[string]any{"kind": "物理机"}
+	status, response = request("POST", "/api/assets", keys[auth.Write], create)
+	if status != 422 || response["code"] != "validation" || response["fields"].([]any)[0].(map[string]any)["field"] != "fields.location_id" {
+		t.Fatal(status, response)
+	}
+	structured, failed = call("create", keys[auth.Write], create)
+	if !failed || structured.(map[string]any)["code"] != "validation" {
+		t.Fatal(structured, failed)
+	}
+	create["object"].(map[string]any)["id"] = "ip:outside"
+	create["object"].(map[string]any)["type"] = "ip"
+	create["object"].(map[string]any)["fields"] = map[string]any{"address": "198.51.100.5", "host_id": "host:overleaf", "network_id": "network:bj"}
+	status, response = request("POST", "/api/assets", keys[auth.Write], create)
+	if status != 422 || response["fields"].([]any)[0].(map[string]any)["field"] != "fields.address" {
+		t.Fatal(status, response)
+	}
+	create["object"].(map[string]any)["name"] = "password=hidden-value"
+	status, response = request("POST", "/api/assets", keys[auth.Write], create)
+	encoded, _ := json.Marshal(response)
+	if status != 422 || bytes.Contains(encoded, []byte("hidden-value")) || response["fields"].([]any)[0].(map[string]any)["field"] != "object.name" {
+		t.Fatal(status, response)
+	}
+	for _, tc := range []struct {
+		object map[string]any
+		field  string
+	}{
+		{map[string]any{"id": "dependency:self", "type": "dependency", "name": "自依赖", "fields": map[string]any{"from_id": "service:overleaf", "to_id": "service:overleaf", "kind": "手工"}}, "fields.to_id"},
+		{map[string]any{"id": "endpoint:repeat", "type": "endpoint", "name": "重复反代", "fields": map[string]any{"service_id": "service:overleaf", "kind": "反向代理", "url": "https://repeat.invalid", "via_json": []string{"service:overleaf", "service:overleaf"}}}, "fields.via_json"},
+	} {
+		input := map[string]any{"object": tc.object, "base_rev": 0, "reason": "校验"}
+		status, response = request("POST", "/api/assets", keys[auth.Write], input)
+		if status != 422 || response["code"] != "validation" || response["fields"].([]any)[0].(map[string]any)["field"] != tc.field {
+			t.Fatal(status, response)
+		}
+		structured, failed = call("create", keys[auth.Write], input)
+		if !failed || structured.(map[string]any)["code"] != "validation" {
+			t.Fatal(structured, failed)
+		}
 	}
 	p, err := a.Authenticate(ctx, keys[auth.Read])
 	if err != nil {

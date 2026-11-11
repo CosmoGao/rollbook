@@ -35,13 +35,92 @@ func (s Service) CreateAsset(ctx context.Context, p auth.Principal, o Object, ba
 	if e := auth.Authorize(p, auth.Update, ""); e != nil {
 		return o, e
 	}
-	if baseRev != 0 || !reasonOK(reason) || via == "" || o.Type == "context" || o.Type == "note" || o.Type == "change" || o.Type == "dependency" {
-		return o, ErrInvalid
+	if e := prepareCreate(&o, baseRev, reason, via, p); e != nil {
+		return o, e
 	}
 	return s.Store.create(ctx, o, actorName(p), func(tx *sql.Tx, created Object) error {
 		_, err := audit.AppendTx(ctx, tx, audit.Entry{ObjectID: created.ID, ObjectType: created.Type, Action: "create", Diff: created, Actor: p, Via: via, Reason: reason, State: "已生效", BaseRev: 0})
 		return err
 	})
+}
+
+func prepareCreate(o *Object, baseRev int64, reason, via string, p auth.Principal) error {
+	if CheckSecrets(reason) != nil {
+		return secretField("reason")
+	}
+	if strings.TrimSpace(reason) == "" {
+		return invalidField("reason", "操作原因必填", "非空字符串")
+	}
+	if baseRev != 0 {
+		return invalidField("base_rev", "创建时版本必须为 0", "0")
+	}
+	if via == "" || o.Type == "context" || o.Type == "change" {
+		return ErrInvalid
+	}
+	if o.CreatedBy != "" || o.UpdatedBy != "" || o.VerifiedBy != "" || o.VerifiedAt != nil || o.Rev != 0 || !o.CreatedAt.IsZero() || !o.UpdatedAt.IsZero() {
+		return ErrInvalid
+	}
+	if o.Fields == nil {
+		o.Fields = map[string]any{}
+	}
+	if o.Type == "dependency" {
+		if _, supplied := o.Fields["generated"]; supplied {
+			return invalidField("fields.generated", "手工依赖不能设置自动生成标志", "省略此字段")
+		}
+	}
+	if o.Type == "note" {
+		o.Fields["author"] = actorName(p)
+	}
+	return nil
+}
+
+// ProposeCreate 先校验候选对象；审批时在落库事务中再次校验。
+func (s Service) ProposeCreate(ctx context.Context, p auth.Principal, o Object, baseRev int64, reason, via string) (string, error) {
+	if e := auth.Authorize(p, auth.ProposeChange, ""); e != nil {
+		return "", e
+	}
+	if e := prepareCreate(&o, baseRev, reason, via, p); e != nil {
+		return "", e
+	}
+	if e := checkCreateSecrets(o); e != nil {
+		return "", e
+	}
+	if _, ok := columns[o.Type]; !ok {
+		return "", ErrInvalid
+	}
+	if o.ID == "" || o.Name == "" || !strings.HasPrefix(o.ID, o.Type+":") {
+		return "", ErrInvalid
+	}
+	tx, e := s.Store.DB.BeginTx(ctx, nil)
+	if e != nil {
+		return "", e
+	}
+	defer tx.Rollback()
+	var n int
+	if e = tx.QueryRowContext(ctx, "SELECT count(*) FROM objects WHERE id=?", o.ID).Scan(&n); e != nil {
+		return "", e
+	}
+	if n != 0 {
+		return "", ErrConflict
+	}
+	if _, e = tx.ExecContext(ctx, "SAVEPOINT proposal_check"); e != nil {
+		return "", e
+	}
+	_, e = s.Store.createTx(ctx, tx, o, actorName(p), nil)
+	if _, rollbackErr := tx.ExecContext(ctx, "ROLLBACK TO proposal_check"); rollbackErr != nil {
+		return "", rollbackErr
+	}
+	if _, releaseErr := tx.ExecContext(ctx, "RELEASE proposal_check"); releaseErr != nil {
+		return "", releaseErr
+	}
+	if e != nil {
+		return "", e
+	}
+	change, e := audit.AppendTx(ctx, tx, audit.Entry{ObjectID: o.ID, ObjectType: o.Type, Action: "create", Diff: o, Actor: p, Via: via, Reason: reason, State: "待确认", BaseRev: 0})
+	if e != nil {
+		return "", e
+	}
+	return change, tx.Commit()
 }
 
 func reasonOK(reason string) bool {
@@ -75,13 +154,8 @@ func (s Service) Update(ctx context.Context, p auth.Principal, id string, rev in
 	if rev < 1 || !reasonOK(reason) || via == "" {
 		return Object{}, ErrInvalid
 	}
-	if e := CheckSecrets(patch.Fields); e != nil {
+	if e := checkPatchSecrets(patch); e != nil {
 		return Object{}, e
-	}
-	for _, v := range []any{patch.Name, patch.Aliases, patch.Tags, patch.Status, patch.Source, patch.Confidence} {
-		if e := checkPatchSecret(v); e != nil {
-			return Object{}, e
-		}
 	}
 	tx, e := s.Store.DB.BeginTx(ctx, nil)
 	if e != nil {
@@ -101,15 +175,25 @@ func (s Service) Update(ctx context.Context, p auth.Principal, id string, rev in
 	}
 	return o, nil
 }
-func checkPatchSecret(v any) error {
-	switch x := v.(type) {
-	case *string:
-		if x != nil {
-			return CheckSecrets(*x)
+func checkPatchSecrets(patch Patch) error {
+	for field, value := range map[string]any{"name": patch.Name, "aliases": patch.Aliases, "tags": patch.Tags, "status": patch.Status, "source": patch.Source, "confidence": patch.Confidence} {
+		switch v := value.(type) {
+		case *string:
+			if v != nil {
+				value = *v
+			}
+		case *[]string:
+			if v != nil {
+				value = *v
+			}
 		}
-	case *[]string:
-		if x != nil {
-			return CheckSecrets(*x)
+		if CheckSecrets(value) != nil {
+			return secretField(field)
+		}
+	}
+	for field, value := range patch.Fields {
+		if CheckSecrets(map[string]any{field: value}) != nil {
+			return secretField("fields." + field)
 		}
 	}
 	return nil
@@ -380,13 +464,8 @@ func (s Service) Propose(ctx context.Context, p auth.Principal, id string, rev i
 	if rev < 1 || !reasonOK(reason) || via == "" {
 		return "", ErrInvalid
 	}
-	if e := CheckSecrets(patch.Fields); e != nil {
+	if e := checkPatchSecrets(patch); e != nil {
 		return "", e
-	}
-	for _, v := range []any{patch.Name, patch.Aliases, patch.Tags, patch.Status, patch.Source, patch.Confidence} {
-		if e := checkPatchSecret(v); e != nil {
-			return "", e
-		}
 	}
 	o, e := s.Store.Get(ctx, id)
 	if e != nil {
@@ -460,20 +539,40 @@ func (s Service) Review(ctx context.Context, p auth.Principal, changeID string, 
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	next := "已驳回"
 	if approve {
-		o, e = get(ctx, tx, id)
-		if e != nil {
-			return Object{}, e
-		}
-		if o.Rev != rev {
-			return Object{}, ErrConflict
+		if action != "create" {
+			o, e = get(ctx, tx, id)
+			if e != nil {
+				return Object{}, e
+			}
+			if o.Rev != rev {
+				return Object{}, ErrConflict
+			}
 		}
 		switch action {
+		case "create":
+			if rev != 0 || json.Unmarshal([]byte(diff), &o) != nil || o.ID != id {
+				return Object{}, ErrInvalid
+			}
+			if e = checkCreateSecrets(o); e != nil {
+				return Object{}, e
+			}
+			var exists int
+			if e = tx.QueryRowContext(ctx, "SELECT count(*) FROM objects WHERE id=?", id).Scan(&exists); e != nil {
+				return Object{}, e
+			}
+			if exists != 0 {
+				return Object{}, ErrConflict
+			}
+			o, e = s.Store.createTx(ctx, tx, o, p.Login, nil)
+			if e != nil {
+				return Object{}, e
+			}
 		case "update":
 			var patch Patch
 			if e = json.Unmarshal([]byte(diff), &patch); e != nil {
 				return Object{}, ErrInvalid
 			}
-			if e = CheckSecrets(patch.Fields); e != nil {
+			if e = checkPatchSecrets(patch); e != nil {
 				return Object{}, e
 			}
 			o, e = s.applyUpdate(ctx, tx, id, rev, patch, p.Login)
@@ -508,6 +607,9 @@ func (s Service) Review(ctx context.Context, p auth.Principal, changeID string, 
 					return Object{}, e
 				}
 			}
+			if e = referencedBy(ctx, tx, id); e != nil {
+				return Object{}, e
+			}
 			if _, e = tx.ExecContext(ctx, "DELETE FROM search_documents WHERE object_id=?", id); e != nil {
 				return Object{}, e
 			}
@@ -534,6 +636,44 @@ func (s Service) Review(ctx context.Context, p auth.Principal, changeID string, 
 		return Object{}, e
 	}
 	return o, nil
+}
+
+func referencedBy(ctx context.Context, tx *sql.Tx, id string) error {
+	refs := []string{}
+	for typ, table := range tables {
+		if typ == "change" || typ == "context" {
+			continue
+		}
+		for _, field := range columns[typ] {
+			if !strings.HasSuffix(field, "_id") && field != "parent_id" && field != "account_ref" {
+				continue
+			}
+			rows, err := tx.QueryContext(ctx, "SELECT id FROM "+table+" WHERE "+field+"=?", id)
+			if err != nil {
+				return err
+			}
+			for rows.Next() {
+				var ref string
+				if err = rows.Scan(&ref); err != nil {
+					break
+				}
+				if ref != id {
+					refs = append(refs, ref)
+				}
+			}
+			if err == nil {
+				err = rows.Err()
+			}
+			rows.Close()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if len(refs) > 0 {
+		return &ValidationError{Fields: []FieldError{{Field: "id", Reason: "对象仍被引用", References: refs}}}
+	}
+	return nil
 }
 
 func (s Service) MarkVerified(ctx context.Context, p auth.Principal, id string, rev int64, reason, via string) (Object, error) {

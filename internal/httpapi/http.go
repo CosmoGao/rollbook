@@ -162,6 +162,8 @@ func route(r *http.Request) (string, Args, bool) {
 		}
 	}
 	switch {
+	case r.Method == "POST" && path == "api/assets":
+		return "create", a, true
 	case r.Method == "PUT" && len(s) == 3 && s[1] == "contexts":
 		a["id"] = StringArg(s[2])
 		return "put_context", a, true
