@@ -246,3 +246,61 @@ func TestContextOwnerAndReviewConflict(t *testing.T) {
 		t.Fatal(e)
 	}
 }
+
+func TestRejectStaleProposal(t *testing.T) {
+	ctx, d, s, a, user := serviceSetup(t)
+	_, raw, e := a.IssueKey(ctx, user, "proposer", auth.Propose, nil, "")
+	if e != nil {
+		t.Fatal(e)
+	}
+	proposer, e := a.Authenticate(ctx, raw)
+	if e != nil {
+		t.Fatal(e)
+	}
+	for _, scenario := range []string{"updated", "deleted"} {
+		t.Run(scenario, func(t *testing.T) {
+			id := "location:" + scenario
+			o, e := s.Store.Create(ctx, catalog.Object{ID: id, Type: "location", Name: "Probe", Fields: map[string]any{"kind": "站点"}}, "owner")
+			if e != nil {
+				t.Fatal(e)
+			}
+			name := "Proposal"
+			change, e := s.Propose(ctx, proposer, o.ID, 1, catalog.Patch{Name: &name}, "proposal", "test")
+			if e != nil {
+				t.Fatal(e)
+			}
+			if scenario == "updated" {
+				newer := "Direct update"
+				if _, e = s.Update(ctx, user, o.ID, 1, catalog.Patch{Name: &newer}, "direct", "test"); e != nil {
+					t.Fatal(e)
+				}
+			} else {
+				deleteChange, e := s.ProposeDelete(ctx, proposer, o.ID, 1, "remove", "test")
+				if e != nil {
+					t.Fatal(e)
+				}
+				if _, e = s.Review(ctx, user, deleteChange, true); e != nil {
+					t.Fatal(e)
+				}
+			}
+			if _, e = s.Review(ctx, user, change, false); e != nil {
+				t.Fatal(e)
+			}
+			var state, reviewer string
+			if e = d.QueryRow("SELECT state,reviewed_by FROM changes WHERE id=?", change).Scan(&state, &reviewer); e != nil || state != "已驳回" || reviewer != "owner" {
+				t.Fatal(state, reviewer, e)
+			}
+			if scenario == "updated" {
+				got, e := s.Store.Get(ctx, o.ID)
+				if e != nil || got.Name != "Direct update" || got.Rev != 2 {
+					t.Fatal(got, e)
+				}
+			} else if _, e = s.Store.Get(ctx, o.ID); !errors.Is(e, sql.ErrNoRows) {
+				t.Fatal(e)
+			}
+			if _, e = s.Review(ctx, user, change, false); !errors.Is(e, catalog.ErrConflict) {
+				t.Fatal(e)
+			}
+		})
+	}
+}

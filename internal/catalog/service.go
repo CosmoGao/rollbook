@@ -315,16 +315,17 @@ func (s Service) Review(ctx context.Context, p auth.Principal, changeID string, 
 	if state != "待确认" {
 		return Object{}, ErrConflict
 	}
-	o, e := get(ctx, tx, id)
-	if e != nil {
-		return Object{}, e
-	}
-	if o.Rev != rev {
-		return Object{}, ErrConflict
-	}
+	var o Object
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	next := "已驳回"
 	if approve {
+		o, e = get(ctx, tx, id)
+		if e != nil {
+			return Object{}, e
+		}
+		if o.Rev != rev {
+			return Object{}, ErrConflict
+		}
 		switch action {
 		case "update":
 			var patch Patch
