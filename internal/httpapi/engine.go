@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/CosmoGao/rollbook/internal/auth"
+	"github.com/CosmoGao/rollbook/internal/backup"
 	"github.com/CosmoGao/rollbook/internal/catalog"
 	"github.com/CosmoGao/rollbook/internal/secrets"
 	"github.com/CosmoGao/rollbook/internal/versioncheck"
@@ -144,7 +145,7 @@ func Error(err error) (int, APIError) {
 		return 409, APIError{"conflict", "Revision conflict", nil}
 	case errors.Is(err, versioncheck.ErrRunning):
 		return 409, APIError{"conflict", "Version check already running", nil}
-	case errors.Is(err, catalog.ErrInvalid), errors.Is(err, auth.ErrInvalid):
+	case errors.Is(err, catalog.ErrInvalid), errors.Is(err, auth.ErrInvalid), errors.Is(err, backup.ErrInvalid), strings.Contains(err.Error(), "unsupported schema_version"):
 		return 422, APIError{"invalid", "Invalid input", nil}
 	case errors.Is(err, secrets.ErrSecret):
 		return 422, APIError{"invalid", "Content rejected", nil}

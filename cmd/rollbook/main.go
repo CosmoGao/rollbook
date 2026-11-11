@@ -2,17 +2,20 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/CosmoGao/rollbook/internal/auth"
+	"github.com/CosmoGao/rollbook/internal/backup"
 	"github.com/CosmoGao/rollbook/internal/catalog"
 	"github.com/CosmoGao/rollbook/internal/db"
 	"github.com/CosmoGao/rollbook/internal/httpapi"
@@ -24,7 +27,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: rollbook serve|bootstrap-user|search|get|update")
+		fmt.Fprintln(os.Stderr, "usage: rollbook serve|bootstrap-user|search|get|update|export|import")
 		os.Exit(2)
 	}
 	var err error
@@ -92,6 +95,7 @@ func serve() error {
 	checker := &versioncheck.Checker{DB: database}
 	engine.VersionChecker = checker
 	checker.Start(ctx)
+	go periodicBackup(ctx, database, filepath.Join(filepath.Dir(path), "rollbook-latest.yaml"))
 	addr := os.Getenv("ROLLBOOK_LISTEN_ADDR")
 	if addr == "" {
 		addr = "127.0.0.1:8080"
@@ -137,4 +141,28 @@ func handler(engines ...httpapi.Engine) http.Handler {
 		w.Header().Set("Cache-Control", "no-store")
 		mux.ServeHTTP(w, r)
 	})
+}
+
+// periodicBackup persists a private complete snapshot on startup and every day.
+func periodicBackup(ctx context.Context, database *sql.DB, path string) {
+	run := func() {
+		data, err := (backup.Service{DB: database}).Export(ctx, "full")
+		if err == nil {
+			err = backup.WriteAtomic(path, data)
+		}
+		if err != nil && ctx.Err() == nil {
+			log.Printf("backup failed: %v", err)
+		}
+	}
+	run()
+	ticker := time.NewTicker(24 * time.Hour)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			run()
+		}
+	}
 }

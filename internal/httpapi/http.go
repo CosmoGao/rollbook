@@ -46,6 +46,10 @@ func (e Engine) Handler() http.Handler {
 			WriteError(w, err)
 			return
 		}
+		if strings.HasPrefix(r.URL.Path, "/api/backup/") {
+			e.backup(w, r, p)
+			return
+		}
 		if adminPath(r.URL.Path) || (r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/api/assets/")) {
 			if !p.IsUser() {
 				WriteError(w, auth.ErrForbidden)

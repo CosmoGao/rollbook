@@ -15,7 +15,7 @@ import (
 
 func runCLI(args []string) error {
 	if len(args) < 1 {
-		return errors.New("usage: rollbook search <query>|get <id>|update <id> <rev> <patch-json> <reason>")
+		return errors.New("usage: rollbook search <query>|get <id>|update <id> <rev> <patch-json> <reason>|export|import <file.yaml>")
 	}
 	base := strings.TrimRight(os.Getenv("ROLLBOOK_URL"), "/")
 	if base == "" {
@@ -38,6 +38,24 @@ func runCLI(args []string) error {
 			return errors.New("usage: rollbook get <id>")
 		}
 		path = "/api/assets/" + url.PathEscape(args[1])
+	case "export":
+		if len(args) != 1 {
+			return errors.New("usage: rollbook export")
+		}
+		path = "/api/backup/export?kind=catalog"
+	case "import":
+		if len(args) != 2 {
+			return errors.New("usage: rollbook import <file.yaml>")
+		}
+		var err error
+		body, err = os.ReadFile(args[1])
+		if err != nil {
+			return err
+		}
+		if len(body) > 16<<20 {
+			return errors.New("import file too large")
+		}
+		method, path = http.MethodPost, "/api/backup/import"
 	case "update":
 		if len(args) != 5 {
 			return errors.New("usage: rollbook update <id> <rev> <patch-json> <reason>")
@@ -54,7 +72,7 @@ func runCLI(args []string) error {
 		method = http.MethodPatch
 		path = "/api/assets/" + url.PathEscape(args[1])
 	default:
-		return errors.New("usage: rollbook search|get|update")
+		return errors.New("usage: rollbook search|get|update|export|import")
 	}
 	req, err := http.NewRequest(method, base+path, bytes.NewReader(body))
 	if err != nil {
@@ -62,7 +80,11 @@ func runCLI(args []string) error {
 	}
 	req.Header.Set("Authorization", "Bearer "+key)
 	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+		if args[0] == "import" {
+			req.Header.Set("Content-Type", "application/yaml")
+		} else {
+			req.Header.Set("Content-Type", "application/json")
+		}
 	}
 	client := &http.Client{Timeout: 15 * time.Second}
 	res, err := client.Do(req)
@@ -70,7 +92,7 @@ func runCLI(args []string) error {
 		return err
 	}
 	defer res.Body.Close()
-	data, err := io.ReadAll(io.LimitReader(res.Body, 2<<20))
+	data, err := io.ReadAll(io.LimitReader(res.Body, 17<<20))
 	if err != nil {
 		return err
 	}

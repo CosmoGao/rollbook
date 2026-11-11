@@ -47,3 +47,9 @@ docker run --rm -p 127.0.0.1:8080:8080 -v rollbook-data:/data rollbook:local
 容器内使用 `/data/rollbook.db`，监听 8080。示例只把端口发布到宿主机回环地址。实际部署应由内网反向代理接入，并持久化 `/data`。
 
 GitHub Actions 在 PR 上运行测试、vet 和镜像构建；推送 main 后使用仓库自带的 `GITHUB_TOKEN` 发布 `ghcr.io/<owner>/<repo>:latest`。工作流不部署服务。
+
+## 备份与恢复
+
+服务启动时及每 24 小时在数据库目录原子写入 `rollbook-latest.yaml`（0600）。网页的「备份与恢复」可下载清册或完整备份、提交 YAML 并查看预览计数；批准后恢复会清除所有会话，需重新登录。完整备份含密码与 key 的哈希，请按敏感文件管理。
+
+CLI 使用 `ROLLBOOK_KEY`：`rollbook export > catalog.yaml` 下载清册；`rollbook import catalog.yaml` 校验并提交待确认导入，网页用户批准后才会恢复。只读 key 可以导出，提议/直接写 key 可以提交导入，任何 key 都无法下载完整备份或批准恢复。未知 `schema_version` 和校验不通过的文件会被拒绝，旧数据库保持不变。
