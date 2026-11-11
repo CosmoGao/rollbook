@@ -102,8 +102,38 @@ func TestToolsAndREST(t *testing.T) {
 		failed, _ := result["isError"].(bool)
 		return result["structuredContent"], failed
 	}
+	_, initialization := request("POST", "/mcp", keys[auth.Read], map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize"})
+	initResult := initialization["result"].(map[string]any)
+	if initResult["instructions"] == "" || initResult["serverInfo"].(map[string]any)["version"] == "1.0.0" {
+		t.Fatalf("MCP initialize incomplete: %v", initResult)
+	}
 	_, listing := request("POST", "/mcp", keys[auth.Read], map[string]any{"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
 	listed := listing["result"].(map[string]any)["tools"].([]any)
+	for _, item := range listed {
+		tool := item.(map[string]any)
+		if len(tool["description"].(string)) < 20 {
+			t.Fatalf("missing tool description: %v", tool)
+		}
+		schema := tool["inputSchema"].(map[string]any)
+		if schema["type"] != "object" {
+			t.Fatalf("invalid schema: %v", tool)
+		}
+		if tool["name"] == "update" || tool["name"] == "propose_change" {
+			patch := schema["properties"].(map[string]any)["patch"].(map[string]any)
+			fields := patch["properties"].(map[string]any)["fields"].(map[string]any)["properties"].(map[string]any)
+			for _, name := range []string{"network_id", "host_id", "protocol", "port", "url"} {
+				if fields[name] == nil {
+					t.Fatalf("patch lacks %s", name)
+				}
+			}
+		}
+		if tool["name"] == "create" {
+			object := schema["properties"].(map[string]any)["object"].(map[string]any)
+			if len(object["oneOf"].([]any)) < 10 {
+				t.Fatal("create object variants missing")
+			}
+		}
+	}
 	if len(listed) != 17 {
 		t.Fatalf("tools=%d", len(listed))
 	}

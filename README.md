@@ -25,6 +25,20 @@ rollbook get service:overleaf
 rollbook update service:overleaf 1 '{"name":"Overleaf 2"}' '修正名称'
 ```
 
+## 从空库到第一次查询
+
+1. 按「本地运行」或 Compose 部署章节创建首用户并启动服务，然后登录网页。空库会提示建立首个站点，或导入使用 `192.0.2.0/24`、`.invalid` 域名的**虚构示例**。也可以到「资产维护」手工新建站点、网段、主机等。
+2. 在「Key 管理」创建只读 Key。Token 只显示一次；页面提供复制按钮、CLI 环境变量，以及 Claude Code、Codex、Cursor 的 Streamable HTTP 配置片段。将对应片段放入客户端配置，替换其中的地址为实际可访问的 HTTPS 地址。配置包含 Key，不要提交到版本库。
+3. 将 [`skills/rollbook/SKILL.md`](skills/rollbook/SKILL.md) 复制到客户端的 `skills/rollbook/SKILL.md`（Codex 可放在 `~/.agents/skills/rollbook/SKILL.md`；Claude Code 放在 `~/.claude/skills/rollbook/SKILL.md`；Cursor 放在项目 `.cursor/skills/rollbook/SKILL.md`），重启客户端后让 agent “搜索示例站点并读取详情”。也可用 CLI 验证：
+
+```sh
+export ROLLBOOK_URL='https://rollbook.example.invalid'
+export ROLLBOOK_KEY='<网页显示的一次性 token>'
+rollbook search 示例
+```
+
+若要让 agent 提议新增或修改，另建 `propose` 级 Key，按 Skill 的查询、读取 rev、提交提议流程操作，最后在网页「待确认」审批。`write` 级 Key 会直接生效，只授予可信 agent。
+
 ## 上游版本检查
 
 在服务的 `upstream_json` 中配置一个上游，并为服务建立版本记录（首次检查也会自动创建空白版本记录）：

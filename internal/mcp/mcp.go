@@ -60,13 +60,13 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	switch req.Method {
 	case "initialize":
-		httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"protocolVersion": "2025-03-26", "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]string{"name": "rollbook", "version": "1.0.0"}}})
+		httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"protocolVersion": "2025-03-26", "capabilities": map[string]any{"tools": map[string]any{}}, "instructions": "先 search 再 get_asset 读取 ID 与 rev；创建用 create(object,base_rev=0,reason)，提议级 key 需网页审批。更新先读取最新 rev，冲突时重读，禁止盲目覆盖。只读 key 不可写；不要保存密码、私钥、token，只保存凭据管理器的引用。每次写入给出具体 reason。", "serverInfo": map[string]string{"name": "rollbook", "version": programVersion()}}})
 	case "ping":
 		httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{}})
 	case "tools/list":
 		tools := make([]map[string]any, 0, len(httpapi.Tools))
 		for _, name := range httpapi.Tools {
-			tools = append(tools, map[string]any{"name": name, "description": "Rollbook " + name, "inputSchema": schema(name)})
+			tools = append(tools, map[string]any{"name": name, "description": descriptions[name], "inputSchema": schema(name)})
 		}
 		httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"tools": tools}})
 	case "tools/call":
@@ -115,27 +115,31 @@ func schema(name string) map[string]any {
 		add("id", "string", true)
 	}
 	switch name {
-	case "put_context", "record_note", "propose_change", "update", "mark_verified":
+	case "put_context", "record_note", "update", "mark_verified":
 		add("rev", "integer", true)
+		add("reason", "string", true)
+	case "propose_change":
+		add("rev", "integer", false)
 		add("reason", "string", true)
 	}
 	if name == "update" || name == "propose_change" {
-		props["patch"] = map[string]string{"type": "object"}
+		props["patch"] = patchSchema()
 	}
 	if name == "propose_change" {
-		add("action", "string", false)
-		add("object", "object", false)
+		props["action"] = map[string]any{"type": "string", "enum": []string{"create", "update", "delete"}}
+		props["object"] = objectSchema()
 		add("base_rev", "integer", false)
 	}
 	if name == "create" {
-		add("object", "object", true)
+		props["object"] = objectSchema()
+		required = append(required, "object")
 		add("base_rev", "integer", true)
 		add("reason", "string", true)
 	}
 	if name == "put_context" {
 		add("body_md", "string", false)
 		add("expires_at", "string", false)
-		add("object", "object", false)
+		props["object"] = objectSchema()
 	}
 	if name == "record_note" {
 		add("kind", "string", true)
@@ -151,5 +155,9 @@ func schema(name string) map[string]any {
 		add("object_id", "string", false)
 		add("state", "string", false)
 	}
-	return map[string]any{"type": "object", "properties": props, "required": required, "additionalProperties": false}
+	result := map[string]any{"type": "object", "properties": props, "required": required, "additionalProperties": false}
+	if name == "propose_change" {
+		result["anyOf"] = []any{map[string]any{"required": []string{"action", "object", "base_rev"}}, map[string]any{"required": []string{"id", "rev", "patch"}}}
+	}
+	return result
 }
