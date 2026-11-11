@@ -256,6 +256,23 @@ func TestToolsAndREST(t *testing.T) {
 	if status != 422 || bytes.Contains(encoded, []byte("hidden-value")) || response["fields"].([]any)[0].(map[string]any)["field"] != "object.name" {
 		t.Fatal(status, response)
 	}
+	for _, tc := range []struct {
+		object map[string]any
+		field  string
+	}{
+		{map[string]any{"id": "dependency:self", "type": "dependency", "name": "自依赖", "fields": map[string]any{"from_id": "service:overleaf", "to_id": "service:overleaf", "kind": "手工"}}, "fields.to_id"},
+		{map[string]any{"id": "endpoint:repeat", "type": "endpoint", "name": "重复反代", "fields": map[string]any{"service_id": "service:overleaf", "kind": "反向代理", "url": "https://repeat.invalid", "via_json": []string{"service:overleaf", "service:overleaf"}}}, "fields.via_json"},
+	} {
+		input := map[string]any{"object": tc.object, "base_rev": 0, "reason": "校验"}
+		status, response = request("POST", "/api/assets", keys[auth.Write], input)
+		if status != 422 || response["code"] != "validation" || response["fields"].([]any)[0].(map[string]any)["field"] != tc.field {
+			t.Fatal(status, response)
+		}
+		structured, failed = call("create", keys[auth.Write], input)
+		if !failed || structured.(map[string]any)["code"] != "validation" {
+			t.Fatal(structured, failed)
+		}
+	}
 	p, err := a.Authenticate(ctx, keys[auth.Read])
 	if err != nil {
 		t.Fatal(err)

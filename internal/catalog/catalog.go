@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/netip"
 	"sort"
@@ -86,7 +85,7 @@ func (s Store) createTx(ctx context.Context, tx *sql.Tx, o Object, actor string,
 		return o, ErrInvalid
 	}
 	if o.Rev != 0 || !o.CreatedAt.IsZero() || !o.UpdatedAt.IsZero() {
-		return o, errors.New("client audit fields are not accepted")
+		return o, invalidField("object", "审计字段由服务端生成", "省略 rev 和时间字段")
 	}
 	if o.Fields == nil {
 		o.Fields = map[string]any{}
@@ -125,7 +124,7 @@ func (s Store) createTx(ctx context.Context, tx *sql.Tx, o Object, actor string,
 			switch x := v.(type) {
 			case string:
 				if !json.Valid([]byte(x)) {
-					return o, fmt.Errorf("invalid JSON in %s", c)
+					return o, invalidField("fields."+c, "JSON 格式无效", "有效 JSON")
 				}
 			default:
 				b, e := json.Marshal(v)
@@ -294,13 +293,16 @@ func validate(ctx context.Context, tx *sql.Tx, o *Object) error {
 		seen := map[string]bool{o.ID: true}
 		for parent != "" {
 			if seen[parent] {
-				return errors.New("parent cycle")
+				return invalidField("fields."+field, "父级关系形成循环", "不形成循环的父级")
 			}
 			seen[parent] = true
 			var next sql.NullString
 			e := tx.QueryRowContext(ctx, "SELECT "+field+" FROM "+table+" WHERE id=?", parent).Scan(&next)
+			if e == sql.ErrNoRows {
+				return invalidField("fields."+field, "父级对象不存在", "现有父级对象")
+			}
 			if e != nil {
-				return fmt.Errorf("parent reference: %w", e)
+				return e
 			}
 			parent = next.String
 		}
@@ -308,27 +310,29 @@ func validate(ctx context.Context, tx *sql.Tx, o *Object) error {
 	if o.Type == "endpoint" {
 		ids, e := stringList(o.Fields["via_json"])
 		if e != nil {
-			return e
+			return invalidField("fields.via_json", "反代列表格式无效", "服务 ID 数组")
 		}
 		seen := map[string]bool{}
 		for _, id := range ids {
 			if seen[id] {
-				return errors.New("repeated proxy in via")
+				return invalidField("fields.via_json", "反代列表不能重复", "不重复的服务 ID 数组")
 			}
 			seen[id] = true
 			var typ string
-			if e = tx.QueryRowContext(ctx, "SELECT type FROM objects WHERE id=?", id).Scan(&typ); e != nil {
-				return fmt.Errorf("via reference: %w", e)
+			if e = tx.QueryRowContext(ctx, "SELECT type FROM objects WHERE id=?", id).Scan(&typ); e == sql.ErrNoRows {
+				return invalidField("fields.via_json", "反代服务不存在", "现有服务 ID")
+			} else if e != nil {
+				return e
 			}
 			if typ != "service" {
-				return errors.New("via must reference services")
+				return invalidField("fields.via_json", "反代必须引用服务", "服务 ID")
 			}
 		}
 	}
 	if o.Type == "context" {
 		ids, e := stringList(o.Fields["related_ids_json"])
 		if e != nil {
-			return e
+			return invalidField("fields.related_ids_json", "关联列表格式无效", "对象 ID 数组")
 		}
 		for _, id := range ids {
 			var n int
@@ -336,7 +340,7 @@ func validate(ctx context.Context, tx *sql.Tx, o *Object) error {
 				return e
 			}
 			if n == 0 {
-				return fmt.Errorf("missing related object %s", id)
+				return invalidField("fields.related_ids_json", "关联对象不存在", "现有对象 ID")
 			}
 		}
 		if o.Fields["expires_at"] == nil {
@@ -351,7 +355,7 @@ func validate(ctx context.Context, tx *sql.Tx, o *Object) error {
 	if o.Type == "dependency" {
 		from, to := str(o.Fields["from_id"]), str(o.Fields["to_id"])
 		if from == to {
-			return errors.New("self dependency")
+			return invalidField("fields.to_id", "依赖不能指向自身", "与 from_id 不同的对象 ID")
 		}
 		if e := checkCycle(ctx, tx, from, to); e != nil {
 			return e
@@ -383,7 +387,7 @@ func stringList(v any) ([]string, error) {
 }
 func checkCycle(ctx context.Context, tx *sql.Tx, from, to string) error {
 	if from == to {
-		return errors.New("dependency cycle")
+		return invalidField("fields.to_id", "依赖形成循环", "不形成循环的对象 ID")
 	}
 	var n int
 	e := tx.QueryRowContext(ctx, `WITH RECURSIVE reach(id) AS (SELECT to_id FROM dependencies WHERE from_id=? UNION SELECT d.to_id FROM dependencies d JOIN reach r ON d.from_id=r.id) SELECT count(*) FROM reach WHERE id=?`, to, from).Scan(&n)
@@ -391,7 +395,7 @@ func checkCycle(ctx context.Context, tx *sql.Tx, from, to string) error {
 		return e
 	}
 	if n > 0 {
-		return errors.New("dependency cycle")
+		return invalidField("fields.to_id", "依赖形成循环", "不形成循环的对象 ID")
 	}
 	return nil
 }
