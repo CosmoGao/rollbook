@@ -101,7 +101,7 @@ func TestSessionCSRFAndCookie(t *testing.T) {
 	if _, e = a.Session(ctx, sid, csrf, true); e != nil {
 		t.Fatal(e)
 	}
-	c := auth.SessionCookie(sid)
+	c := auth.SessionCookie(sid, false)
 	if !c.Secure || !c.HttpOnly || c.SameSite == 0 {
 		t.Fatal(c)
 	}

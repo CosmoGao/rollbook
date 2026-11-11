@@ -152,11 +152,11 @@ func (s Service) Logout(ctx context.Context, session string) error {
 	_, e := s.DB.ExecContext(ctx, "DELETE FROM sessions WHERE id_hash=?", s.digest("session", session))
 	return e
 }
-func SessionCookie(value string) *http.Cookie {
-	return &http.Cookie{Name: "rollbook_session", Value: value, Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode, MaxAge: 12 * 3600}
+func SessionCookie(value string, allowInsecureHTTP bool) *http.Cookie {
+	return &http.Cookie{Name: "rollbook_session", Value: value, Path: "/", HttpOnly: true, Secure: !allowInsecureHTTP, SameSite: http.SameSiteStrictMode, MaxAge: 12 * 3600}
 }
-func ClearSessionCookie() *http.Cookie {
-	c := SessionCookie("")
+func ClearSessionCookie(allowInsecureHTTP bool) *http.Cookie {
+	c := SessionCookie("", allowInsecureHTTP)
 	c.MaxAge = -1
 	return c
 }

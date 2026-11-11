@@ -37,6 +37,10 @@ func (e Engine) Principal(r *http.Request) (auth.Principal, error) {
 
 func (e Engine) Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/config" && r.Method == http.MethodGet {
+			WriteJSON(w, 200, map[string]bool{"allow_insecure_http": e.AllowInsecureHTTP})
+			return
+		}
 		if r.URL.Path == "/api/auth/login" {
 			e.login(w, r)
 			return

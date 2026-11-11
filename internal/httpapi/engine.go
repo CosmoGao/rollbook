@@ -17,9 +17,10 @@ import (
 )
 
 type Engine struct {
-	Auth           auth.Service
-	Catalog        catalog.Service
-	VersionChecker *versioncheck.Checker
+	Auth              auth.Service
+	Catalog           catalog.Service
+	VersionChecker    *versioncheck.Checker
+	AllowInsecureHTTP bool
 }
 type Args map[string]json.RawMessage
 

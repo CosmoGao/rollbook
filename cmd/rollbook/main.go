@@ -91,7 +91,11 @@ func serve() error {
 	if len(pepper) < 32 {
 		return fmt.Errorf("ROLLBOOK_AUTH_PEPPER must contain at least 32 bytes")
 	}
-	engine := httpapi.Engine{Auth: auth.Service{DB: database, Pepper: []byte(pepper)}, Catalog: catalog.Service{Store: catalog.Store{DB: database}}}
+	allowInsecureHTTP := insecureHTTPEnabled()
+	engine := httpapi.Engine{Auth: auth.Service{DB: database, Pepper: []byte(pepper)}, Catalog: catalog.Service{Store: catalog.Store{DB: database}}, AllowInsecureHTTP: allowInsecureHTTP}
+	if allowInsecureHTTP {
+		log.Print("警告：已启用 HTTP 模式；登录口令和 API Key 可能在网络中明文传输，仅可用于可信内网。")
+	}
 	checker := &versioncheck.Checker{DB: database}
 	engine.VersionChecker = checker
 	checker.Start(ctx)
@@ -115,6 +119,10 @@ func serve() error {
 		defer cancel()
 		return server.Shutdown(shutdownCtx)
 	}
+}
+
+func insecureHTTPEnabled() bool {
+	return os.Getenv("ROLLBOOK_ALLOW_INSECURE_HTTP") == "true"
 }
 
 func handler(engines ...httpapi.Engine) http.Handler {
