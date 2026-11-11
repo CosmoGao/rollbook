@@ -85,7 +85,8 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			status, apiErr := httpapi.Error(err)
 			_ = status
-			httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"content": []any{map[string]string{"type": "text", "text": apiErr.Message}}, "isError": true, "code": apiErr.Code}})
+			b, _ := json.Marshal(apiErr)
+			httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"content": []any{map[string]string{"type": "text", "text": string(b)}}, "isError": true, "code": apiErr.Code, "structuredContent": apiErr}})
 			return
 		}
 		data, _ := json.Marshal(result)
@@ -123,6 +124,13 @@ func schema(name string) map[string]any {
 	}
 	if name == "propose_change" {
 		add("action", "string", false)
+		add("object", "object", false)
+		add("base_rev", "integer", false)
+	}
+	if name == "create" {
+		add("object", "object", true)
+		add("base_rev", "integer", true)
+		add("reason", "string", true)
 	}
 	if name == "put_context" {
 		add("body_md", "string", false)

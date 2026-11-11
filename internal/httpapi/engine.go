@@ -37,13 +37,34 @@ func (a Args) Object() (catalog.Object, error) {
 	err := json.Unmarshal(a["object"], &o)
 	return o, err
 }
+func (a Args) CreateRev() (int64, error) {
+	var rev int64
+	if len(a["base_rev"]) == 0 || json.Unmarshal(a["base_rev"], &rev) != nil {
+		return 0, &catalog.ValidationError{Fields: []catalog.FieldError{{Field: "base_rev", Reason: "创建时必须提供整数版本", Expected: "0"}}}
+	}
+	return rev, nil
+}
 
-var Tools = []string{"search", "get_asset", "get_service", "list_by_host", "list_by_network", "get_site", "topology", "list_outdated", "get_changes", "get_context", "put_context", "record_note", "propose_change", "update", "mark_verified", "check_versions"}
+var Tools = []string{"search", "get_asset", "get_service", "list_by_host", "list_by_network", "get_site", "topology", "list_outdated", "get_changes", "get_context", "put_context", "record_note", "propose_change", "create", "update", "mark_verified", "check_versions"}
 
 func (e Engine) Call(ctx context.Context, p auth.Principal, op string, a Args, via string) (any, error) {
 	q := catalog.Query{Service: e.Catalog}
 	id := a.String("id")
 	switch op {
+	case "create":
+		rev, err := a.CreateRev()
+		if err != nil {
+			return nil, err
+		}
+		o, err := a.Object()
+		if err != nil || len(a["object"]) == 0 {
+			return nil, &catalog.ValidationError{Fields: []catalog.FieldError{{Field: "object", Reason: "对象必填且必须是有效 JSON", Expected: "对象"}}}
+		}
+		if p.Level == auth.Propose && !p.IsUser() {
+			changeID, err := e.Catalog.ProposeCreate(ctx, p, o, rev, a.String("reason"), via)
+			return map[string]string{"id": changeID, "action": "create", "state": "待确认"}, err
+		}
+		return e.Catalog.CreateAsset(ctx, p, o, rev, a.String("reason"), via)
 	case "search":
 		return q.Search(ctx, p, a.String("q"))
 	case "get_asset":
@@ -99,6 +120,18 @@ func (e Engine) Call(ctx context.Context, p auth.Principal, op string, a Args, v
 		noteID, err := e.Catalog.RecordNote(ctx, p, id, a.Int("rev"), a.String("kind"), a.String("body_md"), a.String("reason"), via)
 		return map[string]string{"id": noteID}, err
 	case "propose_change":
+		if a.String("action") == "create" {
+			rev, err := a.CreateRev()
+			if err != nil {
+				return nil, err
+			}
+			o, err := a.Object()
+			if err != nil || len(a["object"]) == 0 {
+				return nil, &catalog.ValidationError{Fields: []catalog.FieldError{{Field: "object", Reason: "对象必填且必须是有效 JSON", Expected: "对象"}}}
+			}
+			changeID, err := e.Catalog.ProposeCreate(ctx, p, o, rev, a.String("reason"), via)
+			return map[string]string{"id": changeID}, err
+		}
 		if a.String("action") == "delete" {
 			changeID, err := e.Catalog.ProposeDelete(ctx, p, id, a.Int("rev"), a.String("reason"), via)
 			return map[string]string{"id": changeID}, err
@@ -131,33 +164,38 @@ func (e Engine) Call(ctx context.Context, p auth.Principal, op string, a Args, v
 }
 
 type APIError struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	Details any    `json:"details,omitempty"`
+	Code    string               `json:"code"`
+	Message string               `json:"message"`
+	Details any                  `json:"details,omitempty"`
+	Fields  []catalog.FieldError `json:"fields,omitempty"`
 }
 
 func Error(err error) (int, APIError) {
+	var validation *catalog.ValidationError
+	if errors.As(err, &validation) {
+		return 422, APIError{Code: "validation", Message: "Validation failed", Fields: validation.Fields}
+	}
 	switch {
 	case errors.Is(err, auth.ErrUnauthorized):
-		return 401, APIError{"unauthorized", "Authentication required", nil}
+		return 401, APIError{Code: "unauthorized", Message: "Authentication required"}
 	case errors.Is(err, auth.ErrForbidden):
-		return 403, APIError{"forbidden", "Permission denied", nil}
+		return 403, APIError{Code: "forbidden", Message: "Permission denied"}
 	case errors.Is(err, catalog.ErrConflict):
-		return 409, APIError{"conflict", "Revision conflict", nil}
+		return 409, APIError{Code: "conflict", Message: "Revision conflict"}
 	case errors.Is(err, versioncheck.ErrRunning):
-		return 409, APIError{"conflict", "Version check already running", nil}
+		return 409, APIError{Code: "conflict", Message: "Version check already running"}
 	case errors.Is(err, catalog.ErrInvalid), errors.Is(err, auth.ErrInvalid), errors.Is(err, backup.ErrInvalid), strings.Contains(err.Error(), "unsupported schema_version"):
-		return 422, APIError{"invalid", "Invalid input", nil}
+		return 422, APIError{Code: "invalid", Message: "Invalid input"}
 	case errors.Is(err, secrets.ErrSecret):
-		return 422, APIError{"invalid", "Content rejected", nil}
+		return 422, APIError{Code: "invalid", Message: "Content rejected"}
 	case strings.Contains(err.Error(), "constraint failed"), strings.Contains(err.Error(), "invalid JSON"), strings.Contains(err.Error(), "unknown "), strings.Contains(err.Error(), "required"), strings.Contains(err.Error(), "must "), strings.Contains(err.Error(), "reference"), strings.Contains(err.Error(), "cycle"):
-		return 422, APIError{"invalid", "Invalid input", nil}
+		return 422, APIError{Code: "invalid", Message: "Invalid input"}
 	case strings.Contains(err.Error(), "depth must"), strings.Contains(err.Error(), "center must"):
-		return 422, APIError{"invalid", "Invalid input", nil}
+		return 422, APIError{Code: "invalid", Message: "Invalid input"}
 	case strings.Contains(err.Error(), "sql: no rows"):
-		return 404, APIError{"not_found", "Not found", nil}
+		return 404, APIError{Code: "not_found", Message: "Not found"}
 	default:
-		return 500, APIError{"internal", "Internal error", nil}
+		return 500, APIError{Code: "internal", Message: "Internal error"}
 	}
 }
 
