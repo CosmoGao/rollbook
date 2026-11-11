@@ -7,6 +7,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net/netip"
 	"strings"
 	"time"
 
@@ -124,6 +126,8 @@ func (s Service) applyUpdate(ctx context.Context, tx *sql.Tx, id string, rev int
 	if o.Type == "note" || o.Type == "change" || o.Type == "dependency" || o.Type == "context" {
 		return o, auth.ErrForbidden
 	}
+	oldService := str(o.Fields["service_id"])
+	oldAddress := str(o.Fields["address"])
 	if patch.Name != nil {
 		o.Name = *patch.Name
 	}
@@ -152,11 +156,23 @@ func (s Service) applyUpdate(ctx context.Context, tx *sql.Tx, id string, rev int
 		}
 		o.Fields[k] = v
 	}
+	if o.Type == "ip" && str(o.Fields["address"]) != oldAddress {
+		// 旧网段来自已存对象，不应当被当成用户指定的新网段。
+		if _, supplied := patch.Fields["network_id"]; !supplied {
+			delete(o.Fields, "network_id")
+		}
+		o.Name = str(o.Fields["address"])
+	}
 	if o.Name == "" {
 		return o, ErrInvalid
 	}
 	if e = validate(ctx, tx, &o); e != nil {
 		return o, e
+	}
+	if o.Type == "host" {
+		if e = validateHostIPs(ctx, tx, o.ID, str(o.Fields["location_id"])); e != nil {
+			return o, e
+		}
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	aliases, _ := json.Marshal(nonNil(o.Aliases))
@@ -185,6 +201,11 @@ func (s Service) applyUpdate(ctx context.Context, tx *sql.Tx, id string, rev int
 			}
 		}
 		if _, e = tx.ExecContext(ctx, "UPDATE "+tables[o.Type]+" SET "+k+"=? WHERE id=?", v, id); e != nil {
+			return o, e
+		}
+	}
+	if o.Type == "ip" {
+		if _, e = tx.ExecContext(ctx, "UPDATE ips SET network_id=? WHERE id=?", o.Fields["network_id"], id); e != nil {
 			return o, e
 		}
 	}
@@ -218,6 +239,13 @@ func (s Service) applyUpdate(ctx context.Context, tx *sql.Tx, id string, rev int
 		if e = generate(ctx, tx, o, actor); e != nil {
 			return o, e
 		}
+		if o.Type == "endpoint" {
+			for _, serviceID := range []string{oldService, str(o.Fields["service_id"])} {
+				if e = regenerateProxyEdges(ctx, tx, serviceID, actor); e != nil {
+					return o, e
+				}
+			}
+		}
 	}
 	if _, e = tx.ExecContext(ctx, "DELETE FROM search_documents WHERE object_id=?", id); e != nil {
 		return o, e
@@ -229,6 +257,119 @@ func (s Service) applyUpdate(ctx context.Context, tx *sql.Tx, id string, rev int
 	o.UpdatedAt, _ = time.Parse(time.RFC3339Nano, now)
 	o.UpdatedBy = actor
 	return o, nil
+}
+
+func validateHostIPs(ctx context.Context, tx *sql.Tx, hostID, locationID string) error {
+	var site string
+	if err := tx.QueryRowContext(ctx, `WITH RECURSIVE parents(id,parent_id,kind) AS (
+ SELECT id,parent_id,kind FROM locations WHERE id=?
+ UNION ALL SELECT l.id,l.parent_id,l.kind FROM locations l JOIN parents p ON p.parent_id=l.id
+ ) SELECT id FROM parents WHERE kind='站点' LIMIT 1`, locationID).Scan(&site); err != nil {
+		return fmt.Errorf("location_id: %w", err)
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT id,address FROM ips WHERE host_id=?`, hostID)
+	if err != nil {
+		return err
+	}
+	type hostIP struct{ id, address string }
+	var ips []hostIP
+	for rows.Next() {
+		var ip hostIP
+		if err = rows.Scan(&ip.id, &ip.address); err != nil {
+			rows.Close()
+			return err
+		}
+		ips = append(ips, ip)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return err
+	}
+	for _, ip := range ips {
+		addr, err := netip.ParseAddr(ip.address)
+		if err != nil {
+			return err
+		}
+		matches, best := []string{}, -1
+		networks, err := tx.QueryContext(ctx, `WITH RECURSIVE places(id) AS (
+ SELECT ? UNION ALL SELECT l.id FROM locations l JOIN places p ON l.parent_id=p.id
+ ) SELECT n.id,n.cidr FROM networks n JOIN places p ON n.location_id=p.id`, site)
+		if err != nil {
+			return err
+		}
+		for networks.Next() {
+			var id, cidr string
+			if err = networks.Scan(&id, &cidr); err != nil {
+				networks.Close()
+				return err
+			}
+			prefix, parseErr := netip.ParsePrefix(cidr)
+			if parseErr != nil {
+				networks.Close()
+				return parseErr
+			}
+			if prefix.Contains(addr) {
+				if prefix.Bits() > best {
+					best, matches = prefix.Bits(), nil
+				}
+				if prefix.Bits() == best {
+					matches = append(matches, id)
+				}
+			}
+		}
+		err = networks.Err()
+		networks.Close()
+		if err != nil {
+			return err
+		}
+		if len(matches) != 1 {
+			return fmt.Errorf("location_id: IP %s (%s) does not belong to exactly one network in site %s", ip.address, ip.id, site)
+		}
+		if _, err = tx.ExecContext(ctx, `UPDATE ips SET network_id=? WHERE id=?`, matches[0], ip.id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func regenerateProxyEdges(ctx context.Context, tx *sql.Tx, serviceID, actor string) error {
+	if serviceID == "" {
+		return nil
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT e.id,e.via_json FROM endpoints e WHERE e.service_id=? ORDER BY e.id`, serviceID)
+	if err != nil {
+		return err
+	}
+	type endpoint struct {
+		id  string
+		via []string
+	}
+	var endpoints []endpoint
+	for rows.Next() {
+		var id, raw string
+		if err = rows.Scan(&id, &raw); err != nil {
+			rows.Close()
+			return err
+		}
+		via, parseErr := stringList(raw)
+		if parseErr != nil {
+			rows.Close()
+			return parseErr
+		}
+		endpoints = append(endpoints, endpoint{id, via})
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return err
+	}
+	for _, ep := range endpoints {
+		if err = generate(ctx, tx, Object{ID: ep.id, Type: "endpoint", Fields: map[string]any{"service_id": serviceID, "via_json": ep.via}}, actor); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Propose records an immutable review request; approval rechecks its base revision.

@@ -381,13 +381,19 @@ func generate(ctx context.Context, tx *sql.Tx, o Object, actor string) error {
 	}
 	if o.Type == "endpoint" {
 		ids, _ := stringList(o.Fields["via_json"])
-		prev := str(o.Fields["service_id"])
-		for _, id := range ids {
-			edges = append(edges, [3]string{prev, id, "反代"})
-			prev = id
+		// 反代链属于入口；全局依赖图只记录服务使用的第一跳。
+		if len(ids) > 0 {
+			edges = append(edges, [3]string{str(o.Fields["service_id"]), ids[0], "反代"})
 		}
 	}
 	for i, edge := range edges {
+		var existing int
+		if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM dependencies WHERE from_id=? AND to_id=? AND kind=?`, edge[0], edge[1], edge[2]).Scan(&existing); err != nil {
+			return err
+		}
+		if existing != 0 {
+			continue
+		}
 		if err := checkCycle(ctx, tx, edge[0], edge[1]); err != nil {
 			return err
 		}
