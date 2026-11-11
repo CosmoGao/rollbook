@@ -43,6 +43,7 @@ function createKey(){modal('创建 Key',(box,close,overlay)=>{const form=el('for
 $('#login-form').onsubmit=async e=>{e.preventDefault();$('#login-error').textContent='';const f=new FormData(e.target);try{const p=await api('/api/auth/login',{method:'POST',body:JSON.stringify({login:f.get('login'),password:f.get('password')})});e.target.reset();showApp(p.login);navigate('search')}catch(err){$('#login-error').textContent=err.message}};
 $('#logout').onclick=async()=>{try{await api('/api/auth/logout',{method:'POST'})}finally{showLogin()}};
 document.querySelectorAll('#nav button[data-view]').forEach(b=>b.onclick=()=>navigate(b.dataset.view));
+api('/api/config').then(p=>{document.querySelectorAll('.http-mode-notice').forEach(el=>{el.hidden=!p.allow_insecure_http})}).catch(err=>{$('#login-error').textContent=err.message});
 api('/api/auth/session').then(p=>{showApp(p.login);navigate('search')}).catch(()=>showLogin());
 
 async function renderBackup(){add(root,heading('备份与恢复','清册导出用于迁移资产；完整备份含账号和 Key 哈希，仅网页用户可下载。恢复会清除所有登录会话。'));

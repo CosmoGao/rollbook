@@ -28,3 +28,17 @@ func TestHTTP(t *testing.T) {
 		}
 	}
 }
+
+func TestInsecureHTTPEnabled(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		want  bool
+	}{
+		{"", false}, {"false", false}, {"TRUE", false}, {"1", false}, {"true", true},
+	} {
+		t.Setenv("ROLLBOOK_ALLOW_INSECURE_HTTP", tc.value)
+		if got := insecureHTTPEnabled(); got != tc.want {
+			t.Errorf("value %q: got %t, want %t", tc.value, got, tc.want)
+		}
+	}
+}

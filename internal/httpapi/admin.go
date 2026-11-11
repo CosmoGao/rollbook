@@ -34,8 +34,8 @@ func decodeBody(w http.ResponseWriter, r *http.Request, v any) error {
 	}
 	return nil
 }
-func csrfCookie(value string, maxAge int) *http.Cookie {
-	return &http.Cookie{Name: "rollbook_csrf", Value: value, Path: "/", Secure: true, SameSite: http.SameSiteStrictMode, MaxAge: maxAge}
+func csrfCookie(value string, maxAge int, allowInsecureHTTP bool) *http.Cookie {
+	return &http.Cookie{Name: "rollbook_csrf", Value: value, Path: "/", Secure: !allowInsecureHTTP, SameSite: http.SameSiteStrictMode, MaxAge: maxAge}
 }
 func (e Engine) login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -59,8 +59,8 @@ func (e Engine) login(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	http.SetCookie(w, auth.SessionCookie(session))
-	http.SetCookie(w, csrfCookie(csrf, 12*3600))
+	http.SetCookie(w, auth.SessionCookie(session, e.AllowInsecureHTTP))
+	http.SetCookie(w, csrfCookie(csrf, 12*3600, e.AllowInsecureHTTP))
 	WriteJSON(w, 200, map[string]string{"login": p.Login})
 }
 func (e Engine) admin(w http.ResponseWriter, r *http.Request, p auth.Principal) {
@@ -83,8 +83,8 @@ func (e Engine) admin(w http.ResponseWriter, r *http.Request, p auth.Principal) 
 			WriteError(w, err)
 			return
 		}
-		http.SetCookie(w, auth.ClearSessionCookie())
-		http.SetCookie(w, csrfCookie("", -1))
+		http.SetCookie(w, auth.ClearSessionCookie(e.AllowInsecureHTTP))
+		http.SetCookie(w, csrfCookie("", -1, e.AllowInsecureHTTP))
 		WriteJSON(w, 200, map[string]bool{"ok": true})
 		return
 	case path == "/api/keys" && r.Method == http.MethodGet:
