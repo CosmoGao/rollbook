@@ -37,6 +37,10 @@ func (e Engine) Principal(r *http.Request) (auth.Principal, error) {
 
 func (e Engine) Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/auth/login" {
+			e.login(w, r)
+			return
+		}
 		p, err := e.Principal(r)
 		if err != nil {
 			WriteError(w, err)
@@ -47,7 +51,7 @@ func (e Engine) Handler() http.Handler {
 				WriteError(w, auth.ErrForbidden)
 				return
 			}
-			WriteJSON(w, 404, APIError{Code: "not_found", Message: "Not found"})
+			e.admin(w, r, p)
 			return
 		}
 		op, a, ok := route(r)
@@ -104,7 +108,7 @@ func route(r *http.Request) (string, Args, bool) {
 		return "", nil, false
 	}
 	q := r.URL.Query()
-	for _, key := range []string{"q", "object_id", "state"} {
+	for _, key := range []string{"q", "object_id", "state", "type"} {
 		if v := q.Get(key); v != "" {
 			a[key] = StringArg(v)
 		}
@@ -119,8 +123,12 @@ func route(r *http.Request) (string, Args, bool) {
 		switch {
 		case path == "api/search":
 			return "search", a, true
+		case path == "api/browse":
+			return "browse", a, true
 		case path == "api/versions/outdated":
 			return "list_outdated", a, true
+		case path == "api/assets/unverified":
+			return "list_unverified", a, true
 		case path == "api/changes":
 			return "get_changes", a, true
 		case path == "api/contexts":

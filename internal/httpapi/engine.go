@@ -60,6 +60,10 @@ func (e Engine) Call(ctx context.Context, p auth.Principal, op string, a Args, v
 		return q.Topology(ctx, p, id, depth)
 	case "list_outdated":
 		return q.Outdated(ctx, p)
+	case "list_unverified":
+		return q.Unverified(ctx, p)
+	case "browse":
+		return q.Browse(ctx, p, a.String("type"))
 	case "get_changes":
 		return q.Changes(ctx, p, a.String("object_id"), a.String("state"))
 	case "get_context":
