@@ -12,11 +12,13 @@ import (
 	"github.com/CosmoGao/rollbook/internal/auth"
 	"github.com/CosmoGao/rollbook/internal/catalog"
 	"github.com/CosmoGao/rollbook/internal/secrets"
+	"github.com/CosmoGao/rollbook/internal/versioncheck"
 )
 
 type Engine struct {
-	Auth    auth.Service
-	Catalog catalog.Service
+	Auth           auth.Service
+	Catalog        catalog.Service
+	VersionChecker *versioncheck.Checker
 }
 type Args map[string]json.RawMessage
 
@@ -114,7 +116,14 @@ func (e Engine) Call(ctx context.Context, p auth.Principal, op string, a Args, v
 	case "mark_verified":
 		return e.Catalog.MarkVerified(ctx, p, id, a.Int("rev"), a.String("reason"), via)
 	case "check_versions":
-		return q.CheckVersions(ctx, p)
+		if err := e.Catalog.CheckVersionsAllowed(p); err != nil {
+			return nil, err
+		}
+		checker := e.VersionChecker
+		if checker == nil {
+			checker = &versioncheck.Checker{DB: e.Catalog.Store.DB}
+		}
+		return checker.Run(ctx, false)
 	}
 	return nil, catalog.ErrInvalid
 }
@@ -133,6 +142,8 @@ func Error(err error) (int, APIError) {
 		return 403, APIError{"forbidden", "Permission denied", nil}
 	case errors.Is(err, catalog.ErrConflict):
 		return 409, APIError{"conflict", "Revision conflict", nil}
+	case errors.Is(err, versioncheck.ErrRunning):
+		return 409, APIError{"conflict", "Version check already running", nil}
 	case errors.Is(err, catalog.ErrInvalid), errors.Is(err, auth.ErrInvalid):
 		return 422, APIError{"invalid", "Invalid input", nil}
 	case errors.Is(err, secrets.ErrSecret):

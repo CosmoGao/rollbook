@@ -17,6 +17,7 @@ import (
 	"github.com/CosmoGao/rollbook/internal/db"
 	"github.com/CosmoGao/rollbook/internal/httpapi"
 	"github.com/CosmoGao/rollbook/internal/mcp"
+	"github.com/CosmoGao/rollbook/internal/versioncheck"
 	"github.com/CosmoGao/rollbook/web"
 	"golang.org/x/term"
 )
@@ -88,6 +89,9 @@ func serve() error {
 		return fmt.Errorf("ROLLBOOK_AUTH_PEPPER must contain at least 32 bytes")
 	}
 	engine := httpapi.Engine{Auth: auth.Service{DB: database, Pepper: []byte(pepper)}, Catalog: catalog.Service{Store: catalog.Store{DB: database}}}
+	checker := &versioncheck.Checker{DB: database}
+	engine.VersionChecker = checker
+	checker.Start(ctx)
 	addr := os.Getenv("ROLLBOOK_LISTEN_ADDR")
 	if addr == "" {
 		addr = "127.0.0.1:8080"
