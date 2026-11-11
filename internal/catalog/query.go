@@ -2,10 +2,12 @@ package catalog
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/CosmoGao/rollbook/internal/auth"
 	"github.com/CosmoGao/rollbook/internal/search"
+	"github.com/CosmoGao/rollbook/internal/versioncheck"
 )
 
 // Query 将所有传输入口的读取请求收敛到同一个授权边界。
@@ -91,7 +93,41 @@ func (q Query) ServiceDetail(ctx context.Context, p auth.Principal, idOrName str
 			return d, err
 		}
 	}
+	for i := range d.Versions {
+		if err = q.versionState(ctx, &d.Versions[i]); err != nil {
+			return d, err
+		}
+	}
 	return d, nil
+}
+
+func (q Query) versionState(ctx context.Context, o *Object) error {
+	var checkError, attempted sql.NullString
+	err := q.Service.Store.DB.QueryRowContext(ctx, `SELECT last_error,last_attempt_at FROM version_checks WHERE service_id=?`, o.Fields["service_id"]).Scan(&checkError, &attempted)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	if checkError.Valid {
+		o.Fields["check_error"] = checkError.String
+	}
+	if attempted.Valid {
+		o.Fields["last_attempt_at"] = attempted.String
+	}
+	current, _ := o.Fields["current_version"].(string)
+	latest, _ := o.Fields["latest_version"].(string)
+	if current == "" || latest == "" {
+		o.Fields["version_state"] = "待人工确认"
+		return nil
+	}
+	comparison, ok := versioncheck.Compare(current, latest)
+	if !ok {
+		o.Fields["version_state"] = "待人工确认"
+	} else if comparison < 0 {
+		o.Fields["version_state"] = "有新版本"
+	} else {
+		o.Fields["version_state"] = "已是最新"
+	}
+	return nil
 }
 
 func (q Query) collect(ctx context.Context, p auth.Principal, statement string, args []any, dst *[]Object) error {
@@ -130,8 +166,20 @@ func (q Query) Outdated(ctx context.Context, p auth.Principal) ([]Object, error)
 		return nil, err
 	}
 	out := []Object{}
-	err := q.collect(ctx, p, `SELECT id FROM versions WHERE latest_version IS NOT NULL AND current_version IS NOT NULL AND latest_version<>current_version ORDER BY id`, nil, &out)
-	return out, err
+	all := []Object{}
+	err := q.collect(ctx, p, `SELECT v.id FROM versions v JOIN services s ON s.id=v.service_id WHERE s.upstream_json IS NOT NULL AND s.upstream_json<>'' ORDER BY v.id`, nil, &all)
+	if err != nil {
+		return nil, err
+	}
+	for i := range all {
+		if err = q.versionState(ctx, &all[i]); err != nil {
+			return nil, err
+		}
+		if all[i].Fields["version_state"] != "已是最新" || all[i].Fields["check_error"] != nil {
+			out = append(out, all[i])
+		}
+	}
+	return out, nil
 }
 func (q Query) Unverified(ctx context.Context, p auth.Principal) ([]Object, error) {
 	if err := auth.Authorize(p, auth.View, ""); err != nil {
@@ -169,10 +217,9 @@ func (q Query) Contexts(ctx context.Context, p auth.Principal, archived bool) ([
 	}
 	return q.Service.Store.Contexts(ctx, archived, time.Now().UTC())
 }
-func (q Query) CheckVersions(ctx context.Context, p auth.Principal) (map[string]any, error) {
+func (q Query) CheckVersions(ctx context.Context, p auth.Principal) (versioncheck.Summary, error) {
 	if err := q.Service.CheckVersionsAllowed(p); err != nil {
-		return nil, err
+		return versioncheck.Summary{}, err
 	}
-	// 版本上游任务在后续阶段接入。此处仅返回明确状态，不伪称检查成功。
-	return map[string]any{"status": "not_configured"}, nil
+	return (versioncheck.Checker{DB: q.Service.Store.DB}).Run(ctx, false)
 }
