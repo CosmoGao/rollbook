@@ -207,8 +207,19 @@ func (s Service) applyUpdate(ctx context.Context, tx *sql.Tx, id string, rev int
 	if o.Rev != rev {
 		return o, ErrConflict
 	}
-	if o.Type == "note" || o.Type == "change" || o.Type == "dependency" || o.Type == "context" {
+	if o.Type == "change" || o.Type == "context" {
 		return o, auth.ErrForbidden
+	}
+	if o.Type == "note" {
+		return o, invalidField("fields.body_md", "笔记只允许追加，不能编辑", "新增笔记")
+	}
+	if o.Type == "dependency" {
+		if _, ok := patch.Fields["generated"]; ok {
+			return o, invalidField("fields.generated", "不能更改自动生成标志", "省略此字段")
+		}
+		if str(o.Fields["generated"]) == "1" {
+			return o, auth.ErrForbidden
+		}
 	}
 	oldService := str(o.Fields["service_id"])
 	oldAddress := str(o.Fields["address"])

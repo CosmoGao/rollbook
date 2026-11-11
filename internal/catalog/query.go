@@ -194,9 +194,7 @@ func (q Query) Browse(ctx context.Context, p auth.Principal, typ string) ([]Obje
 	if err := auth.Authorize(p, auth.View, ""); err != nil {
 		return nil, err
 	}
-	switch typ {
-	case "location", "host", "network":
-	default:
+	if _, ok := tables[typ]; !ok || typ == "change" || typ == "context" {
 		return nil, ErrInvalid
 	}
 	out := []Object{}

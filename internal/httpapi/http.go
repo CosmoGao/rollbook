@@ -54,7 +54,7 @@ func (e Engine) Handler() http.Handler {
 			e.backup(w, r, p)
 			return
 		}
-		if adminPath(r.URL.Path) || (r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/api/assets/")) {
+		if adminPath(r.URL.Path) || (r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/api/assets/")) || strings.HasPrefix(r.URL.Path, "/api/hosts/") && (strings.HasSuffix(r.URL.Path, "/offline") || strings.HasSuffix(r.URL.Path, "/restore")) {
 			if !p.IsUser() {
 				WriteError(w, auth.ErrForbidden)
 				return

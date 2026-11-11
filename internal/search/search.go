@@ -14,6 +14,7 @@ type Result struct {
 	ID         string   `json:"id"`
 	Type       string   `json:"type"`
 	Name       string   `json:"name"`
+	Status     string   `json:"status"`
 	SiteID     string   `json:"site_id,omitempty"`
 	NetworkID  string   `json:"network_id,omitempty"`
 	RouterID   string   `json:"router_id,omitempty"`
@@ -98,7 +99,7 @@ func (s Store) Search(ctx context.Context, q string) ([]Result, error) {
 
 func (s Store) enrich(ctx context.Context, id string) (Result, error) {
 	r := Result{ID: id}
-	e := s.DB.QueryRowContext(ctx, `SELECT type,name FROM objects WHERE id=?`, id).Scan(&r.Type, &r.Name)
+	e := s.DB.QueryRowContext(ctx, `SELECT type,name,status FROM objects WHERE id=?`, id).Scan(&r.Type, &r.Name, &r.Status)
 	if e != nil {
 		return r, e
 	}
