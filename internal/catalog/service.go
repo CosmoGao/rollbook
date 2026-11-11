@@ -419,7 +419,7 @@ func validateHostIPs(ctx context.Context, tx *sql.Tx, hostID, locationID string)
 			return err
 		}
 		if len(matches) != 1 {
-			return fmt.Errorf("location_id: IP %s (%s) does not belong to exactly one network in site %s", ip.address, ip.id, site)
+			return invalidField("fields.location_id", fmt.Sprintf("IP %s (%s) 不属于新站点 %s 的唯一最长前缀网段", ip.address, ip.id, site), "新站点下唯一匹配的网段")
 		}
 		if _, err = tx.ExecContext(ctx, `UPDATE ips SET network_id=? WHERE id=?`, matches[0], ip.id); err != nil {
 			return err

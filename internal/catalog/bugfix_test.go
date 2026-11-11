@@ -1,6 +1,7 @@
 package catalog_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -106,7 +107,8 @@ func TestHostMoveRejectsIPOutsideNewSite(t *testing.T) {
 	add(t, ctx, store, "host:one", "host", "主机", map[string]any{"kind": "物理机", "location_id": "location:old"})
 	add(t, ctx, store, "ip:one", "ip", "10.1.0.5", map[string]any{"address": "10.1.0.5", "host_id": "host:one"})
 	_, err := service.Update(ctx, user, "host:one", 1, catalog.Patch{Fields: map[string]any{"location_id": "location:new"}}, "搬站点", "test")
-	if err == nil || !strings.Contains(err.Error(), "10.1.0.5") || !strings.Contains(err.Error(), "location_id") {
+	var validation *catalog.ValidationError
+	if !errors.As(err, &validation) || len(validation.Fields) != 1 || validation.Fields[0].Field != "fields.location_id" || !strings.Contains(validation.Fields[0].Reason, "10.1.0.5") || !strings.Contains(validation.Fields[0].Reason, "location:new") {
 		t.Fatalf("B-05: 错误未指出 IP 和字段: %v", err)
 	}
 	got, err := store.Get(ctx, "host:one")
