@@ -13,6 +13,16 @@ go run ./cmd/rollbook serve
 
 默认监听 `127.0.0.1:8080`，数据库写入 `./data/rollbook.db`。访问 `/` 可看到占位页，`/healthz` 返回 `ok`。环境变量 `ROLLBOOK_LISTEN_ADDR` 和 `ROLLBOOK_DB_PATH` 可修改监听地址与数据库路径。首次启动自动迁移；再次启动不会重复执行已应用的迁移。数据库使用 WAL、外键约束和 FTS5。
 
+REST `/api/` 与 Streamable HTTP `/mcp` 使用 `Authorization: Bearer <key>`。启动服务须设置至少 32 字节的 `ROLLBOOK_AUTH_PEPPER`，该值应保存在部署环境中，不要提交到仓库。MCP 支持 `initialize`、`tools/list`、`tools/call` 的 JSON 响应模式，工具调用与 REST 共用应用服务和权限检查。`check_versions` 当前返回 `not_configured`；上游检查任务将在版本检查阶段接入。
+
+CLI 通过 `ROLLBOOK_URL`（默认 `http://127.0.0.1:8080`）和 `ROLLBOOK_KEY` 连接同一 REST API：
+
+```sh
+rollbook search Overleaf
+rollbook get service:overleaf
+rollbook update service:overleaf 1 '{"name":"Overleaf 2"}' '修正名称'
+```
+
 ## 容器运行
 
 ```sh

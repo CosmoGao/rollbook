@@ -16,7 +16,7 @@ func TestHTTP(t *testing.T) {
 		{"/", 200, "Rollbook 清册"},
 		{"/healthz", 200, "ok"},
 		{"/unknown", 404, ""},
-		{"/api/keys", 404, ""},
+		{"/api/keys", 401, ""},
 	} {
 		response := httptest.NewRecorder()
 		handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, tc.path, nil))
