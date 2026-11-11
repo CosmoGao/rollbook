@@ -71,7 +71,7 @@ CLI `import` 使用 Bearer key 提交整库导入提议并校验文件，真正�
 | `mark_verified` | `POST /api/assets/{id}/verify` | 更新时间和操作者 |
 | `check_versions` | `POST /api/versions/check` | 触发检查，不改 current 字段 |
 
-网页专用：`POST /api/auth/login`、`POST /api/auth/logout`、`GET/POST/PATCH/DELETE /api/keys`、`POST /api/changes/{id}/approve`、`POST /api/changes/{id}/reject`、`DELETE /api/assets/{id}`（仅通过已批准删除提议）、`GET /api/backup/export`、`POST /api/backup/restore`。清册新增可由网页直接创建，或由 key 通过提议创建；直接写 key 若需新增，也必须携带 `base_rev:0` 并走同一审计路径。MCP 工具名保持 issue 清单，不另加管理工具。CLI `search/get/update/export/import` 分别调用对应 REST；import 为待确认提议。
+网页专用：`POST /api/auth/login`、`POST /api/auth/logout`、`GET/POST/PATCH/DELETE /api/keys`、`POST /api/changes/{id}/approve`、`POST /api/changes/{id}/reject`、`DELETE /api/assets/{id}`（仅通过已批准删除提议）、`GET /api/backup/export?kind=catalog|full`、`POST /api/backup/import`、`GET /api/backup/imports`、`POST /api/backup/imports/{id}/approve|reject`。清册新增可由网页直接创建，或由 key 通过提议创建；直接写 key 若需新增，也必须携带 `base_rev:0` 并走同一审计路径。MCP 工具名保持 issue 清单，不另加管理工具。CLI `search/get/update/export/import` 分别调用对应 REST；import 为待确认提议。
 
 ## 页面
 
@@ -83,24 +83,27 @@ CLI `import` 使用 Bearer key 提交整库导入提议并校验文件，真正�
 
 ## YAML 备份与恢复
 
-格式固定 `schema_version: 1`、`exported_at`、`objects`（按 type/id 排序）、`relations`（依赖及有序入口链）、`notes`、`contexts`、`changes`；完整备份增加 `users`、`api_keys` 的哈希和元数据，**从不含明文 key、密码或 session**。凭据仅导出 `vault/item_ref`。文件采用 UTF-8 YAML，显式 null，稳定 ID，保留 rev、审计时间；示意：
+YAML v1 包含 `schema_version`、`kind`（`catalog` 或 `full`）、`exported_at` 与 `tables`。`tables` 按固定表名列出完整行，保留对象 ID、rev、审计字段、依赖和入口链。`catalog` 只含清册；`full` 增加 `users` 和 `api_keys` 的密码哈希、key 哈希与元数据。两种格式均不含明文 key、密码、session 或待导入文件。凭据只保存 vault 与 item_ref。示意：
 
 ```yaml
 schema_version: 1
+kind: catalog
 exported_at: "2026-11-11T00:00:00Z"
-objects:
-  - id: "host:multica-server"
-    type: host
-    name: "Multica 服务端"
-    rev: 1
-    host: {location_id: "location:beijing", kind: "物理机"}
-relations: []
-notes: []
-contexts: []
-changes: []
+tables:
+  objects:
+    - id: host:multica-server
+      type: host
+      name: Multica 服务端
+      rev: 1
+      # 其余公共字段照数据库列名保留
+  hosts:
+    - id: host:multica-server
+      kind: 物理机
+      location_id: location:beijing
+  # 其余清册表逐一列出；空表为 []
 ```
 
-定时备份以临时文件、fsync、原子 rename 写入数据目录，权限 0600，保留份数可配置。恢复先解析 schema_version、秘密检测、引用与 CIDR 校验、计算对象/关系计数并展示预览；网页用户批准后在独占写事务内导入到临时数据库，完整校验通过再原子替换并重建 FTS、清除 session。任何失败保留旧库及备份。恢复后核对对象和关系计数、外键、搜索结果。格式演进只添加明确的版本迁移，不静默丢字段。
+本机启动时及每 24 小时将完整备份写到数据库同目录的 `rollbook-latest.yaml`：先写权限 0600 的临时文件，fsync 后原子重命名。只读 key 可通过 CLI/REST 导出清册；完整备份仅限网页用户。CLI 导入需提议或直接写 key，提交后仅生成待确认项；网页用户查看对象数和关系数并批准，key 无法批准或直接恢复。网页用户也可提交完整备份。恢复先在私有临时目录的数据库解析和校验版本、列、秘密、外键、CIDR、引用及依赖环，再在正式库的单一事务中替换数据并重建 FTS。失败回滚旧库；成功清除全部 session。未知 `schema_version` 拒绝，格式演进需显式迁移。
 
 ## 测试与交付
 
