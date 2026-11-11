@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"io"
 	"net/http"
 	"net/url"
@@ -65,6 +66,21 @@ func runCLI(args []string) error {
 		if len(body) > 16<<20 {
 			return errors.New("import file too large")
 		}
+		var doc map[string]any
+		if err = yaml.Unmarshal(body, &doc); err != nil || doc == nil {
+			return errors.New("invalid import YAML")
+		}
+		if kind, ok := doc["kind"]; ok && kind != "merge" {
+			return errors.New("CLI 仅支持合并导入；整库恢复请在网页提交")
+		}
+		doc["kind"] = "merge"
+		if _, ok := doc["schema_version"]; !ok {
+			doc["schema_version"] = 1
+		}
+		body, err = yaml.Marshal(doc)
+		if err != nil {
+			return err
+		}
 		method, path = http.MethodPost, "/api/backup/import"
 	case "update":
 		if len(args) != 5 {
@@ -110,5 +126,8 @@ func runCLI(args []string) error {
 		return fmt.Errorf("HTTP %d: %s", res.StatusCode, strings.TrimSpace(string(data)))
 	}
 	_, err = os.Stdout.Write(data)
+	if err == nil && args[0] == "import" {
+		_, err = fmt.Fprintln(os.Stdout, "合并导入已提交，等待网页用户批准；批准前会重新校验 rev 和关联关系。")
+	}
 	return err
 }

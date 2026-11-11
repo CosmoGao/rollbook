@@ -25,6 +25,7 @@ const MaxSize = 16 << 20
 const SchemaVersion = 1
 
 var ErrInvalid = errors.New("invalid backup")
+var ErrConflict = errors.New("merge conflict")
 
 // 表名固定，避免导入文件控制 SQL；顺序只用于稳定输出。
 var catalogTables = []string{"objects", "locations", "uplinks", "hosts", "networks", "ips", "services", "ports", "endpoints", "dependencies", "versions", "credentials", "notes", "contexts", "changes", "version_checks"}
@@ -35,10 +36,12 @@ type File struct {
 	Kind          string                      `yaml:"kind" json:"kind"`
 	ExportedAt    string                      `yaml:"exported_at" json:"exported_at"`
 	Tables        map[string][]map[string]any `yaml:"tables" json:"tables"`
+	Objects       []map[string]any            `yaml:"objects,omitempty" json:"objects,omitempty"`
 }
 type Preview struct {
-	Kind   string         `json:"kind"`
-	Counts map[string]int `json:"counts"`
+	Kind    string          `json:"kind"`
+	Counts  map[string]int  `json:"counts"`
+	Objects []ObjectPreview `json:"objects,omitempty"`
 }
 type Service struct{ DB *sql.DB }
 
@@ -138,7 +141,10 @@ func Parse(data []byte) (File, Preview, error) {
 	}
 	names, err := tables(f.Kind)
 	if err != nil {
-		return f, p, err
+		if f.Kind != "merge" {
+			return f, p, err
+		}
+		return parseMerge(f)
 	}
 	if len(f.Tables) != len(names) {
 		return f, p, ErrInvalid
@@ -340,7 +346,11 @@ func WriteAtomic(path string, data []byte) error {
 }
 
 // validateRelations checks references stored in JSON and network addresses, which SQLite foreign keys cannot cover.
-func validateRelations(ctx context.Context, d *sql.DB) error {
+type relationQuerier interface {
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
+}
+
+func validateRelations(ctx context.Context, d relationQuerier) error {
 	rows, err := d.QueryContext(ctx, "SELECT cidr FROM networks")
 	if err != nil {
 		return err
