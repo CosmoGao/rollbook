@@ -162,8 +162,16 @@ func ClearSessionCookie() *http.Cookie {
 }
 
 type Key struct {
-	ID, Name, IssuerID, IssuerName, CreatedAt, ExpiresAt, Note, LastUsedAt, RevokedAt string
-	Level                                                                             Level
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	IssuerID   string `json:"issuer_id"`
+	IssuerName string `json:"issuer_name"`
+	CreatedAt  string `json:"created_at"`
+	ExpiresAt  string `json:"expires_at"`
+	Note       string `json:"note"`
+	LastUsedAt string `json:"last_used_at"`
+	RevokedAt  string `json:"revoked_at"`
+	Level      Level  `json:"level"`
 }
 
 func (s Service) IssueKey(ctx context.Context, p Principal, name string, level Level, expires *time.Time, note string) (Key, string, error) {

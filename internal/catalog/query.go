@@ -133,6 +133,28 @@ func (q Query) Outdated(ctx context.Context, p auth.Principal) ([]Object, error)
 	err := q.collect(ctx, p, `SELECT id FROM versions WHERE latest_version IS NOT NULL AND current_version IS NOT NULL AND latest_version<>current_version ORDER BY id`, nil, &out)
 	return out, err
 }
+func (q Query) Unverified(ctx context.Context, p auth.Principal) ([]Object, error) {
+	if err := auth.Authorize(p, auth.View, ""); err != nil {
+		return nil, err
+	}
+	out := []Object{}
+	cutoff := time.Now().UTC().AddDate(0, 0, -30).Format(time.RFC3339Nano)
+	err := q.collect(ctx, p, `SELECT id FROM objects WHERE type NOT IN ('change','note','dependency') AND (verified_at IS NULL OR verified_at < ?) ORDER BY updated_at DESC LIMIT 500`, []any{cutoff}, &out)
+	return out, err
+}
+func (q Query) Browse(ctx context.Context, p auth.Principal, typ string) ([]Object, error) {
+	if err := auth.Authorize(p, auth.View, ""); err != nil {
+		return nil, err
+	}
+	switch typ {
+	case "location", "host", "network":
+	default:
+		return nil, ErrInvalid
+	}
+	out := []Object{}
+	err := q.collect(ctx, p, `SELECT id FROM objects WHERE type=? ORDER BY name LIMIT 500`, []any{typ}, &out)
+	return out, err
+}
 func (q Query) Changes(ctx context.Context, p auth.Principal, objectID, state string) ([]Object, error) {
 	if err := auth.Authorize(p, auth.View, ""); err != nil {
 		return nil, err
