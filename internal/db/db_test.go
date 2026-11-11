@@ -19,7 +19,7 @@ func TestMigrationAndSQLiteFeatures(t *testing.T) {
 		if err := database.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&count); err != nil {
 			t.Fatal(err)
 		}
-		if count != 1 {
+		if count != 2 {
 			t.Fatalf("migration count = %d", count)
 		}
 		var mode string
