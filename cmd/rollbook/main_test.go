@@ -3,6 +3,8 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -40,5 +42,80 @@ func TestInsecureHTTPEnabled(t *testing.T) {
 		if got := insecureHTTPEnabled(); got != tc.want {
 			t.Errorf("value %q: got %t, want %t", tc.value, got, tc.want)
 		}
+	}
+}
+
+func TestAuthPepper(t *testing.T) {
+	for _, name := range []string{"ROLLBOOK_AUTH_PEPPER", "ROLLBOOK_AUTH_PEPPER_FILE"} {
+		value, present := os.LookupEnv(name)
+		t.Cleanup(func() {
+			if present {
+				os.Setenv(name, value)
+			} else {
+				os.Unsetenv(name)
+			}
+		})
+		os.Unsetenv(name)
+	}
+	dir := t.TempDir()
+	file := filepath.Join(dir, "pepper")
+	content := strings.Repeat("x", 32) + "\n"
+	if err := os.WriteFile(file, []byte(content), 0600); err != nil {
+		t.Fatal(err)
+	}
+	os.Setenv("ROLLBOOK_AUTH_PEPPER_FILE", file)
+	if got, err := authPepper(); err != nil || string(got) != content {
+		t.Fatalf("file pepper = %q, %v", got, err)
+	}
+	os.Setenv("ROLLBOOK_AUTH_PEPPER", strings.Repeat("y", 32))
+	if _, err := authPepper(); err == nil || !strings.Contains(err.Error(), "cannot both be set") {
+		t.Fatalf("both set: %v", err)
+	}
+	os.Unsetenv("ROLLBOOK_AUTH_PEPPER")
+	if err := os.WriteFile(file, []byte(strings.Repeat("z", 31)), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := authPepper(); err == nil || !strings.Contains(err.Error(), "at least 32 bytes") {
+		t.Fatalf("short file: %v", err)
+	}
+	os.Setenv("ROLLBOOK_AUTH_PEPPER_FILE", filepath.Join(dir, "missing"))
+	if _, err := authPepper(); err == nil || !strings.Contains(err.Error(), "read ROLLBOOK_AUTH_PEPPER_FILE") {
+		t.Fatalf("missing file: %v", err)
+	}
+	os.Unsetenv("ROLLBOOK_AUTH_PEPPER_FILE")
+	os.Setenv("ROLLBOOK_AUTH_PEPPER", strings.Repeat("p", 32))
+	if got, err := authPepper(); err != nil || string(got) != strings.Repeat("p", 32) {
+		t.Fatalf("env pepper = %q, %v", got, err)
+	}
+}
+
+func TestInvalidPepperDoesNotCreateDatabase(t *testing.T) {
+	value, present := os.LookupEnv("ROLLBOOK_AUTH_PEPPER")
+	t.Cleanup(func() {
+		if present {
+			os.Setenv("ROLLBOOK_AUTH_PEPPER", value)
+		} else {
+			os.Unsetenv("ROLLBOOK_AUTH_PEPPER")
+		}
+	})
+	t.Setenv("ROLLBOOK_DB_PATH", filepath.Join(t.TempDir(), "data", "rollbook.db"))
+	t.Setenv("ROLLBOOK_AUTH_PEPPER_FILE", filepath.Join(t.TempDir(), "missing"))
+	os.Unsetenv("ROLLBOOK_AUTH_PEPPER")
+	if err := bootstrapUser([]string{"owner"}); err == nil {
+		t.Fatal("bootstrap accepted missing pepper")
+	}
+	if _, err := os.Stat(os.Getenv("ROLLBOOK_DB_PATH")); !os.IsNotExist(err) {
+		t.Fatalf("database created before pepper validation: %v", err)
+	}
+}
+
+func TestBackupPath(t *testing.T) {
+	t.Setenv("ROLLBOOK_BACKUP_DIR", "")
+	if got := backupPath("/data/rollbook.db"); got != "/data/rollbook-latest.yaml" {
+		t.Fatal(got)
+	}
+	t.Setenv("ROLLBOOK_BACKUP_DIR", "/backups")
+	if got := backupPath("/data/rollbook.db"); got != "/backups/rollbook-latest.yaml" {
+		t.Fatal(got)
 	}
 }

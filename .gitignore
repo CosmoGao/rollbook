@@ -2,3 +2,7 @@
 *.db
 *.db-shm
 *.db-wal
+.env
+/secrets/
+/snapshot-data/
+/snapshot-backups/

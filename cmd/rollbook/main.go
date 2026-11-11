@@ -51,15 +51,15 @@ func bootstrapUser(args []string) error {
 	if path == "" {
 		path = "./data/rollbook.db"
 	}
+	pepper, err := authPepper()
+	if err != nil {
+		return err
+	}
 	database, err := db.Open(context.Background(), path)
 	if err != nil {
 		return err
 	}
 	defer database.Close()
-	pepper := os.Getenv("ROLLBOOK_AUTH_PEPPER")
-	if len(pepper) < 32 {
-		return fmt.Errorf("ROLLBOOK_AUTH_PEPPER must contain at least 32 bytes")
-	}
 	fmt.Fprint(os.Stderr, "Password (at least 12 characters): ")
 	password, err := term.ReadPassword(int(os.Stdin.Fd()))
 	fmt.Fprintln(os.Stderr)
@@ -71,7 +71,7 @@ func bootstrapUser(args []string) error {
 			password[i] = 0
 		}
 	}()
-	_, err = (auth.Service{DB: database, Pepper: []byte(pepper)}).BootstrapUser(context.Background(), args[0], string(password))
+	_, err = (auth.Service{DB: database, Pepper: pepper}).BootstrapUser(context.Background(), args[0], string(password))
 	return err
 }
 
@@ -82,24 +82,24 @@ func serve() error {
 	if path == "" {
 		path = "./data/rollbook.db"
 	}
+	pepper, err := authPepper()
+	if err != nil {
+		return err
+	}
 	database, err := db.Open(ctx, path)
 	if err != nil {
 		return err
 	}
 	defer database.Close()
-	pepper := os.Getenv("ROLLBOOK_AUTH_PEPPER")
-	if len(pepper) < 32 {
-		return fmt.Errorf("ROLLBOOK_AUTH_PEPPER must contain at least 32 bytes")
-	}
 	allowInsecureHTTP := insecureHTTPEnabled()
-	engine := httpapi.Engine{Auth: auth.Service{DB: database, Pepper: []byte(pepper)}, Catalog: catalog.Service{Store: catalog.Store{DB: database}}, AllowInsecureHTTP: allowInsecureHTTP}
+	engine := httpapi.Engine{Auth: auth.Service{DB: database, Pepper: pepper}, Catalog: catalog.Service{Store: catalog.Store{DB: database}}, AllowInsecureHTTP: allowInsecureHTTP}
 	if allowInsecureHTTP {
 		log.Print("警告：已启用 HTTP 模式；登录口令和 API Key 可能在网络中明文传输，仅可用于可信内网。")
 	}
 	checker := &versioncheck.Checker{DB: database}
 	engine.VersionChecker = checker
 	checker.Start(ctx)
-	go periodicBackup(ctx, database, filepath.Join(filepath.Dir(path), "rollbook-latest.yaml"))
+	go periodicBackup(ctx, database, backupPath(path))
 	addr := os.Getenv("ROLLBOOK_LISTEN_ADDR")
 	if addr == "" {
 		addr = "127.0.0.1:8080"
@@ -119,6 +119,36 @@ func serve() error {
 		defer cancel()
 		return server.Shutdown(shutdownCtx)
 	}
+}
+
+func authPepper() ([]byte, error) {
+	value, hasValue := os.LookupEnv("ROLLBOOK_AUTH_PEPPER")
+	file, hasFile := os.LookupEnv("ROLLBOOK_AUTH_PEPPER_FILE")
+	if hasValue && hasFile {
+		return nil, fmt.Errorf("ROLLBOOK_AUTH_PEPPER and ROLLBOOK_AUTH_PEPPER_FILE cannot both be set")
+	}
+	if hasFile {
+		pepper, err := os.ReadFile(file)
+		if err != nil {
+			return nil, fmt.Errorf("read ROLLBOOK_AUTH_PEPPER_FILE: %w", err)
+		}
+		if len(pepper) < 32 {
+			return nil, fmt.Errorf("ROLLBOOK_AUTH_PEPPER_FILE must contain at least 32 bytes")
+		}
+		return pepper, nil
+	}
+	if len(value) < 32 {
+		return nil, fmt.Errorf("ROLLBOOK_AUTH_PEPPER must contain at least 32 bytes")
+	}
+	return []byte(value), nil
+}
+
+func backupPath(databasePath string) string {
+	dir := os.Getenv("ROLLBOOK_BACKUP_DIR")
+	if dir == "" {
+		dir = filepath.Dir(databasePath)
+	}
+	return filepath.Join(dir, "rollbook-latest.yaml")
 }
 
 func insecureHTTPEnabled() bool {
