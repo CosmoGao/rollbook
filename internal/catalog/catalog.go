@@ -55,6 +55,14 @@ var jsonFields = map[string]bool{"inbound_ports_json": true, "resources_json": t
 
 // Create validates and inserts an object atomically. Actor is supplied by the caller's auth layer.
 func (s Store) Create(ctx context.Context, o Object, actor string) (Object, error) {
+	return s.create(ctx, o, actor, nil)
+}
+func (s Store) create(ctx context.Context, o Object, actor string, after func(*sql.Tx, Object) error) (Object, error) {
+	for _, value := range []any{o.Name, o.Aliases, o.Tags, o.Fields} {
+		if err := CheckSecrets(value); err != nil {
+			return o, err
+		}
+	}
 	if _, ok := columns[o.Type]; !ok {
 		return o, fmt.Errorf("unknown type %q", o.Type)
 	}
@@ -140,6 +148,11 @@ func (s Store) Create(ctx context.Context, o Object, actor string) (Object, erro
 	}
 	if err = index(ctx, tx, o); err != nil {
 		return o, err
+	}
+	if after != nil {
+		if err = after(tx, o); err != nil {
+			return o, err
+		}
 	}
 	if err = tx.Commit(); err != nil {
 		return o, err
@@ -401,11 +414,19 @@ func index(ctx context.Context, tx *sql.Tx, o Object) error {
 
 // Get loads public fields and all type-specific fields.
 func (s Store) Get(ctx context.Context, id string) (Object, error) {
+	return get(ctx, s.DB, id)
+}
+
+type rowQuerier interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+func get(ctx context.Context, q rowQuerier, id string) (Object, error) {
 	var o Object
 	var aliases, tags, created, updated string
 	var verified sql.NullString
 	var verifiedBy sql.NullString
-	err := s.DB.QueryRowContext(ctx, `SELECT id,type,name,aliases_json,tags_json,status,source,confidence,verified_at,verified_by,rev,created_at,created_by,updated_at,updated_by FROM objects WHERE id=?`, id).Scan(&o.ID, &o.Type, &o.Name, &aliases, &tags, &o.Status, &o.Source, &o.Confidence, &verified, &verifiedBy, &o.Rev, &created, &o.CreatedBy, &updated, &o.UpdatedBy)
+	err := q.QueryRowContext(ctx, `SELECT id,type,name,aliases_json,tags_json,status,source,confidence,verified_at,verified_by,rev,created_at,created_by,updated_at,updated_by FROM objects WHERE id=?`, id).Scan(&o.ID, &o.Type, &o.Name, &aliases, &tags, &o.Status, &o.Source, &o.Confidence, &verified, &verifiedBy, &o.Rev, &created, &o.CreatedBy, &updated, &o.UpdatedBy)
 	if err != nil {
 		return o, err
 	}
@@ -425,7 +446,7 @@ func (s Store) Get(ctx context.Context, id string) (Object, error) {
 	for i := range raw {
 		dest[i] = &raw[i]
 	}
-	row := s.DB.QueryRowContext(ctx, "SELECT "+strings.Join(cols, ",")+" FROM "+tables[o.Type]+" WHERE id=?", id)
+	row := q.QueryRowContext(ctx, "SELECT "+strings.Join(cols, ",")+" FROM "+tables[o.Type]+" WHERE id=?", id)
 	if err = row.Scan(dest...); err != nil {
 		return o, err
 	}
