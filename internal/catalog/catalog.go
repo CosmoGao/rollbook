@@ -52,6 +52,9 @@ var columns = map[string][]string{
 var tables = map[string]string{"location": "locations", "uplink": "uplinks", "host": "hosts", "network": "networks", "ip": "ips", "service": "services", "port": "ports", "endpoint": "endpoints", "dependency": "dependencies", "version": "versions", "credential": "credentials", "note": "notes", "context": "contexts", "change": "changes"}
 var jsonFields = map[string]bool{"inbound_ports_json": true, "resources_json": true, "upstream_json": true, "via_json": true, "nav_card_json": true, "related_ids_json": true, "diff_json": true}
 
+// EditableFields returns a copy of the business fields accepted for this type.
+func EditableFields(typ string) []string { return append([]string(nil), columns[typ]...) }
+
 // Create validates and inserts an object atomically. Actor is supplied by the caller's auth layer.
 func (s Store) Create(ctx context.Context, o Object, actor string) (Object, error) {
 	return s.create(ctx, o, actor, nil)

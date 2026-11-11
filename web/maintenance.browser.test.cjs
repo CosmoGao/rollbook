@@ -45,6 +45,7 @@ test('从空库用网页录入、维护并两次确认删除',async()=>{
    return reply({message:'Unexpected request '+m+' '+p},404);
   });
   await page.goto('http://rollbook.test/');
+  await page.getByRole('button',{name:'稍后再说'}).click();
   await page.getByRole('button',{name:/资产维护/}).click();
   async function create(type,name,fields){
    await page.getByRole('button',{name:/资产维护/}).click();
@@ -75,5 +76,46 @@ test('从空库用网页录入、维护并两次确认删除',async()=>{
   await page.getByRole('button',{name:'恢复主机'}).click();await page.locator('.modal input[placeholder="恢复原因"]').fill('设备恢复');await page.getByRole('button',{name:'恢复',exact:true}).click();await page.locator('.modal').waitFor({state:'detached'});
   await page.getByRole('button',{name:/资产维护/}).click();await page.locator('#content select').first().selectOption('ip');await page.locator('.card').click();await page.getByRole('button',{name:'删除'}).click();await page.locator('.modal input[placeholder="删除原因"]').fill('撤销测试数据');let dialogs=0;page.on('dialog',d=>{dialogs++;d.accept()});await page.getByRole('button',{name:'继续删除'}).click();await page.locator('.modal .error').getByText(/service:app/).waitFor();await page.getByRole('button',{name:'继续删除'}).click();await page.locator('.modal').waitFor({state:'detached'});assert.equal(dialogs,2);
   assert.deepEqual(writes.map(x=>x.action),['create','create','create','create','create','update','verify','note','offline','restore','delete']);
+ }finally{await browser.close()}
+});
+
+test('空库引导导入虚构数据并展示可复制的客户端配置',async()=>{
+ const browser=await chromium.launch({headless:true});
+ try{
+  const context=await browser.newContext();const page=await context.newPage();
+  await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.__copied=text}}}));
+  const objects=new Map();
+  await page.route('http://rollbook.test/**',async route=>{
+   const req=route.request(),u=new URL(req.url()),p=u.pathname,m=req.method();
+   const reply=(data,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
+   if(p==='/')return route.fulfill({contentType:'text/html',body:html});
+   if(p==='/app.js')return route.fulfill({contentType:'application/javascript',body:js});
+   if(p==='/style.css')return route.fulfill({contentType:'text/css',body:css});
+   if(p==='/api/config')return reply({allow_insecure_http:false});
+   if(p==='/api/auth/session')return reply({login:'owner'});
+   if(p==='/api/browse')return reply([...objects.values()].filter(o=>o.type===u.searchParams.get('type')));
+   if(p==='/api/assets'&&m==='POST'){const {object}=JSON.parse(req.postData());objects.set(object.id,object);return reply(object)}
+   if(p==='/api/keys'&&m==='GET')return reply([]);
+   if(p==='/api/keys'&&m==='POST')return reply({token:'rb_test_token'});
+   return reply({message:'Unexpected request '+m+' '+p},404);
+  });
+  await page.goto('http://rollbook.test/');
+  await page.getByRole('button',{name:'导入虚构示例数据'}).click();
+  await page.locator('.modal').waitFor({state:'detached'});
+  assert.equal(objects.size,6);
+  for(const o of objects.values())assert.match(o.name,/【示例】/);
+  assert.equal([...objects.values()].find(o=>o.type==='ip').fields.address,'192.0.2.10');
+  await page.getByRole('button',{name:/Key 管理/}).click();
+  await page.getByRole('button',{name:'创建 Key'}).click();
+  await page.locator('.modal input').first().fill('agent');
+  await page.locator('.modal button[type=submit]').click();
+  const setup=page.locator('.modal');
+  for(const label of ['CLI 环境变量','Claude Code（.mcp.json）','Codex（config.toml）','Cursor（mcp.json）'])assert.match(await setup.innerText(),new RegExp(label.split('（')[0]));
+  const snippets=await setup.locator('.setup-block pre').allTextContents();
+  for(const snippet of snippets)assert.match(snippet,/rb_test_token/);
+  assert.equal(JSON.parse(snippets[1]).mcpServers.rollbook.type,'http');
+  assert.equal(JSON.parse(snippets[3]).mcpServers.rollbook.url,'http://rollbook.test/mcp');
+  await setup.locator('.setup-block').first().getByRole('button',{name:'复制'}).click();
+  assert.equal(await page.evaluate(()=>window.__copied),snippets[0]);
  }finally{await browser.close()}
 });
