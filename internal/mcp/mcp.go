@@ -1,0 +1,147 @@
+// Package mcp implements the stateless JSON response mode of Streamable HTTP.
+package mcp
+
+import (
+	"encoding/json"
+	"io"
+	"net/http"
+
+	"github.com/CosmoGao/rollbook/internal/httpapi"
+)
+
+type Server struct{ Engine httpapi.Engine }
+type request struct {
+	JSONRPC string          `json:"jsonrpc"`
+	ID      json.RawMessage `json:"id"`
+	Method  string          `json:"method"`
+	Params  struct {
+		Name      string       `json:"name"`
+		Arguments httpapi.Args `json:"arguments"`
+	} `json:"params"`
+}
+type response struct {
+	JSONRPC string          `json:"jsonrpc"`
+	ID      json.RawMessage `json:"id"`
+	Result  any             `json:"result,omitempty"`
+	Error   any             `json:"error,omitempty"`
+}
+
+func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", "POST")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	p, err := s.Engine.Principal(r)
+	if err != nil {
+		httpapi.WriteError(w, err)
+		return
+	}
+	body := http.MaxBytesReader(w, r.Body, 1<<20)
+	defer body.Close()
+	var req request
+	dec := json.NewDecoder(body)
+	if err := dec.Decode(&req); err != nil {
+		rpcError(w, nil, -32700, "Invalid JSON")
+		return
+	}
+	var extra any
+	if err := dec.Decode(&extra); err != io.EOF {
+		rpcError(w, req.ID, -32600, "Invalid request")
+		return
+	}
+	if req.JSONRPC != "2.0" {
+		rpcError(w, req.ID, -32600, "Invalid request")
+		return
+	}
+	if len(req.ID) == 0 {
+		w.WriteHeader(http.StatusAccepted)
+		return
+	}
+	switch req.Method {
+	case "initialize":
+		httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"protocolVersion": "2025-03-26", "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]string{"name": "rollbook", "version": "1.0.0"}}})
+	case "ping":
+		httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{}})
+	case "tools/list":
+		tools := make([]map[string]any, 0, len(httpapi.Tools))
+		for _, name := range httpapi.Tools {
+			tools = append(tools, map[string]any{"name": name, "description": "Rollbook " + name, "inputSchema": schema(name)})
+		}
+		httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"tools": tools}})
+	case "tools/call":
+		valid := false
+		for _, name := range httpapi.Tools {
+			if req.Params.Name == name {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			rpcError(w, req.ID, -32602, "Unknown tool")
+			return
+		}
+		result, err := s.Engine.Call(r.Context(), p, req.Params.Name, req.Params.Arguments, "mcp")
+		if err != nil {
+			status, apiErr := httpapi.Error(err)
+			_ = status
+			httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"content": []any{map[string]string{"type": "text", "text": apiErr.Message}}, "isError": true, "code": apiErr.Code}})
+			return
+		}
+		data, _ := json.Marshal(result)
+		httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"content": []any{map[string]string{"type": "text", "text": string(data)}}, "structuredContent": result, "isError": false}})
+	default:
+		rpcError(w, req.ID, -32601, "Method not found")
+	}
+}
+
+func rpcError(w http.ResponseWriter, id json.RawMessage, code int, message string) {
+	httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: id, Error: map[string]any{"code": code, "message": message}})
+}
+func schema(name string) map[string]any {
+	props := map[string]any{}
+	required := []string{}
+	add := func(key, typ string, req bool) {
+		props[key] = map[string]string{"type": typ}
+		if req {
+			required = append(required, key)
+		}
+	}
+	switch name {
+	case "search":
+		add("q", "string", true)
+	case "get_asset", "get_service", "list_by_host", "list_by_network", "get_site", "topology", "put_context", "record_note", "propose_change", "update", "mark_verified":
+		add("id", "string", true)
+	}
+	switch name {
+	case "put_context", "record_note", "propose_change", "update", "mark_verified":
+		add("rev", "integer", true)
+		add("reason", "string", true)
+	}
+	if name == "update" || name == "propose_change" {
+		props["patch"] = map[string]string{"type": "object"}
+	}
+	if name == "propose_change" {
+		add("action", "string", false)
+	}
+	if name == "put_context" {
+		add("body_md", "string", false)
+		add("expires_at", "string", false)
+		add("object", "object", false)
+	}
+	if name == "record_note" {
+		add("kind", "string", true)
+		add("body_md", "string", true)
+	}
+	if name == "topology" {
+		add("depth", "integer", false)
+	}
+	if name == "get_context" {
+		add("archived", "boolean", false)
+	}
+	if name == "get_changes" {
+		add("object_id", "string", false)
+		add("state", "string", false)
+	}
+	return map[string]any{"type": "object", "properties": props, "required": required, "additionalProperties": false}
+}
