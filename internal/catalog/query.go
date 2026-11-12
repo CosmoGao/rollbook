@@ -59,6 +59,57 @@ type ServiceDetail struct {
 	Changes      []Object `json:"changes"`
 }
 
+// AssetDetail 汇总详情页需要的关联数据；凭据仅含管理器引用。
+type AssetDetail struct {
+	Object       Object   `json:"object"`
+	Notes        []Object `json:"notes"`
+	Credentials  []Object `json:"credentials"`
+	Changes      []Object `json:"changes"`
+	ReferencedBy []Object `json:"referenced_by"`
+}
+
+func (q Query) AssetDetail(ctx context.Context, p auth.Principal, id string) (AssetDetail, error) {
+	var d AssetDetail
+	var err error
+	d.Object, err = q.Service.Get(ctx, p, id)
+	if err != nil {
+		return d, err
+	}
+	for _, part := range []struct {
+		dst *[]Object
+		sql string
+	}{
+		{&d.Notes, `SELECT id FROM notes WHERE target_id=? ORDER BY id DESC LIMIT 100`},
+		{&d.Credentials, `SELECT id FROM credentials WHERE target_id=? ORDER BY id LIMIT 100`},
+		{&d.Changes, `SELECT id FROM changes WHERE object_id=? ORDER BY id DESC LIMIT 100`},
+		{&d.ReferencedBy, `SELECT id FROM (
+            SELECT id FROM hosts WHERE parent_host_id=? OR location_id=? OR uplink_id=?
+            UNION SELECT id FROM networks WHERE location_id=? OR router_id=? OR uplink_id=?
+            UNION SELECT id FROM ips WHERE network_id=? OR host_id=?
+            UNION SELECT id FROM services WHERE host_id=?
+            UNION SELECT id FROM ports WHERE service_id=?
+            UNION SELECT id FROM endpoints WHERE service_id=? OR EXISTS (SELECT 1 FROM json_each(endpoints.via_json) WHERE value=?)
+            UNION SELECT id FROM versions WHERE service_id=?
+            UNION SELECT id FROM uplinks WHERE location_id=? OR edge_device_id=? OR account_ref=?
+            UNION SELECT id FROM dependencies WHERE from_id=? OR to_id=?
+            UNION SELECT id FROM contexts WHERE EXISTS (SELECT 1 FROM json_each(contexts.related_ids_json) WHERE value=?)
+            UNION SELECT id FROM locations WHERE parent_id=?
+        ) ORDER BY id LIMIT 200`},
+	} {
+		args := []any{id}
+		if part.dst == &d.ReferencedBy {
+			args = make([]any, 20)
+			for i := range args {
+				args[i] = id
+			}
+		}
+		if err = q.collect(ctx, p, part.sql, args, part.dst); err != nil {
+			return d, err
+		}
+	}
+	return d, nil
+}
+
 func (q Query) ServiceDetail(ctx context.Context, p auth.Principal, idOrName string) (ServiceDetail, error) {
 	var d ServiceDetail
 	if err := auth.Authorize(p, auth.View, ""); err != nil {
@@ -208,11 +259,27 @@ func (q Query) Browse(ctx context.Context, p auth.Principal, typ string) ([]Obje
 	return out, err
 }
 func (q Query) Changes(ctx context.Context, p auth.Principal, objectID, state string) ([]Object, error) {
+	return q.FilterChanges(ctx, p, objectID, state, "", "", "", "")
+}
+
+func (q Query) FilterChanges(ctx context.Context, p auth.Principal, objectID, state, key, objectType, since, until string) ([]Object, error) {
 	if err := auth.Authorize(p, auth.View, ""); err != nil {
 		return nil, err
 	}
+	if objectType != "" {
+		if _, ok := tables[objectType]; !ok {
+			return nil, ErrInvalid
+		}
+	}
+	for _, stamp := range []string{since, until} {
+		if stamp != "" {
+			if _, err := time.Parse(time.RFC3339, stamp); err != nil {
+				return nil, ErrInvalid
+			}
+		}
+	}
 	out := []Object{}
-	err := q.collect(ctx, p, `SELECT id FROM changes WHERE (?='' OR object_id=?) AND (?='' OR state=?) ORDER BY id DESC LIMIT 200`, []any{objectID, objectID, state, state}, &out)
+	err := q.collect(ctx, p, `SELECT c.id FROM changes c JOIN objects o ON o.id=c.id WHERE (?='' OR c.object_id=?) AND (?='' OR c.state=?) AND (?='' OR c.actor_key_id=? OR c.actor_key_name=?) AND (?='' OR c.object_type=?) AND (?='' OR julianday(o.created_at)>=julianday(?)) AND (?='' OR julianday(o.created_at)<=julianday(?)) ORDER BY o.created_at DESC,c.id DESC LIMIT 200`, []any{objectID, objectID, state, state, key, key, key, objectType, objectType, since, since, until, until}, &out)
 	if err != nil {
 		return nil, err
 	}
