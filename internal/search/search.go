@@ -21,6 +21,7 @@ type Result struct {
 	RouterID   string   `json:"router_id,omitempty"`
 	HostID     string   `json:"host_id,omitempty"`
 	RelatedIDs []string `json:"related_ids,omitempty"`
+	aliases    []string
 }
 type Store struct{ DB *sql.DB }
 
@@ -94,14 +95,52 @@ func (s Store) Search(ctx context.Context, q string) ([]Result, error) {
 		}
 		out = append(out, r)
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	sort.Slice(out, func(i, j int) bool {
+		a, b := out[i], out[j]
+		if (a.Status == "停用") != (b.Status == "停用") {
+			return b.Status == "停用"
+		}
+		if ar, br := matchRank(a, q), matchRank(b, q); ar != br {
+			return ar < br
+		}
+		if an, bn := strings.ToLower(a.Name), strings.ToLower(b.Name); an != bn {
+			return an < bn
+		}
+		return a.ID < b.ID
+	})
 	return out, nil
+}
+
+// 名称或别名全词命中优先，其次名称包含、别名包含，其他字段命中最后。
+func matchRank(r Result, q string) int {
+	q = strings.ToLower(strings.TrimSpace(q))
+	if strings.ToLower(r.ID) == q || strings.ToLower(r.Name) == q {
+		return 0
+	}
+	for _, alias := range r.aliases {
+		if strings.ToLower(alias) == q {
+			return 0
+		}
+	}
+	if strings.Contains(strings.ToLower(r.Name), q) {
+		return 1
+	}
+	for _, alias := range r.aliases {
+		if strings.Contains(strings.ToLower(alias), q) {
+			return 2
+		}
+	}
+	return 3
 }
 
 func (s Store) enrich(ctx context.Context, id string) (Result, error) {
 	r := Result{ID: id}
-	e := s.DB.QueryRowContext(ctx, `SELECT type,name,status FROM objects WHERE id=?`, id).Scan(&r.Type, &r.Name, &r.Status)
+	var aliasesJSON string
+	e := s.DB.QueryRowContext(ctx, `SELECT type,name,status,aliases_json FROM objects WHERE id=?`, id).Scan(&r.Type, &r.Name, &r.Status, &aliasesJSON)
 	if e != nil {
+		return r, e
+	}
+	if e = json.Unmarshal([]byte(aliasesJSON), &r.aliases); e != nil {
 		return r, e
 	}
 	var host, network, site sql.NullString
@@ -161,28 +200,6 @@ func (s Store) enrich(ctx context.Context, id string) (Result, error) {
 	if r.HostID != "" {
 		related[r.HostID] = true
 		rows, e := s.DB.QueryContext(ctx, `SELECT id FROM services WHERE host_id=? UNION SELECT e.id FROM endpoints e JOIN services s ON s.id=e.service_id WHERE s.host_id=?`, r.HostID, r.HostID)
-		if e != nil {
-			return r, e
-		}
-		for rows.Next() {
-			var x string
-			if e = rows.Scan(&x); e != nil {
-				rows.Close()
-				return r, e
-			}
-			related[x] = true
-		}
-		e = rows.Err()
-		rows.Close()
-		if e != nil {
-			return r, e
-		}
-	}
-	if r.SiteID != "" {
-		rows, e := s.DB.QueryContext(ctx, `WITH RECURSIVE places(id) AS (SELECT ? UNION ALL SELECT l.id FROM locations l JOIN places p ON l.parent_id=p.id)
- SELECT n.id FROM networks n JOIN places p ON n.location_id=p.id
- UNION SELECT u.id FROM uplinks u JOIN places p ON u.location_id=p.id
- UNION SELECT h.id FROM hosts h JOIN places p ON h.location_id=p.id`, r.SiteID)
 		if e != nil {
 			return r, e
 		}
