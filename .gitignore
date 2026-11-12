@@ -7,4 +7,6 @@
 /snapshot-data/
 /snapshot-backups/
 /node_modules/
+/web/node_modules/
+/web/password-*.png
 /.browser-libs/

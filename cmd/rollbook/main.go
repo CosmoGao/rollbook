@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
@@ -316,6 +317,7 @@ func handler(engines ...httpapi.Engine) http.Handler {
 		engine = engines[0]
 	}
 	mux := http.NewServeMux()
+	mux.HandleFunc("/api", http.NotFound)
 	mux.Handle("/api/", engine.Handler())
 	mux.Handle("/mcp", mcp.Server{Engine: engine})
 	mux.HandleFunc("/manifest.webmanifest", func(w http.ResponseWriter, r *http.Request) {
@@ -324,7 +326,7 @@ func handler(engines ...httpapi.Engine) http.Handler {
 			return
 		}
 		w.Header().Set("Content-Type", "application/manifest+json; charset=utf-8")
-		data, err := web.Files.ReadFile("manifest.webmanifest")
+		data, err := web.Files.ReadFile("dist/manifest.webmanifest")
 		if err != nil {
 			http.Error(w, "manifest unavailable", http.StatusInternalServerError)
 			return
@@ -342,7 +344,28 @@ func handler(engines ...httpapi.Engine) http.Handler {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		http.FileServer(http.FS(web.Files)).ServeHTTP(w, r)
+		path := strings.TrimPrefix(r.URL.Path, "/")
+		if path == "api" || strings.HasPrefix(path, "api/") || path == "mcp" || strings.HasPrefix(path, "mcp/") || path == "healthz" || strings.HasPrefix(path, "healthz/") {
+			http.NotFound(w, r)
+			return
+		}
+		if path == "" {
+			path = "index.html"
+		}
+		data, err := web.Files.ReadFile("dist/" + path)
+		if err != nil {
+			if strings.HasPrefix(path, "assets/") || strings.Contains(path, ".") {
+				http.NotFound(w, r)
+				return
+			}
+			path = "index.html"
+			data, err = web.Files.ReadFile("dist/" + path)
+		}
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		http.ServeContent(w, r, path, time.Time{}, bytes.NewReader(data))
 	}))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// 资源和接口均不缓存，避免页面显示失效的会话或旧数据。

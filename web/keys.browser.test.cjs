@@ -1,3 +1,4 @@
+const {installBundle}=require('./browser.bundle.cjs');
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -15,8 +16,7 @@ test('Key 列表显示元数据，编辑后更新，吊销项默认折叠',async
   await page.route('http://rollbook.test/**',route=>{
    const request=route.request(),pathname=new URL(request.url()).pathname;
    const reply=(data,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
-   if(pathname==='/')return route.fulfill({contentType:'text/html',body:asset('index.html')});
-   if(['app.js','i18n.js','style.css'].includes(pathname.slice(1)))return route.fulfill({contentType:pathname.endsWith('.css')?'text/css':'application/javascript',body:asset(pathname.slice(1))});
+   if(pathname==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'dist','index.html'))});
    if(pathname==='/api/auth/session')return reply({login:'owner'});
    if(pathname==='/api/config')return reply({allow_insecure_http:false,http_risk:false});
    if(pathname==='/api/version')return reply({version:'test',commit:'test'});
@@ -26,9 +26,9 @@ test('Key 列表显示元数据，编辑后更新，吊销项默认折叠',async
    if(pathname.endsWith('/revoke')&&request.method()==='POST'){current.revoked_at='2026-11-12T00:00:00Z';return reply({ok:true})}
    return reply({message:'unexpected '+pathname},404);
   });
-  await page.goto('http://rollbook.test/');
+  await installBundle(page);await page.goto('http://rollbook.test/');
   await page.getByRole('button',{name:'稍后再说'}).click();
-  await page.locator('#nav button[data-view="keys"]').click();
+  await page.locator('#nav button[data-view="agent"]').click();
   await page.locator('#content .row').first().waitFor();
   assert.match(await page.locator('#content').innerText(),/只读/);
   assert.match(await page.locator('#content').innerText(),/旧备注/);
@@ -45,7 +45,7 @@ test('Key 列表显示元数据，编辑后更新，吊销项默认折叠',async
   assert.equal(calls[0].name,'新名称');
   assert.equal(calls[0].note,'新备注');
   assert.match(calls[0].expires_at,/2030-01-01/);
-  assert.match(await page.locator('#content').innerText(),/新名称/);
+  await page.locator('#content').getByText('新名称').waitFor();assert.match(await page.locator('#content').innerText(),/新名称/);
   await page.locator('#content button').filter({hasText:'吊销'}).click();
   await page.locator('.modal button').filter({hasText:'确认吊销'}).click();
   await page.locator('.modal').waitFor({state:'detached'});

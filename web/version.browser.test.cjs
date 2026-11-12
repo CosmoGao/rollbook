@@ -1,3 +1,4 @@
+const {installBundle}=require('./browser.bundle.cjs');
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -9,15 +10,14 @@ const webFile=name=>fs.readFileSync(path.join(__dirname,name));
 async function openPage(page,{version,commit,loggedIn=false,failVersion=false}){
  await page.route('http://rollbook.test/**',route=>{
   const url=new URL(route.request().url()),p=url.pathname;
-  if(p==='/')return route.fulfill({contentType:'text/html',body:webFile('index.html')});
-  if(['/app.js','/i18n.js','/style.css'].includes(p))return route.fulfill({contentType:p.endsWith('.css')?'text/css':'application/javascript',body:webFile(p.slice(1))});
+  if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'dist','index.html'))});
   if(p==='/api/version')return failVersion?route.fulfill({status:503,json:{}}):route.fulfill({json:{version,commit}});
   if(p==='/api/config')return route.fulfill({json:{http_risk:false}});
   if(p==='/api/auth/session')return loggedIn?route.fulfill({json:{login:'owner'}}):route.fulfill({status:401,json:{code:'unauthorized'}});
   if(p==='/api/browse')return route.fulfill({json:[{id:'location:site',type:'location',name:'Site',fields:{kind:'站点'}}]});
   return route.fulfill({json:[]});
  });
- await page.goto('http://rollbook.test/');
+ await installBundle(page);await page.goto('http://rollbook.test/');
 }
 
 test('版本在中英文登录页和工作台一致，且窄屏可见',async()=>{
@@ -37,9 +37,10 @@ test('版本在中英文登录页和工作台一致，且窄屏可见',async()=>
    if(process.env.ROLLBOOK_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.ROLLBOOK_SCREENSHOT_DIR,`login-${locale}.png`),fullPage:true});
    await page.unrouteAll();
    await openPage(page,{version,commit,loggedIn:true});
-   await page.locator('#build-version').getByText(expected).waitFor();
-   assert.equal(await page.locator('#build-version').isVisible(),true);
-   assert.equal(await page.locator('#build-version').textContent(),expected);
+   const label=page.locator(width<760?'#mobile-build-version':'#build-version');
+   await label.getByText(expected).waitFor();
+   assert.equal(await label.isVisible(),true);
+   assert.equal(await label.textContent(),expected);
    if(process.env.ROLLBOOK_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.ROLLBOOK_SCREENSHOT_DIR,`app-${locale}.png`),fullPage:true});
    await context.close();
   }

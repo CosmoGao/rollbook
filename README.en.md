@@ -30,3 +30,7 @@ Create and update requests accept English enum aliases. For example, `active` ma
 Use HTTPS, a trusted reverse proxy, and least-privilege keys. For TLS termination, set `ROLLBOOK_TRUSTED_PROXY_CIDRS` to the immediate proxy's narrow TCP address range (for example `127.0.0.1/32`) and configure Zoraxy to overwrite `X-Forwarded-Proto`, or Nginx with `proxy_set_header X-Forwarded-Proto $scheme;`. Remove or normalize client-supplied `X-Forwarded-Proto` and `Forwarded` headers at the proxy. Only headers from trusted TCP peers affect the protocol decision; direct TLS is always secure. The warning and session/CSRF cookie `Secure` flags follow each request. Direct HTTP login requires `ROLLBOOK_ALLOW_INSECURE_HTTP=true` and exposes credentials on the network. The server rejects non-HTTP(S) URL fields and filters URL links in the web interface. Backups can contain account and key hashes; protect them accordingly. Read the [Chinese README](README.md) for the complete configuration, backup, restore, and migration procedures.
 
 Licensed under Apache-2.0.
+
+## Web development
+
+The web source lives in `web/src/` and uses React, TypeScript, and Vite. Run `npm ci --prefix web` once, then `npm run typecheck --prefix web` and `npm run build --prefix web` after changes. Commit the generated `web/dist/` assets. Go embeds them, so `go build ./cmd/rollbook` works without Node. Rebuild before committing to keep `web/dist/` in sync.

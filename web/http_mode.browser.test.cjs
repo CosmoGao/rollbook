@@ -53,6 +53,8 @@ test('真实浏览器经 TLS 终结反代与直连 HTTP 的提示和 Cookie', {t
   for(const scenario of [{name:'https',url:`https://127.0.0.1:${proxyPort}`,secure:true},{name:'http',url:`http://127.0.0.1:${appPort}`,secure:false}]){
    const context=await browser.newContext({ignoreHTTPSErrors:true});
    const page=await context.newPage();
+   const pendingResponses=[];
+   page.on('response',response=>{const url=new URL(response.url());if(url.pathname==='/api/changes'&&url.searchParams.get('state')==='待确认')pendingResponses.push(response.status())});
    await page.goto(scenario.url);
    await page.locator('#login-form').waitFor();
    assert.equal(await page.locator('#login .http-mode-notice').isVisible(),!scenario.secure);
@@ -67,7 +69,11 @@ test('真实浏览器经 TLS 终结反代与直连 HTTP 的提示和 Cookie', {t
     assert.equal(cookie.secure,scenario.secure,`${scenario.name}: ${name} Secure`);
    }
    assert.equal(await page.locator('.sidebar-http-notice').isVisible(),!scenario.secure);
-   await page.locator('.modal-backdrop .modal button').last().click();
+   await page.locator('.modal button').last().click();
+   await page.waitForFunction(()=>document.querySelector('.overview-card strong')?.textContent==='0');
+   assert.equal(await page.locator('.overview-card').first().locator('strong').innerText(),'0');
+   assert.ok(pendingResponses.length>=2,`${scenario.name}: 总览和侧栏应分别请求待确认变更`);
+   assert.ok(pendingResponses.every(status=>status===200),`${scenario.name}: 待确认变更请求应成功`);
    if(artifactDir)await page.screenshot({path:path.join(artifactDir,`${scenario.name}.png`),fullPage:true});
    await context.close();
   }

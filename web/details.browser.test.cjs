@@ -1,3 +1,4 @@
+const {installBundle}=require('./browser.bundle.cjs');
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -18,14 +19,13 @@ test('四类详情安全显示笔记、凭据与引用；变更筛选和共享�
   let query;
   await page.route('http://rollbook.test/**',route=>{
    const u=new URL(route.request().url()),p=decodeURIComponent(u.pathname);
-   if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'index.html'))});
-   if(['/app.js','/i18n.js','/topology.js','/dagre.min.js','/marked.umd.js','/purify.min.js','/style.css'].includes(p))return route.fulfill({contentType:p.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,p.slice(1)))});
+   if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'dist','index.html'))});
    const reply=json=>route.fulfill({json});
    if(p==='/api/auth/session')return reply({login:'owner'});
    if(p==='/api/config')return reply({allow_insecure_http:false,http_risk:false});
    if(p==='/api/version')return reply({version:'test',commit:'test'});
-   if(p==='/api/browse')return reply([]);
-   if(p==='/api/changes'){query=u.searchParams;return reply([change])}
+   if(p==='/api/browse')return reply(Object.values(assets).filter(x=>x.type===u.searchParams.get('type')));
+   if(p==='/api/assets/unverified')return reply([]);if(p==='/api/versions/outdated')return reply([]);if(p==='/api/changes'){query=u.searchParams;return reply(query.get('state')==='待确认'?[]:[change])}
    if(p==='/api/contexts')return reply([context]);
    if(p.startsWith('/api/assets/')&&p.endsWith('/detail')){const id=p.slice('/api/assets/'.length,-'/detail'.length);return reply({object:assets[id],notes:[note],credentials:[credential],changes:[change],referenced_by:[assets['service:app']]})}
    if(p.startsWith('/api/assets/'))return reply(assets[p.slice('/api/assets/'.length)]||credential);
@@ -34,10 +34,10 @@ test('四类详情安全显示笔记、凭据与引用；变更筛选和共享�
    if(p==='/api/services/service:app/topology')return reply({nodes:[],edges:[]});
    return route.fulfill({status:404,json:{message:'unexpected '+p}});
   });
-  await page.goto('http://rollbook.test/');
+  await installBundle(page);await page.goto('http://rollbook.test/');
   await page.getByRole('button',{name:'稍后再说'}).click();
   for(const id of ids){
-   await page.evaluate(id=>openObject(id),id);
+   await page.locator('#nav button[data-view="assets"]').click();await page.locator('.asset-type-select').selectOption(id.split(':')[0]);await page.locator('.card').filter({hasText:id}).click();
    await page.getByRole('heading',{name:'笔记'}).waitFor();
    assert.equal(await page.locator('.detail-entry strong').first().count(),1);
    assert.equal(await page.getByRole('heading',{name:'凭据引用'}).count(),1);
@@ -47,14 +47,14 @@ test('四类详情安全显示笔记、凭据与引用；变更筛选和共享�
    assert.equal(await page.locator('a[href^="javascript:"]').count(),0);
    assert.equal(await page.evaluate(()=>window.__pwned),undefined);
   }
-  await page.locator('#nav [data-view=changes]').click();
+  await page.locator('#nav [data-view=overview]').click();await page.locator('.section').filter({has:page.getByRole('heading',{name:'最近变更'})}).getByRole('button',{name:'查看全部'}).click();
   await page.locator('.filter-bar input').first().fill('robot');
   await page.locator('.filter-bar select').selectOption('host');
   await page.locator('.filter-bar input[type=date]').first().fill('2026-11-01');
   await page.locator('.filter-bar button').click();
   await page.getByText('update · host:box').waitFor();
   assert.equal(query.get('key'),'robot');assert.equal(query.get('object_type'),'host');assert.equal(query.get('since'),new Date('2026-11-01T00:00:00').toISOString());
-  await page.locator('#nav [data-view=contexts]').click();
+  await page.locator('#nav [data-view=overview]').click();await page.locator('.section').filter({has:page.getByRole('heading',{name:'共享上下文'})}).getByRole('button',{name:'查看全部'}).click();
   await page.getByText('交接').waitFor();
   assert.equal(await page.locator('.markdown img').count(),0);
   assert.equal(await page.evaluate(()=>window.__pwned),undefined);

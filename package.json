@@ -1,5 +1,7 @@
 {
-	"scripts": {"test:browser": "node --test web/*.browser.test.cjs"},
+  "scripts": {
+    "test:browser": "node --test --test-concurrency=1 web/*.browser.test.cjs"
+  },
   "devDependencies": {
     "playwright": "^1.65.0"
   }
