@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -241,11 +242,49 @@ func (s Service) SetLevel(ctx context.Context, p Principal, id string, level Lev
 	}
 	return nil
 }
+
+// UpdateKey 只修改可编辑的元数据，已吊销的 Key 不可修改。
+func (s Service) UpdateKey(ctx context.Context, p Principal, id, name, note string, expires *time.Time) error {
+	if !p.IsUser() {
+		return ErrForbidden
+	}
+	if strings.TrimSpace(name) == "" {
+		return ErrInvalid
+	}
+	if err := secrets.Check([]string{name, note}); err != nil {
+		return err
+	}
+	var expiry string
+	if expires != nil {
+		if !expires.After(time.Now()) {
+			return ErrInvalid
+		}
+		expiry = expires.UTC().Format(time.RFC3339Nano)
+	}
+	r, err := s.DB.ExecContext(ctx, "UPDATE api_keys SET name=?,note=?,expires_at=? WHERE id=? AND revoked_at IS NULL", name, note, null(expiry), id)
+	if err != nil {
+		return err
+	}
+	if n, _ := r.RowsAffected(); n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
 func (s Service) Revoke(ctx context.Context, p Principal, id string) error {
 	if !p.IsUser() {
 		return ErrForbidden
 	}
-	r, e := s.DB.ExecContext(ctx, "UPDATE api_keys SET revoked_at=? WHERE id=? AND revoked_at IS NULL", time.Now().UTC().Format(time.RFC3339Nano), id)
+	tx, e := s.DB.BeginTx(ctx, nil)
+	if e != nil {
+		return e
+	}
+	defer tx.Rollback()
+	var name string
+	if e = tx.QueryRowContext(ctx, "SELECT name FROM api_keys WHERE id=? AND revoked_at IS NULL", id).Scan(&name); e != nil {
+		return e
+	}
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	r, e := tx.ExecContext(ctx, "UPDATE api_keys SET revoked_at=? WHERE id=? AND revoked_at IS NULL", now, id)
 	if e != nil {
 		return e
 	}
@@ -253,7 +292,19 @@ func (s Service) Revoke(ctx context.Context, p Principal, id string) error {
 	if n == 0 {
 		return sql.ErrNoRows
 	}
-	return nil
+	changeID, e := random()
+	if e != nil {
+		return e
+	}
+	changeID = "change:" + changeID
+	diff, _ := json.Marshal(map[string]string{"name": name, "revoked_at": now})
+	if _, e = tx.ExecContext(ctx, `INSERT INTO objects(id,type,name,created_at,created_by,updated_at,updated_by) VALUES(?,'change',?,?,?,?,?)`, changeID, "revoke_key", now, p.Login, now, p.Login); e != nil {
+		return e
+	}
+	if _, e = tx.ExecContext(ctx, `INSERT INTO changes(id,object_type,object_id,action,diff_json,actor,actor_type,via,reason,state,base_rev) VALUES(?,?,?,?,?,?,?,?,?,?,?)`, changeID, "api_key", id, "revoke_key", string(diff), p.Login, "user", "web", "吊销 Key", "已生效", 0); e != nil {
+		return e
+	}
+	return tx.Commit()
 }
 func (s Service) Keys(ctx context.Context, p Principal) ([]Key, error) {
 	if !p.IsUser() {

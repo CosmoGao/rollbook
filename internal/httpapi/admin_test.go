@@ -96,6 +96,30 @@ func TestBrowserAdminAndKeyBoundary(t *testing.T) {
 	if w := call("GET", "/api/keys", "", "", nil, result.Token); w.Code != 403 {
 		t.Fatal(w.Code)
 	}
+	metadataPath := "/api/keys/" + result.Key.ID + "/metadata"
+	if w := call("PATCH", metadataPath, `{"name":"hijack"}`, "", nil, result.Token); w.Code != 403 {
+		t.Fatal("key edited metadata", w.Code, w.Body)
+	}
+	if w := call("PATCH", metadataPath, `{"name":"renamed"}`, "", cookies, ""); w.Code != 403 {
+		t.Fatal("missing csrf", w.Code)
+	}
+	for _, body := range []string{`{"name":"","note":"ok"}`, `{"name":"bad","expires_at":"yesterday"}`, `{"name":"bad","expires_at":"2020-01-01T00:00:00Z"}`, `{"name":"bad","note":"password: secret"}`} {
+		if w := call("PATCH", metadataPath, body, csrf, cookies, ""); w.Code != 422 {
+			t.Fatal("invalid metadata", w.Code, w.Body)
+		}
+	}
+	expiry := time.Now().Add(time.Hour).UTC().Format(time.RFC3339)
+	body, _ := json.Marshal(map[string]string{"name": "renamed", "note": "test note", "expires_at": expiry})
+	if w := call("PATCH", metadataPath, string(body), csrf, cookies, ""); w.Code != 200 {
+		t.Fatal("update metadata", w.Code, w.Body)
+	}
+	var keys []auth.Key
+	if w := call("GET", "/api/keys", "", "", cookies, ""); w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &keys) != nil || len(keys) != 1 || keys[0].Name != "renamed" || keys[0].Note != "test note" || keys[0].ExpiresAt == "" || keys[0].CreatedAt == "" {
+		t.Fatal("key list metadata", w.Code, w.Body)
+	}
+	if p, err := a.Authenticate(ctx, result.Token); err != nil || p.KeyName != "renamed" {
+		t.Fatal("key metadata did not take effect", p, err)
+	}
 	if w := call("POST", "/api/changes/change:missing/approve", "", "", nil, result.Token); w.Code != 403 {
 		t.Fatal(w.Code)
 	}
@@ -107,6 +131,13 @@ func TestBrowserAdminAndKeyBoundary(t *testing.T) {
 	}
 	if w := call("POST", "/api/keys/"+result.Key.ID+"/revoke", "", csrf, cookies, ""); w.Code != 200 {
 		t.Fatal(w.Code, w.Body)
+	}
+	if w := call("PATCH", metadataPath, `{"name":"resurrect"}`, csrf, cookies, ""); w.Code != 404 {
+		t.Fatal("revoked key edited", w.Code, w.Body)
+	}
+	var auditCount int
+	if err := database.QueryRowContext(ctx, "SELECT count(*) FROM changes WHERE object_type='api_key' AND object_id=? AND action='revoke_key'", result.Key.ID).Scan(&auditCount); err != nil || auditCount != 1 {
+		t.Fatal("missing revocation audit", auditCount, err)
 	}
 	if w := call("GET", "/api/search?q=test", "", "", nil, result.Token); w.Code != 401 {
 		t.Fatal(w.Code)

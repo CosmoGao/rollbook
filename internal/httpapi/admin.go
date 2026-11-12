@@ -286,6 +286,27 @@ func (e Engine) admin(w http.ResponseWriter, r *http.Request, p auth.Principal) 
 		}
 		var err error
 		switch {
+		case parts[1] == "metadata" && r.Method == http.MethodPatch:
+			var input struct {
+				Name      string `json:"name"`
+				Note      string `json:"note"`
+				ExpiresAt string `json:"expires_at"`
+			}
+			if err = decodeBody(w, r, &input); err == nil {
+				var expiry *time.Time
+				if input.ExpiresAt != "" {
+					var parsed time.Time
+					parsed, err = time.Parse(time.RFC3339, input.ExpiresAt)
+					if err == nil {
+						expiry = &parsed
+					} else {
+						err = auth.ErrInvalid
+					}
+				}
+				if err == nil {
+					err = e.Auth.UpdateKey(r.Context(), p, parts[0], input.Name, input.Note, expiry)
+				}
+			}
 		case parts[1] == "level" && r.Method == http.MethodPatch:
 			var input struct {
 				Level auth.Level `json:"level"`
