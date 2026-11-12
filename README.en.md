@@ -21,6 +21,8 @@ REST is served under `/api/` and Streamable HTTP MCP under `/mcp`. Both accept `
 
 Install the CLI from a release or build it with `go build ./cmd/rollbook`. Run `rollbook login` to save a server address and key, or set `ROLLBOOK_URL` and `ROLLBOOK_KEY` for the current process. The CLI uses the same REST API. MCP tools include `search`, `get_asset`, `get_service`, `create`, and `update`; inspect `tools/list` for full schemas. See [`skills/rollbook/SKILL.md`](skills/rollbook/SKILL.md) for agent workflows.
 
+The sign-in page and signed-in footer display the same build version from `GET /api/version`. Tag builds show `Rollbook vX.Y.Z`; main builds show `Rollbook main` followed by the seven-character commit ID.
+
 Create and update requests accept English enum aliases. For example, `active` maps to `在用` for `status`, and `physical` maps to `物理机` for a host's `kind`. Responses and stored values stay in Chinese for compatibility. MCP schemas list accepted aliases. REST errors use English when you send `Accept-Language: en` or `X-Rollbook-Language: en`; codes and HTTP statuses stay the same. Chinese requests and older clients continue to work.
 
 ## Security and deployment
