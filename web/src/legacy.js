@@ -1,6 +1,3 @@
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
-import { mountFlow, unmountFlow } from './Flow.jsx';
 import { mountOverview, unmountOverview } from './Overview';
 import { mountAssets, unmountAssets } from './Assets';
 import { mountSettings, unmountSettings } from './Settings';
@@ -11,6 +8,8 @@ import { mountBackup, unmountBackup } from './Backup';
 import { mountAudit, unmountAudit } from './Audit';
 import { mountTopology, unmountTopology } from './Topology';
 import { openAssetForm, formFields } from './AssetForm';
+import { mountDetail, unmountDetail } from './AssetDetail';
+import { openFirstRun } from './FirstRun';
 // 界面文案以现有中文为键；这里不更改 API 取值。
 const translations = {
 '备注':'Note','创建时间':'Created','到期时间':'Expires','最后使用时间':'Last used','查看已吊销的 Key':'Show revoked keys','编辑 Key':'Edit key',
@@ -100,14 +99,7 @@ function error(e){clear(root).append(message(e.message,'error'))}
 async function navigate(view){current=view;const menuView=['pending','unverified','outdated'].includes(view)?'pendingHub':view==='services'?'assets':view;$('#crumb').textContent=t(labels[menuView]||'资产详情');document.querySelectorAll('#nav button[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===menuView));clear(root);try{switch(view){case 'overview':await renderOverview();break;case 'services':await renderAssets('service');break;case 'topology':await renderTopologyPage();break;case 'pendingHub':await renderPendingHub('pending');break;case 'agent':await renderKeys();break;case 'settings':renderSettings();break;case 'search':renderSearch();break;case 'assets':await renderAssets();break;case 'sites':case 'hosts':case 'networks':await renderBrowse(view);break;case 'outdated':case 'unverified':case 'pending':await renderPendingHub(view);break;case 'changes':await renderRecentChanges();break;case 'contexts':await renderContexts();break;case 'keys':await renderKeys();break;case 'backup':await renderBackup();break}}catch(e){error(e)}}
 async function renderBrowse(view){const type={sites:'location',hosts:'host',networks:'network'}[view];add(root,heading(labels[view],view==='sites'?'查看接入、网段与路由设备。':'按资产浏览清册。'));let list=await api('/api/browse?type='+type);if(view==='sites')list=list.filter(o=>o.fields?.kind==='站点');if(!list.length){root.append(empty());return}if(view==='hosts'){await renderHostTree(list);return}const grid=el('div','grid');root.append(grid);for(const o of list)grid.append(card(o,view==='networks'?fmt(o.fields?.cidr):o.id))}
 async function renderHostTree(hosts){const [services,ips]=await Promise.all([api('/api/browse?type=service'),api('/api/browse?type=ip')]);const hostIds=new Set(hosts.map(h=>h.id));const children=new Map(),servicesByHost=new Map(),ipsByHost=new Map();for(const h of hosts){const parent=h.fields?.parent_host_id;if(parent&&hostIds.has(parent)){if(!children.has(parent))children.set(parent,[]);children.get(parent).push(h)}}for(const s of services){const id=s.fields?.host_id;if(!servicesByHost.has(id))servicesByHost.set(id,[]);servicesByHost.get(id).push(s)}for(const ip of ips){const id=ip.fields?.host_id;if(!ipsByHost.has(id))ipsByHost.set(id,[]);ipsByHost.get(id).push(ip.fields?.address)}const container=el('div','host-tree');root.append(container);const visited=new Set();const rank=h=>({物理机:0,NAS:0,虚拟机:1,LXC:2,容器:2,网络设备:3})[h.fields?.kind]??4;const node=(o,depth=0)=>{if(visited.has(o.id))return null;visited.add(o.id);const ipHost=o.type==='service'?o.fields?.host_id:o.id;const ownIPs=(ipsByHost.get(ipHost)||[]).join(', ')||'—';const kids=[...(children.get(o.id)||[]).sort((a,b)=>rank(a)-rank(b)||a.name.localeCompare(b.name)),...(servicesByHost.get(o.id)||[])];const details=el('details','tree-node');details.open=depth<2;const summary=el('summary');const title=el('span','tree-title',literal(o.name));title.onclick=e=>{e.preventDefault();e.stopPropagation();openObject(o.id,o.type)};const meta=el('span','tree-meta',literal(`${o.type==='host'?enumLabel('kind',o.fields?.kind):t('服务')} · IP ${ownIPs} · ${enumLabel('status',o.status)}`));const link=el('button','ghost','查看');link.type='button';link.onclick=e=>{e.preventDefault();e.stopPropagation();openObject(o.id,o.type)};add(summary,title,meta,link);details.append(summary);const body=el('div','tree-children');for(const child of kids){const item=node(child,depth+1);if(item)body.append(item)}details.append(body);return details};for(const h of hosts.filter(h=>!h.fields?.parent_host_id||!hostIds.has(h.fields.parent_host_id)).sort((a,b)=>rank(a)-rank(b)||a.name.localeCompare(b.name))){const item=node(h);if(item)container.append(item)}for(const h of hosts)if(!visited.has(h.id)){const item=node(h);if(item)container.append(item)}}
-function renderOccupancy(inv){const o=inv.occupancy;if(!o)return;const summary=section('网段占用');add(summary,el('p','muted',literal(`${o.cidr} · ${t('网关')} ${o.gateway||'—'} · DHCP ${o.dhcp_range||'—'}`)),el('p','',literal(`${t('下一个可分配 IP')}：${o.next_available||t('无空闲地址')}`)));if(o.next_available)summary.append(copyButton(o.next_available));root.append(summary);const used=section('已用地址');if(!o.used?.length)used.append(empty());for(const entry of o.used||[]){const r=el('div','row occupancy-row');add(r,el('strong','',literal(entry.address)),copyButton(entry.address),el('span','muted',literal(`${entry.host_id} · ${entry.ip_id}`)));if(entry.gateway)r.append(el('span','tag warn','网关'));if(entry.dhcp)r.append(el('span','tag warn','DHCP'));if(entry.conflict)r.append(el('span','tag conflict','冲突'));used.append(r)}root.append(used);const free=section('空闲地址范围');if(!o.free?.length)free.append(empty('无空闲地址'));for(const range of o.free||[])free.append(el('div','row',literal(range.start===range.end?range.start:`${range.start} – ${range.end}`)));root.append(free)}
-async function openObject(id,type){current='detail';$('#crumb').textContent=t('资产详情');document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));clear(root).append(message('正在加载…'));try{if(type==='service'||id.startsWith('service:'))return renderService(id);if(type==='location')return renderSite(id);if(type==='host'||type==='network')return renderInventory(id,type);const o=await getObject(id);if(o.type==='service')return renderService(id);if(o.type==='location')return renderSite(id);if(o.type==='host'||o.type==='network')return renderInventory(id,o.type);await renderBasic(o)}catch(e){error(e)}}
-function renderBasic(o){clear(root);add(root,heading(literal(o.name||o.id),literal(o.id)));const s=section(types[o.type]||o.type);s.append(fieldRows({...o, ...o.fields},['fields','aliases','tags'],o.type));root.append(s)}
-function listSection(title,arr,formatter){const s=section(title);if(!arr?.length){s.append(empty());return s}for(const o of arr){if(typeof o==='string'){const r=el('div','row');const b=el('button','ghost','查看');b.onclick=()=>openObject(o);add(r,el('span','',literal(o)),b);s.append(r)}else s.append(row(o,formatter?formatter(o):o.id))}return s}
-async function renderSite(id){const site=await api('/api/sites/'+encodeURIComponent(id));const ids=[...(site.uplinks||[]),...(site.networks||[]),...(site.routers||[]),...(site.hosts||[])];const got=await objects([...new Set(ids)]);const byId=Object.fromEntries(got.map(o=>[o.id,o]));const pick=arr=>(arr||[]).map(x=>byId[x]).filter(Boolean);clear(root);add(root,heading(literal(site.name||site.Name),literal(`${t('站点 · ')}${site.id}`)));const uplinks=pick(site.uplinks||site.Uplinks);const networks=pick(site.networks||site.Networks);const routers=pick(site.routers||site.Routers);const hosts=pick(site.hosts||site.Hosts);for(const u of uplinks){const s=section(literal(t('网络接入 · ')+u.name));s.append(fieldRows(u.fields,[],u.type));root.append(s)}root.append(listSection('网段',networks,o=>`${fmt(o.fields?.cidr)} · 网关 ${fmt(o.fields?.gateway)}`));root.append(listSection('路由器',routers,o=>fmt(o.fields?.net_role)));root.append(listSection('主机',hosts,o=>fmt(o.fields?.kind)))}
-async function renderInventory(id,type){const [o,inv]=await Promise.all([getObject(id),api(`/api/${type==='host'?'hosts':'networks'}/${encodeURIComponent(id)}/inventory`)]);const ids=[...(inv.hosts||[]),...(inv.services||[]),...(inv.ips||[]),...(inv.router_id?[inv.router_id]:[])];const got=await objects([...new Set(ids)]);const byId=Object.fromEntries(got.map(x=>[x.id,x]));const pick=arr=>(arr||[]).map(x=>byId[x]).filter(Boolean);clear(root);add(root,heading(literal(o.name),literal(o.id)));const s=section('资产信息');s.append(fieldRows(o.fields,[],o.type));root.append(s);if(type==='network'&&inv.router_id)root.append(listSection('路由器',pick([inv.router_id])));if(type==='network')renderOccupancy(inv);else root.append(listSection('IP 地址',pick(inv.ips),x=>fmt(x.fields?.address)));if(type==='network')root.append(listSection('主机',pick(inv.hosts)));else root.append(listSection('服务',pick(inv.services)))}
-async function renderService(id){const d=await api('/api/services/'+encodeURIComponent(id));const o=d.service;clear(root);add(root,heading(literal(o.name),literal(`${t('服务 · ')}${o.id}`)));const overview=section('服务信息');overview.append(fieldRows({...o.fields,宿主:d.host?.name,宿主IP:(d.ips||[]).map(x=>x.fields?.address).join('、')||'—'},[],o.type));root.append(overview);const pair=el('div','detail-grid');add(pair,listSection('端口',d.ports,x=>`${fmt(x.fields?.bind)}:${fmt(x.fields?.port)}/${fmt(x.fields?.protocol)} · ${fmt(x.fields?.purpose)}`),listSection('访问入口',d.endpoints,x=>`${fmt(x.fields?.url)} · 经由 ${fmt(x.fields?.via_json)}`));root.append(pair);root.append(listSection('依赖',d.dependencies,x=>`${fmt(x.fields?.from_id)} → ${fmt(x.fields?.to_id)} · ${fmt(x.fields?.kind)}`));root.append(listSection('版本',d.versions,x=>`当前 ${fmt(x.fields?.current_version)} · 最新 ${fmt(x.fields?.latest_version)} · ${fmt(x.fields?.version_state)} · 来源 ${fmt(x.fields?.upstream_source)} · 原始 tag ${fmt(x.fields?.upstream_tag)}${x.fields?.check_error?' · 检查失败: '+x.fields.check_error:''}${x.fields?.pinned?' · 固定版本: '+fmt(x.fields?.pinned_reason):''}`));await appendTopology(id,'service')}
-function diffText(change){let d=change.fields?.diff_json;try{if(typeof d==='string')d=JSON.parse(d)}catch{}return JSON.stringify(d||{},null,2)}
+async function openObject(id,type){current='detail';$('#crumb').textContent=t('资产详情');document.querySelectorAll('#nav button').forEach(button=>button.classList.remove('active'));clear(root);mountDetail(root,{id,type,api,t,enumLabel,types,open:openObject,navigate})}
 function modal(title,build){const overlay=el('div','modal-backdrop');const box=el('div','modal');add(box,el('h2','',title));const close=el('button','ghost','取消');close.onclick=()=>overlay.remove();build(box,close,overlay);overlay.append(box);overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};document.body.append(overlay)}
 async function renderKeys(){mountKeys(root,api)}
 $('#login-form').onsubmit=async e=>{e.preventDefault();$('#login-error').textContent='';const f=new FormData(e.target);try{const p=await api('/api/auth/login',{method:'POST',body:JSON.stringify({login:f.get('login'),password:f.get('password')})});e.target.reset();showApp(p.login);navigate('overview');showFirstRun()}catch(err){$('#login-error').textContent=err.message}};
@@ -127,94 +119,11 @@ async function renderBackup(){mountBackup(root,api,showLogin)}
 
 // 表单字段与数据库中的业务模型保持一致；关联项从当前清册选择。
 async function assetForm(type,original=null){openAssetForm(type,original,api,t,enumLabel,types,openObject)}
-async function refreshObject(o){await openObject(o.id,o.type)}
-function detailActions(o){const bar=el('div','controls detail-actions');const button=(label,fn,cls='ghost')=>{const b=el('button',cls,label);b.onclick=fn;bar.append(b)};
- if(formFields[o.type]&&o.type!=='note')button('编辑',()=>assetForm(o.type,o));
- button('标记核实',async()=>{const reason=prompt('核实原因');if(!reason)return;try{await api('/api/assets/'+encodeURIComponent(o.id)+'/verify',{method:'POST',body:JSON.stringify({rev:o.rev,reason})});refreshObject(o)}catch(e){alert(e.message)}});
- button('加笔记',()=>modal('添加笔记',(box,close,overlay)=>{const kind=el('select');for(const value of ['运维笔记','故障','决策','待办']){const opt=el('option','',literal(enumLabel('kind',value)));opt.value=value;kind.append(opt)}const body=el('textarea');body.required=true;const reason=el('input');reason.required=true;const form=el('form');add(form,add(el('label','','类型'),kind),add(el('label','','内容'),body),add(el('label','','原因'),reason));const err=el('div','error');const save=el('button','primary','保存笔记');save.type='submit';add(form,err,add(el('div','modal-actions'),close,save));box.append(form);form.onsubmit=async event=>{event.preventDefault();try{await api('/api/notes',{method:'POST',body:JSON.stringify({id:o.id,rev:o.rev,kind:kind.value,body_md:body.value,reason:reason.value})});overlay.remove();refreshObject(o)}catch(e){err.textContent=e.message}}}));
- if(o.type==='host'){if(o.status!=='停用')button('停用主机',()=>offlineDialog(o));else button('恢复主机',()=>restoreDialog(o))}
- button('删除',()=>deleteDialog(o),'danger');return bar}
-function deleteDialog(o){modal('删除'+o.name,(box,close,overlay)=>{box.append(el('p','muted','删除后无法撤销。请确认两次。被引用时会列出引用方。'));const reason=el('input');reason.placeholder=t('删除原因');reason.required=true;const form=el('form');add(form,add(el('label','','操作原因'),reason));const err=el('div','error');const yes=el('button','danger','继续删除');yes.type='submit';add(form,err,add(el('div','modal-actions'),close,yes));box.append(form);form.onsubmit=async event=>{event.preventDefault();if(!confirm(`第二次确认：删除 ${o.name}？`))return;yes.disabled=true;try{await api('/api/assets/'+encodeURIComponent(o.id),{method:'DELETE',body:JSON.stringify({rev:o.rev,reason:reason.value})});overlay.remove();navigate('assets')}catch(e){err.textContent=e.message;yes.disabled=false}}})}
-async function offlineDialog(o){try{const data=await api('/api/hosts/'+encodeURIComponent(o.id)+'/offline');modal('停用主机 · 预览影响',(box,close,overlay)=>{const preview=data.preview;for(const [key,label] of [['services','服务'],['ips','IP'],['endpoints','入口']])box.append(el('p','muted',`${label}：${preview[key].map(x=>x.name).join('、')||'无'}`));const options={};for(const [key,label] of [['services','连带停用服务'],['ips','释放 IP'],['endpoints','标记入口不可用']]){const input=el('input');input.type='checkbox';options[key]=input;add(box,add(el('label','check-row',''),input,el('span','',label)))}const reason=el('input');reason.required=true;reason.placeholder=t('停用原因');const err=el('div','error');const yes=el('button','danger','确认停用');const form=el('form');add(form,add(el('label','','操作原因'),reason),err,add(el('div','modal-actions'),close,yes));box.append(form);form.onsubmit=async event=>{event.preventDefault();yes.disabled=true;try{await api('/api/hosts/'+encodeURIComponent(o.id)+'/offline',{method:'POST',body:JSON.stringify({rev:o.rev,reason:reason.value,options:Object.fromEntries(Object.entries(options).map(([k,v])=>[k,v.checked]))})});overlay.remove();refreshObject(o)}catch(e){err.textContent=e.message;yes.disabled=false}}})}catch(e){alert(e.message)}}
-async function restoreDialog(o){try{const data=await api('/api/hosts/'+encodeURIComponent(o.id)+'/offline');if(!data.operation_id)throw Error('没有可恢复的停用记录');modal('恢复主机',(box,close,overlay)=>{const reason=el('input');reason.required=true;reason.placeholder=t('恢复原因');const err=el('div','error');const form=el('form');const yes=el('button','primary','恢复');add(form,add(el('label','','操作原因'),reason),err,add(el('div','modal-actions'),close,yes));box.append(form);form.onsubmit=async event=>{event.preventDefault();yes.disabled=true;try{const result=await api('/api/hosts/'+encodeURIComponent(o.id)+'/restore',{method:'POST',body:JSON.stringify({operation_id:data.operation_id,reason:reason.value})});overlay.remove();await refreshObject(o);if(result.skipped.length)root.prepend(message('以下对象后来被修改，已跳过恢复：'+result.skipped.join('、')))}catch(e){err.textContent=e.message;yes.disabled=false}}})}catch(e){alert(e.message)}}
-const originalBasic=renderBasic;renderBasic=async function(o){originalBasic(o);root.insertBefore(detailActions(o),root.children[1]);await appendAssetDetail(o.id)};
-const originalSite=renderSite;renderSite=async function(id){await originalSite(id);root.insertBefore(detailActions(await getObject(id)),root.children[1]);await appendAssetDetail(id)};
-const originalInventory=renderInventory;renderInventory=async function(id,type){await originalInventory(id,type);root.insertBefore(detailActions(await getObject(id)),root.children[1]);if(type==='host')await appendTopology(id,'host');await appendAssetDetail(id)};
-const originalService=renderService;renderService=async function(id){await originalService(id);root.insertBefore(detailActions(await getObject(id)),root.children[1]);await appendAssetDetail(id)};
-
-// 初次登录只在空清册显示引导。示例全部使用保留的文档地址与虚构名称。
+// 初次登录仅在空清册显示引导。
 let firstRunOpen=false;
-async function showFirstRun(){if(firstRunOpen)return;try{const sites=await api('/api/browse?type=location');if(sites.length)return;firstRunOpen=true;modal('欢迎使用清册',(box,close,overlay)=>{close.textContent=t('稍后再说');close.onclick=()=>{firstRunOpen=false;overlay.remove()};box.append(el('p','muted','清册还是空的。可以建立第一个站点，或导入明确标记的虚构示例数据。示例使用文档专用 IP 和 .invalid 域名，不代表真实资产。'));const actions=el('div','controls');const site=el('button','primary','建立第一个站点');site.onclick=()=>{firstRunOpen=false;overlay.remove();assetForm('location')};const sample=el('button','ghost','导入虚构示例数据');const err=el('div','error');sample.onclick=async()=>{sample.disabled=true;try{await importSample();firstRunOpen=false;overlay.remove();await navigate('sites')}catch(e){err.textContent=e.message;sample.disabled=false}};add(actions,site,sample);add(box,actions,err,close)})}catch(e){console.error('首次引导检查失败',e)}}
-async function importSample(){const suffix=Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');const id=type=>type+':sample-'+suffix;const examples=[
- {type:'location',name:'【示例】云杉站点',fields:{kind:'站点'}},
- {type:'network',name:'【示例】文档网段',fields:{cidr:'192.0.2.0/24',location_id:id('location')}},
- {type:'host',name:'【示例】演示主机',fields:{kind:'虚拟机',location_id:id('location')}},
- {type:'ip',name:'【示例】192.0.2.10',fields:{address:'192.0.2.10',network_id:id('network'),host_id:id('host')}},
- {type:'service',name:'【示例】演示服务',fields:{host_id:id('host')}},
- {type:'endpoint',name:'【示例】演示入口',fields:{service_id:id('service'),kind:'内网直连',url:'https://demo.example.invalid'}}
- ];for(const item of examples){await api('/api/assets',{method:'POST',body:JSON.stringify({object:{...item,id:id(item.type),source:'人工'},base_rev:0,reason:'导入虚构示例数据'})})}}
-// Markdown 先解析再过滤；仅保留 http(s) 链接，数据里的 HTML 不获得执行机会。
-function safeMarkdown(value){
- const box=el('div','markdown');
- const html=marked.parse(String(value||''),{async:false});
- box.innerHTML=DOMPurify.sanitize(html,{FORBID_TAGS:['img','iframe','form','input','button','style','svg','math']});
- for(const link of box.querySelectorAll('a')){
-  const href=safeLink(link.getAttribute('href'));
-  if(!href){link.replaceWith(document.createTextNode(link.textContent));continue}
-  link.href=href;link.target='_blank';link.rel='noopener noreferrer';
- }
- return box;
-}
-function detailRow(o,description){return row(o,description)}
-async function appendAssetDetail(id){
- const d=await api('/api/assets/'+encodeURIComponent(id)+'/detail');
- const common=section('基本字段');
- common.append(fieldRows(d.object,['fields','aliases','tags'],d.object.type));
- root.insertBefore(common,root.children[2]||null);
- const notes=section('笔记');
- if(!d.notes.length)notes.append(empty());
- for(const n of d.notes){const item=el('article','detail-entry');add(item,el('strong','',literal(`${enumLabel('kind',n.fields.kind)} · ${n.fields.author||n.created_by} · ${n.created_at}`)),safeMarkdown(n.fields.body_md));notes.append(item)}
- root.append(notes);
- const creds=section('凭据引用');
- if(!d.credentials.length)creds.append(empty());
- for(const c of d.credentials)creds.append(detailRow(c,`${fmt(c.fields.vault)} / ${fmt(c.fields.item_ref)} · ${fmt(c.fields.purpose)}`));
- root.append(creds);
- const history=section('变更记录');
- if(!d.changes.length)history.append(empty());
- for(const c of d.changes)history.append(detailRow(c,`${fmt(c.fields.action)} · ${fmt(c.fields.actor_key_name||c.fields.actor)} · ${fmt(c.fields.reason)} · ${c.created_at}`));
- root.append(history);
- root.append(listSection('反向引用',d.referenced_by,x=>`${t(types[x.type]||x.type)} · ${x.name}`));
-}
+async function showFirstRun(){if(firstRunOpen)return;try{const sites=await api('/api/browse?type=location');if(sites.length)return;firstRunOpen=true;openFirstRun(api,t,()=>assetForm('location'),()=>navigate('sites'),()=>{firstRunOpen=false})}catch(e){console.error('首次引导检查失败',e)}}
 async function renderRecentChanges(){mountAudit(root,'changes',api,openObject)}
 async function renderContexts(){mountAudit(root,'contexts',api,openObject)}
-
-// 使用随程序嵌入的 Dagre 计算分层布局，SVG 由安全的 DOM API 构造。
-async function appendTopology(id, type) {
-  const sectionNode = section('拓扑与访问链');
-  const controls = el('div', 'controls topology-controls');
-  const graphButton = el('button', 'ghost', '分层拓扑');
-  const accessButton = el('button', 'ghost', '访问链');
-  const canvas = el('div', 'topology-canvas');
-  add(controls, graphButton, accessButton);
-  add(sectionNode, controls, canvas);
-  root.append(sectionNode);
-  const base = `/api/${type === 'host' ? 'hosts' : 'services'}/${encodeURIComponent(id)}/topology`;
-  async function load(view) {
-    graphButton.classList.toggle('selected', view === 'graph');
-    accessButton.classList.toggle('selected', view === 'access');
-    clear(canvas).append(message('正在加载…'));
-    try { drawTopology(canvas, await api(base + (view === 'access' ? '?view=access' : '')), view); }
-    catch (e) { clear(canvas).append(message(e.message, 'error')); }
-  }
-  graphButton.onclick = () => load('graph');
-  accessButton.onclick = () => load('access');
-  await load('graph');
-}
-
-function drawTopology(target, data, view) {
-  target.replaceChildren();
-  mountFlow(target, data, openObject, view==='access'?'LR':'TB');
-}
 
 async function renderTopologyPage(){mountTopology(root,api,openObject)}
 let renderOverview=async function(){mountOverview(root,api,navigate)};
@@ -227,9 +136,9 @@ let renderPendingHub=async function(tab='pending'){mountPending(root,api,openObj
 const routePaths={overview:'/',assets:'/assets',services:'/assets/services',sites:'/assets/sites',hosts:'/assets/hosts',networks:'/assets/networks',topology:'/topology',pendingHub:'/pending',pending:'/pending',unverified:'/pending?tab=unverified',outdated:'/pending?tab=outdated',agent:'/agent',keys:'/agent',settings:'/settings',backup:'/settings/backup',changes:'/changes',contexts:'/contexts',search:'/search'};
 function routeFromLocation(){const path=location.pathname;const tab=new URLSearchParams(location.search).get('tab');if(path==='/pending')return tab==='unverified'?'unverified':tab==='outdated'?'outdated':'pendingHub';return Object.keys(routePaths).find(key=>routePaths[key]===path)||'overview'}
 const originalOpenObject=openObject;
-openObject=async function(...args){unmountFlow();unmountOverview();unmountAssets();unmountSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();unmountAudit();unmountTopology();return originalOpenObject(...args)};
+openObject=async function(...args){unmountOverview();unmountAssets();unmountSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();unmountAudit();unmountTopology();unmountDetail();return originalOpenObject(...args)};
 const originalNavigate=navigate;
-navigate=async function(view,push=true){unmountFlow();unmountOverview();unmountAssets();unmountSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();unmountAudit();unmountTopology();const target=routePaths[view];if(push&&target&&target!==location.pathname+location.search)history.pushState({},'',target);return originalNavigate(view)};
+navigate=async function(view,push=true){unmountOverview();unmountAssets();unmountSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();unmountAudit();unmountTopology();unmountDetail();const target=routePaths[view];if(push&&target&&target!==location.pathname+location.search)history.pushState({},'',target);return originalNavigate(view)};
 window.addEventListener('popstate',()=>navigate(routeFromLocation(),false));
 document.documentElement.lang=language;
 for(const selector of ['#login','.sidebar','.topbar'])translateStatic(document.querySelector(selector));
