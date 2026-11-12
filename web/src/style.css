@@ -51,3 +51,6 @@
 
 :root[data-theme="dark"]{--flow-node-bg:#263b32;--flow-node-text:#e0f3e8}
 @media(prefers-color-scheme:dark){:root[data-theme="system"]{--flow-node-bg:#263b32;--flow-node-text:#e0f3e8}}
+.agent-guide{margin-top:18px}.agent-guide code,.agent-guide pre{overflow-wrap:anywhere}.agent-guide li{margin:7px 0}.agent-guide .primary{display:inline-block;margin-top:10px}.agent-guide .setup-block{border-top:1px solid #dce8df;padding:14px 0}.agent-guide .setup-block:first-of-type{border-top:0}
+:root[data-theme="dark"] .agent-guide .diff,:root[data-theme="dark"] .secret{background:#263b32;color:#e3eee8}
+@media(prefers-color-scheme:dark){:root[data-theme="system"] .agent-guide .diff,:root[data-theme="system"] .secret{background:#263b32;color:#e3eee8}}
