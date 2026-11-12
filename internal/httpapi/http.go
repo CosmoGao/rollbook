@@ -56,6 +56,10 @@ func (e Engine) Handler() http.Handler {
 			WriteError(w, err)
 			return
 		}
+		if r.URL.Path == "/api/versions/alerts" {
+			e.versionAlerts(w, r, p)
+			return
+		}
 		if strings.HasPrefix(r.URL.Path, "/api/backup/") {
 			e.backup(w, r, p)
 			return

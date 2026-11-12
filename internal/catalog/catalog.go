@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/CosmoGao/rollbook/internal/versioncheck"
 )
 
 type Object struct {
@@ -223,6 +225,22 @@ func validate(ctx context.Context, tx *sql.Tx, o *Object) error {
 	}
 	if err := validateURLFields(o.Fields); err != nil {
 		return err
+	}
+	if o.Type == "service" && o.Fields["upstream_json"] != nil && str(o.Fields["upstream_json"]) != "" {
+		raw, err := json.Marshal(o.Fields["upstream_json"])
+		if value, ok := o.Fields["upstream_json"].(string); ok {
+			raw = []byte(value)
+		}
+		if err != nil {
+			return invalidField("fields.upstream_json", "配置格式无效", "JSON 对象")
+		}
+		var cfg versioncheck.Config
+		if err = json.Unmarshal(raw, &cfg); err != nil {
+			return invalidField("fields.upstream_json", "配置格式无效", "JSON 对象")
+		}
+		if err = versioncheck.ValidateConfig(cfg); err != nil {
+			return invalidField("fields.upstream_json", "tag 过滤条件无效或过宽", "有效的 tag_prefix 或 tag_regex")
+		}
 	}
 	refTypes := map[string]string{"parent_id": "location", "location_id": "location", "uplink_id": "uplink", "edge_device_id": "host", "parent_host_id": "host", "router_id": "host", "host_id": "host", "network_id": "network", "service_id": "service", "from_id": "*", "to_id": "*", "target_id": "*", "account_ref": "credential"}
 	for field, expected := range refTypes {

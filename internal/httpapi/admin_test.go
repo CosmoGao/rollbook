@@ -60,6 +60,18 @@ func TestBrowserAdminAndKeyBoundary(t *testing.T) {
 	if csrf == "" {
 		t.Fatal("no CSRF cookie")
 	}
+	if w := call("GET", "/api/versions/alerts", "", "", nil, ""); w.Code != 401 {
+		t.Fatalf("anonymous alert settings: %d", w.Code)
+	}
+	if w := call("PUT", "/api/versions/alerts", `{"enabled":true,"webhook_url":"javascript:bad","format":"feishu"}`, csrf, cookies, ""); w.Code != 422 {
+		t.Fatalf("invalid webhook: %d %s", w.Code, w.Body.String())
+	}
+	if w := call("PUT", "/api/versions/alerts", `{"enabled":false,"webhook_url":"http://127.0.0.1:12345/hook","format":"wecom"}`, csrf, cookies, ""); w.Code != 200 {
+		t.Fatalf("save webhook: %d %s", w.Code, w.Body.String())
+	}
+	if w := call("GET", "/api/versions/alerts", "", "", cookies, ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"format":"wecom"`) {
+		t.Fatalf("read webhook: %d %s", w.Code, w.Body.String())
+	}
 	badURL := call("POST", "/api/assets", `{"object":{"id":"endpoint:bad","type":"endpoint","name":"入口","fields":{"url":"javascript:alert(1)"}},"base_rev":0,"reason":"测试"}`, csrf, cookies, "")
 	if badURL.Code != 422 || !strings.Contains(badURL.Body.String(), "fields.url") {
 		t.Fatal("URL validation", badURL.Code, badURL.Body.String())

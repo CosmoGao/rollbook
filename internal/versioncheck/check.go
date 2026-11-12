@@ -31,6 +31,8 @@ type Config struct {
 	Repository string `json:"repository"`
 	Image      string `json:"image"`
 	Product    string `json:"product"`
+	TagPrefix  string `json:"tag_prefix,omitempty"`
+	TagRegex   string `json:"tag_regex,omitempty"`
 }
 type Result struct {
 	ServiceID string `json:"service_id"`
@@ -46,7 +48,72 @@ type Summary struct {
 
 var ErrRunning = errors.New("version check already running")
 
-type release struct{ Version, Source, URL, EOL string }
+type release struct{ Version, Source, URL, EOL, RawTag string }
+
+func State(current, latest string, pinned, eol any, now time.Time) string {
+	if pinned == int64(1) || pinned == int(1) || pinned == float64(1) || pinned == true {
+		return "已锁定"
+	}
+	comparison, comparable := Compare(current, latest)
+	if comparable && comparison > 0 {
+		return "上游数据可疑，需人工确认"
+	}
+	if date, ok := eol.(string); ok && date != "" {
+		if t, err := time.Parse("2006-01-02", date); err == nil && !t.After(now.AddDate(0, 0, 90)) {
+			return "90 天内停止支持"
+		}
+	}
+	if !comparable {
+		return "无法判断"
+	}
+	if comparison < 0 {
+		return "有新版本"
+	}
+	return "已是最新"
+}
+
+func ValidateConfig(cfg Config) error {
+	_, err := tagMatcher(cfg)
+	return err
+}
+
+func tagVersion(tag string, cfg Config) string {
+	if _, ok := partsVersion(tag); ok {
+		return tag
+	}
+	if cfg.TagRegex != "" {
+		re, err := regexp.Compile(cfg.TagRegex)
+		if err == nil {
+			m := re.FindStringSubmatch(tag)
+			if len(m) > 1 {
+				if _, ok := partsVersion(m[1]); ok {
+					return m[1]
+				}
+			}
+		}
+	}
+	return ""
+}
+
+func tagMatcher(cfg Config) (func(string) bool, error) {
+	if len(cfg.TagPrefix) > 80 || len(cfg.TagRegex) > 160 {
+		return nil, errors.New("tag filter too long")
+	}
+	var re *regexp.Regexp
+	if cfg.TagRegex != "" {
+		var err error
+		re, err = regexp.Compile(cfg.TagRegex)
+		if err != nil {
+			return nil, errors.New("invalid tag regex")
+		}
+		if re.MatchString("") || re.MatchString("latest") {
+			return nil, errors.New("tag regex is too broad")
+		}
+	}
+	return func(tag string) bool {
+		return strings.HasPrefix(tag, cfg.TagPrefix) && (re == nil || re.MatchString(tag))
+	}, nil
+}
 
 func (c Checker) now() time.Time {
 	if c.Now != nil {
@@ -102,30 +169,55 @@ func (c Checker) fetch(ctx context.Context, endpoint string, dst any) error {
 	}
 	return nil
 }
-func (c Checker) lookup(ctx context.Context, cfg Config) (release, error) {
+func (c Checker) lookup(ctx context.Context, cfg Config, current string) (release, error) {
+	match, err := tagMatcher(cfg)
+	if err != nil {
+		return release{}, err
+	}
 	switch cfg.Provider {
 	case "github_releases":
 		parts, err := pathParts(cfg.Repository, 2)
 		if err != nil {
 			return release{}, err
 		}
-		var v struct {
+		type githubRelease struct {
 			Tag        string `json:"tag_name"`
 			URL        string `json:"html_url"`
 			Draft      bool   `json:"draft"`
 			Prerelease bool   `json:"prerelease"`
 		}
-		err = c.fetch(ctx, origin(c.GitHubURL, "https://api.github.com")+"/repos/"+parts[0]+"/"+parts[1]+"/releases/latest", &v)
-		if err != nil {
-			return release{}, err
+		base := origin(c.GitHubURL, "https://api.github.com") + "/repos/" + parts[0] + "/" + parts[1] + "/releases"
+		var best githubRelease
+		if cfg.TagPrefix == "" && cfg.TagRegex == "" {
+			if err := c.fetch(ctx, base+"/latest", &best); err != nil {
+				return release{}, err
+			}
+		} else {
+			var releases []githubRelease
+			if err := c.fetch(ctx, base+"?per_page=100", &releases); err != nil {
+				return release{}, err
+			}
+			for _, candidate := range releases {
+				if candidate.Draft || candidate.Prerelease || !match(candidate.Tag) {
+					continue
+				}
+				if _, ok := partsVersion(candidate.Tag); !ok {
+					continue
+				}
+				if best.Tag == "" {
+					best = candidate
+				} else if cmp, ok := Compare(best.Tag, candidate.Tag); ok && cmp < 0 {
+					best = candidate
+				}
+			}
 		}
-		if v.Tag == "" || v.Draft || v.Prerelease {
-			return release{}, errors.New("no stable GitHub release")
+		if best.Tag == "" || best.Draft || best.Prerelease || !match(best.Tag) {
+			return release{}, errors.New("no stable GitHub release matches tag filter")
 		}
-		if v.URL == "" {
-			v.URL = "https://github.com/" + cfg.Repository + "/releases"
+		if best.URL == "" {
+			best.URL = "https://github.com/" + cfg.Repository + "/releases"
 		}
-		return release{v.Tag, "github_releases", v.URL, ""}, nil
+		return release{Version: best.Tag, Source: "github_releases", URL: best.URL, RawTag: best.Tag}, nil
 	case "docker_hub":
 		parts, err := pathParts(cfg.Image, 2)
 		if err != nil {
@@ -140,20 +232,25 @@ func (c Checker) lookup(ctx context.Context, cfg Config) (release, error) {
 		if err = c.fetch(ctx, endpoint, &v); err != nil {
 			return release{}, err
 		}
-		best := ""
+		best, raw := "", ""
 		for _, tag := range v.Results {
-			if _, ok := partsVersion(tag.Name); ok {
-				if best == "" {
-					best = tag.Name
-				} else if cmp, ok := Compare(best, tag.Name); ok && cmp < 0 {
-					best = tag.Name
-				}
+			if !match(tag.Name) {
+				continue
+			}
+			version := tagVersion(tag.Name, cfg)
+			if version == "" {
+				continue
+			}
+			if best == "" {
+				best, raw = version, tag.Name
+			} else if cmp, ok := Compare(best, version); ok && cmp < 0 {
+				best, raw = version, tag.Name
 			}
 		}
 		if best == "" {
 			return release{}, errors.New("no comparable Docker Hub tag")
 		}
-		return release{best, "docker_hub", "https://hub.docker.com/r/" + cfg.Image + "/tags", ""}, nil
+		return release{Version: best, Source: "docker_hub", URL: "https://hub.docker.com/r/" + cfg.Image + "/tags", RawTag: raw}, nil
 	case "endoflife_date":
 		parts, err := pathParts(cfg.Product, 1)
 		if err != nil {
@@ -174,9 +271,15 @@ func (c Checker) lookup(ctx context.Context, cfg Config) (release, error) {
 			return release{}, err
 		}
 		best := release{}
+		currentParts, _ := partsVersion(current)
+		var currentEOL string
 		for _, r := range v.Result.Releases {
-			if _, ok := partsVersion(r.Latest.Name); !ok {
+			releaseParts, valid := partsVersion(r.Latest.Name)
+			if !valid || !match(r.Latest.Name) {
 				continue
+			}
+			if len(currentParts) > 0 && len(releaseParts) > 0 && currentParts[0] == releaseParts[0] && (len(currentParts) < 2 || len(releaseParts) < 2 || currentParts[1] == releaseParts[1]) && r.EOL != nil {
+				currentEOL = *r.EOL
 			}
 			if best.Version == "" {
 				best.Version = r.Latest.Name
@@ -198,7 +301,11 @@ func (c Checker) lookup(ctx context.Context, cfg Config) (release, error) {
 		if best.Version == "" {
 			return release{}, errors.New("no comparable endoflife.date release")
 		}
+		if len(currentParts) > 0 {
+			best.EOL = currentEOL
+		}
 		best.Source = "endoflife_date"
+		best.RawTag = best.Version
 		if best.URL == "" {
 			best.URL = "https://endoflife.date/" + cfg.Product
 		}
@@ -258,7 +365,7 @@ func (c Checker) record(ctx context.Context, serviceID string, value release, fa
 	defer tx.Rollback()
 	now := c.now().Format(time.RFC3339Nano)
 	if failure == "" {
-		r, e := tx.ExecContext(ctx, `UPDATE versions SET latest_version=?,latest_source=?,latest_url=?,eol_date=?,checked_at=? WHERE service_id=?`, value.Version, value.Source, value.URL, null(value.EOL), now, serviceID)
+		r, e := tx.ExecContext(ctx, `UPDATE versions SET latest_version=?,latest_source=?,latest_url=?,eol_date=?,checked_at=?,raw_tag=? WHERE service_id=?`, value.Version, value.Source, value.URL, null(value.EOL), now, value.RawTag, serviceID)
 		if e != nil {
 			return e
 		}
@@ -330,15 +437,15 @@ func (c Checker) Run(ctx context.Context, dueOnly bool) (Summary, error) {
 	defer func() {
 		_, _ = c.DB.ExecContext(context.Background(), `DELETE FROM version_check_lease WHERE id=1 AND expires_at=?`, lease)
 	}()
-	rows, err := c.DB.QueryContext(ctx, `SELECT s.id,s.upstream_json,COALESCE(v.checked_at,''),COALESCE(vc.last_attempt_at,'') FROM services s LEFT JOIN versions v ON v.service_id=s.id LEFT JOIN version_checks vc ON vc.service_id=s.id WHERE s.upstream_json IS NOT NULL AND s.upstream_json<>'' ORDER BY s.id`)
+	rows, err := c.DB.QueryContext(ctx, `SELECT s.id,s.upstream_json,COALESCE(v.checked_at,''),COALESCE(vc.last_attempt_at,''),COALESCE(v.current_version,'') FROM services s LEFT JOIN versions v ON v.service_id=s.id LEFT JOIN version_checks vc ON vc.service_id=s.id WHERE s.upstream_json IS NOT NULL AND s.upstream_json<>'' ORDER BY s.id`)
 	if err != nil {
 		return out, err
 	}
-	type item struct{ id, raw, checked, attempted string }
+	type item struct{ id, raw, checked, attempted, current string }
 	items := []item{}
 	for rows.Next() {
 		var x item
-		if err = rows.Scan(&x.id, &x.raw, &x.checked, &x.attempted); err != nil {
+		if err = rows.Scan(&x.id, &x.raw, &x.checked, &x.attempted, &x.current); err != nil {
 			break
 		}
 		items = append(items, x)
@@ -387,7 +494,7 @@ func (c Checker) Run(ctx context.Context, dueOnly bool) (Summary, error) {
 		err = json.Unmarshal([]byte(x.raw), &cfg)
 		if err == nil {
 			var value release
-			value, err = c.lookup(ctx, cfg)
+			value, err = c.lookup(ctx, cfg, x.current)
 			if err == nil {
 				err = c.record(ctx, x.id, value, "")
 			}
@@ -404,6 +511,9 @@ func (c Checker) Run(ctx context.Context, dueOnly bool) (Summary, error) {
 			out.Checked++
 		}
 		out.Results = append(out.Results, result)
+	}
+	if err := c.DailyAlert(ctx); err != nil {
+		return out, err
 	}
 	return out, nil
 }
