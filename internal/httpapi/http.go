@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/CosmoGao/rollbook/internal/auth"
+	"github.com/CosmoGao/rollbook/internal/buildinfo"
 	"github.com/CosmoGao/rollbook/internal/catalog"
 )
 
@@ -37,6 +38,11 @@ func (e Engine) Principal(r *http.Request) (auth.Principal, error) {
 
 func (e Engine) Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/version" && r.Method == http.MethodGet {
+			version, commit := buildinfo.Info()
+			WriteJSON(w, 200, map[string]string{"version": version, "commit": commit})
+			return
+		}
 		if r.URL.Path == "/api/config" && r.Method == http.MethodGet {
 			WriteJSON(w, 200, map[string]bool{"allow_insecure_http": e.AllowInsecureHTTP})
 			return

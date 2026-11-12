@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/CosmoGao/rollbook/internal/buildinfo"
 	"github.com/CosmoGao/rollbook/internal/httpapi"
 )
 
@@ -60,7 +61,8 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	switch req.Method {
 	case "initialize":
-		httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"protocolVersion": "2025-03-26", "capabilities": map[string]any{"tools": map[string]any{}}, "instructions": "先 search 再 get_asset 读取 ID 与 rev；创建用 create(object,base_rev=0,reason)，提议级 key 需网页审批。更新先读取最新 rev，冲突时重读，禁止盲目覆盖。只读 key 不可写；不要保存密码、私钥、token，只保存凭据管理器的引用。每次写入给出具体 reason。", "serverInfo": map[string]string{"name": "rollbook", "version": programVersion()}}})
+		_, commit := buildinfo.Info()
+		httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"protocolVersion": "2025-03-26", "capabilities": map[string]any{"tools": map[string]any{}}, "instructions": "先 search 再 get_asset 读取 ID 与 rev；创建用 create(object,base_rev=0,reason)，提议级 key 需网页审批。更新先读取最新 rev，冲突时重读，禁止盲目覆盖。只读 key 不可写；不要保存密码、私钥、token，只保存凭据管理器的引用。每次写入给出具体 reason。", "serverInfo": map[string]string{"name": "rollbook", "version": programVersion(), "commit": commit}}})
 	case "ping":
 		httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{}})
 	case "tools/list":

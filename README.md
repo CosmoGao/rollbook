@@ -25,6 +25,14 @@ REST `/api/` 与 Streamable HTTP `/mcp` 使用 `Authorization: Bearer <key>`；�
 
 CLI 使用与服务端相同的 REST API。首次运行 `rollbook login`，依次输入服务地址和网页生成的 Key；交互输入 Key 时终端不回显。配置写入 `~/.config/rollbook/config.toml`（或系统的用户配置目录），文件权限为 `0600`。用 `rollbook --profile 家庭 login` 保存另一套配置；最近登录的 profile 是默认值。每次调用可用 `--profile` 选择。环境变量 `ROLLBOOK_URL`、`ROLLBOOK_KEY` 分别覆盖选中 profile 的地址和 Key；地址都未设置时默认 `http://127.0.0.1:8080`。环境变量只对当前进程生效。无 Key 时 `--help`、`version` 和 `completion` 仍可运行。
 
+仅支持 stdio 的 MCP 客户端可配置 `{"mcpServers":{"rollbook":{"command":"rollbook","args":["mcp"]}}}`；先在同一用户下执行 `rollbook login`，或设置 `ROLLBOOK_URL` 和 `ROLLBOOK_KEY`。多套清册可在 `args` 中写入 `["--profile","家庭","mcp"]`。桥接按 JSON-RPC 每行一条消息读写，标准输出只包含协议响应，错误写入标准错误；客户端关闭 stdin 后退出。远端须提供 Rollbook 的 `/mcp` JSON 响应模式。
+
+## 安装与版本
+
+正式 tag `vX.Y.Z` 会在同一构建流程发布 GHCR 镜像、Linux/macOS/Windows 的 amd64/arm64 压缩包、`SHA256SUMS`、`install.sh` 和自动生成的 Release notes。Linux/macOS 可以下载 Release 中的 `install.sh` 后运行，默认安装到 `~/.local/bin`；可通过 `ROLLBOOK_VERSION=v0.3.0` 固定版本，`ROLLBOOK_INSTALL_DIR` 调整安装目录。Windows 请从 Release 下载对应压缩包并核对 SHA256。安装程序只替换本机 CLI 二进制，不更改数据库。`rollbook version`、网页页脚、`GET /api/version` 与 MCP `initialize.serverInfo` 显示同一构建版本和短提交号。
+
+YAML 备份当前使用 `schema_version: 1`。导入仅接受程序支持的 schema 版本；新版若提高 schema 版本，会先提供升级路径，不承诺新版 YAML 能由旧程序导入。数据库在启动时执行向前迁移；不承诺降级读取已迁移数据库，升级前须保留完整文件级快照。完整回退流程见下文“数据库迁移可能不可逆”。
+
 `--output json|yaml|table` 适用于 REST JSON 响应，默认 JSON；`export` 始终原样输出 YAML，适合重定向到文件。表格会展平首层字段，嵌套字段以紧凑 JSON 显示。输出中的 Key、token、密码等敏感字段会隐藏。可用 `rollbook completion bash|zsh|fish` 生成相应的补全脚本，例如 `rollbook completion bash > ~/.local/share/bash-completion/completions/rollbook`。
 
 常用命令：

@@ -49,6 +49,7 @@ $('#change-password').onclick=()=>modal('修改密码',(box,close,overlay)=>{con
 $('#logout-all').onclick=async()=>{if(!confirm('退出所有设备，包括当前会话？'))return;try{await api('/api/auth/logout-all',{method:'POST'});showLogin()}catch(e){alert(e.message)}};
 document.querySelectorAll('#nav button[data-view]').forEach(b=>b.onclick=()=>navigate(b.dataset.view));
 api('/api/config').then(p=>{document.querySelectorAll('.http-mode-notice').forEach(el=>{el.hidden=!p.allow_insecure_http})}).catch(err=>{$('#login-error').textContent=err.message});
+api('/api/version').then(p=>{$('#build-version').textContent=`${p.version} (${p.commit})`}).catch(()=>{});
 api('/api/auth/session').then(p=>{showApp(p.login);navigate('search');showFirstRun()}).catch(()=>showLogin());
 
 async function renderBackup(){add(root,heading('备份与恢复','清册导出用于迁移资产；完整备份含账号和 Key 哈希，仅网页用户可下载。恢复会清除所有登录会话。'));
@@ -122,5 +123,6 @@ function showKeySetup(box,token){const url=location.origin+'/mcp';const shell=`e
  'CLI 环境变量':shell,
  'Claude Code（.mcp.json）':JSON.stringify({mcpServers:{rollbook:{type:'http',url,headers:{Authorization:'Bearer '+token}}}},null,2),
  'Codex（config.toml）':`[mcp_servers.rollbook]\nurl = ${JSON.stringify(url)}\nhttp_headers = { Authorization = ${JSON.stringify('Bearer '+token)} }`,
- 'Cursor（mcp.json）':JSON.stringify({mcpServers:{rollbook:{url,headers:{Authorization:'Bearer '+token}}}},null,2)
+ 'Cursor（mcp.json）':JSON.stringify({mcpServers:{rollbook:{url,headers:{Authorization:'Bearer '+token}}}},null,2),
+ 'stdio 客户端（mcp.json）':JSON.stringify({mcpServers:{rollbook:{command:'rollbook',args:['mcp']}}},null,2)
  };box.append(el('p','muted','将 Skill 安装到客户端的 skills/rollbook/SKILL.md；MCP 使用 Streamable HTTP。配置片段含 Key，请只放在本机受保护的配置中。'));for(const [title,value] of Object.entries(clients)){const block=el('div','setup-block');const copy=el('button','ghost','复制');copy.onclick=async()=>{try{await navigator.clipboard.writeText(value);copy.textContent='已复制'}catch{copy.textContent='复制失败，请手动复制'}};add(block,el('h3','',title),el('pre','diff',value),copy);box.append(block)}}

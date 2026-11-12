@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"github.com/CosmoGao/rollbook/internal/buildinfo"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -33,6 +35,24 @@ func TestHTTP(t *testing.T) {
 		if !strings.Contains(response.Body.String(), tc.contains) {
 			t.Errorf("%s: body = %q", tc.path, response.Body.String())
 		}
+	}
+}
+
+func TestBuildIdentity(t *testing.T) {
+	oldVersion, oldCommit := buildinfo.Version, buildinfo.Commit
+	buildinfo.Version, buildinfo.Commit = "v0.3.0", "123456789abcdef"
+	t.Cleanup(func() { buildinfo.Version, buildinfo.Commit = oldVersion, oldCommit })
+	response := httptest.NewRecorder()
+	handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/version", nil))
+	if response.Code != 200 || !strings.Contains(response.Body.String(), `"version":"v0.3.0"`) || !strings.Contains(response.Body.String(), `"commit":"1234567"`) {
+		t.Fatalf("版本接口: %d %s", response.Code, response.Body.String())
+	}
+	var output bytes.Buffer
+	if err := (cliRunner{out: &output}).run([]string{"version"}); err != nil {
+		t.Fatal(err)
+	}
+	if output.String() != "rollbook v0.3.0 (1234567)\n" {
+		t.Fatalf("CLI 版本: %q", output.String())
 	}
 }
 
