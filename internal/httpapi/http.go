@@ -141,6 +141,9 @@ func route(r *http.Request) (string, Args, bool) {
 	if v := q.Get("depth"); v != "" {
 		a["depth"] = IntArg(v)
 	}
+	if v := q.Get("view"); v != "" {
+		a["view"] = StringArg(v)
+	}
 	if r.Method == "GET" {
 		switch {
 		case path == "api/search":
@@ -162,6 +165,9 @@ func route(r *http.Request) (string, Args, bool) {
 			a["id"] = StringArg(s[2])
 			return "get_service", a, true
 		case len(s) == 4 && s[1] == "services" && s[3] == "topology":
+			a["id"] = StringArg(s[2])
+			return "topology", a, true
+		case len(s) == 4 && s[1] == "hosts" && s[3] == "topology":
 			a["id"] = StringArg(s[2])
 			return "topology", a, true
 		case len(s) == 4 && s[1] == "hosts" && s[3] == "inventory":

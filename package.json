@@ -1,5 +1,5 @@
 {
-	"scripts": {"test:browser": "node --test web/maintenance.browser.test.cjs"},
+	"scripts": {"test:browser": "node --test web/*.browser.test.cjs"},
   "devDependencies": {
     "playwright": "^1.65.0"
   }

@@ -22,7 +22,7 @@ var descriptions = map[string]string{
 	"list_by_host":    "查看主机下的 IP 和服务；已知主机 ID 时使用。",
 	"list_by_network": "查看网段内的 IP 和主机；已知网段 ID 时使用。",
 	"get_site":        "查看站点、网段、主机和上游；已知站点 ID 时使用。",
-	"topology":        "查看服务两层依赖拓扑；需要分析上下游时使用，depth 可指定层数。",
+	"topology":        "查看服务或主机拓扑；id 为 service: 或 host:，view=access 查看入口到宿主的访问链，depth 可指定依赖层数。",
 	"list_outdated":   "列出落后或待人工确认的版本；结果不是自动升级建议。",
 	"get_changes":     "查看审计和待审批变更；用 state 筛选待确认提议。",
 	"get_context":     "读取补充上下文；archived=true 才包含归档记录。",

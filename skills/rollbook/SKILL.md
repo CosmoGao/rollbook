@@ -10,6 +10,7 @@ description: 查询和维护 Rollbook 清册中的站点、主机、IP、服务�
 ## 查询
 
 1. `search` 搜名称、地址、域名或别名；根据结果 ID 调 `get_asset`。服务用 `get_service` 查看宿主、入口、依赖、版本；站点用 `get_site`；主机或网段用 `list_by_host`、`list_by_network`。
+   要看服务或主机的分层拓扑，调用 `topology` 并传 `id`；`view: "access"` 返回入口经反代、服务、宿主到父主机的访问链。`nodes` 保留 ID 数组，`details` 提供名称、类型、状态。
 2. 结果为空就明确说明清册未记录；不要凭空补造资产。注明数据的来源、核实时间与不确定性。
 3. `get_changes` 可查历史和待确认提议；`list_outdated` 的“待人工确认”不是已知升级版本。
 

@@ -85,7 +85,11 @@ func (e Engine) Call(ctx context.Context, p auth.Principal, op string, a Args, v
 		if len(a["depth"]) == 0 {
 			depth = 2
 		}
-		return q.Topology(ctx, p, id, depth)
+		view := a.String("view")
+		if view == "" {
+			view = "graph"
+		}
+		return q.TopologyView(ctx, p, id, depth, view)
 	case "list_outdated":
 		return q.Outdated(ctx, p)
 	case "list_unverified":

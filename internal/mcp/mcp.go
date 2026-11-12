@@ -187,6 +187,7 @@ func schema(name string) map[string]any {
 	}
 	if name == "topology" {
 		add("depth", "integer", false)
+		props["view"] = map[string]any{"type": "string", "enum": []string{"graph", "access"}, "description": "graph 为拓扑，access 为入口到物理机的访问链"}
 	}
 	if name == "get_context" {
 		add("archived", "boolean", false)

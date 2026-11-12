@@ -4,6 +4,7 @@ package search
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -325,58 +326,323 @@ type Edge struct {
 	Kind string `json:"kind"`
 }
 type Topology struct {
-	Center string   `json:"center"`
-	Nodes  []string `json:"nodes"`
-	Edges  []Edge   `json:"edges"`
+	Center  string         `json:"center"`
+	Nodes   []string       `json:"nodes"`
+	Edges   []Edge         `json:"edges"`
+	Details []TopologyNode `json:"details"`
+}
+
+type TopologyNode struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Type   string `json:"type"`
+	Status string `json:"status"`
+	Kind   string `json:"kind,omitempty"`
 }
 
 func (s Store) Topology(ctx context.Context, center string, depth int) (Topology, error) {
+	return s.TopologyView(ctx, center, depth, "graph")
+}
+
+// TopologyView 保留旧拓扑的 nodes/edges 字段，并提供图形展示所需的节点详情。
+func (s Store) TopologyView(ctx context.Context, center string, depth int, view string) (Topology, error) {
 	if depth < 0 || depth > 2 {
 		return Topology{}, fmt.Errorf("depth must be 0..2")
+	}
+	if view != "graph" && view != "access" {
+		return Topology{}, fmt.Errorf("unknown topology view")
 	}
 	var typ string
 	if e := s.DB.QueryRowContext(ctx, `SELECT type FROM objects WHERE id=?`, center).Scan(&typ); e != nil {
 		return Topology{}, e
 	}
-	if typ != "service" {
-		return Topology{}, fmt.Errorf("center must be service")
+	if typ != "service" && typ != "host" {
+		return Topology{}, fmt.Errorf("center must be service or host")
 	}
-	t := Topology{Center: center}
-	seen := map[string]bool{center: true}
-	front := []string{center}
+	g := topologyGraph{store: s, ctx: ctx, seen: map[string]bool{center: true}, edges: map[Edge]bool{}}
+	if view == "access" {
+		if typ == "service" {
+			g.accessService(center)
+		} else {
+			g.host(center, true)
+		}
+	} else if typ == "host" {
+		g.host(center, true)
+	} else {
+		g.service(center, depth)
+	}
+	if g.err != nil {
+		return Topology{}, g.err
+	}
+	t := Topology{Center: center, Nodes: []string{}, Edges: []Edge{}, Details: []TopologyNode{}}
+	for id := range g.seen {
+		t.Nodes = append(t.Nodes, id)
+	}
+	sort.Strings(t.Nodes)
+	for edge := range g.edges {
+		t.Edges = append(t.Edges, edge)
+	}
+	sort.Slice(t.Edges, func(i, j int) bool {
+		a, b := t.Edges[i], t.Edges[j]
+		if a.From != b.From {
+			return a.From < b.From
+		}
+		if a.To != b.To {
+			return a.To < b.To
+		}
+		return a.Kind < b.Kind
+	})
+	for _, id := range t.Nodes {
+		var n TopologyNode
+		n.ID = id
+		g.err = s.DB.QueryRowContext(ctx, `SELECT name,type,status FROM objects WHERE id=?`, id).Scan(&n.Name, &n.Type, &n.Status)
+		if g.err != nil {
+			return Topology{}, g.err
+		}
+		if n.Type == "host" {
+			g.err = s.DB.QueryRowContext(ctx, `SELECT kind FROM hosts WHERE id=?`, id).Scan(&n.Kind)
+			if g.err != nil {
+				return Topology{}, g.err
+			}
+		}
+		t.Details = append(t.Details, n)
+	}
+	return t, nil
+}
+
+type topologyGraph struct {
+	store Store
+	ctx   context.Context
+	seen  map[string]bool
+	edges map[Edge]bool
+	err   error
+}
+
+func (g *topologyGraph) add(from, to, kind string) {
+	if from == "" || to == "" || g.err != nil {
+		return
+	}
+	g.seen[from] = true
+	g.seen[to] = true
+	g.edges[Edge{from, to, kind}] = true
+}
+func (g *topologyGraph) rows(query string, args ...any) *sql.Rows {
+	if g.err != nil {
+		return nil
+	}
+	var r *sql.Rows
+	r, g.err = g.store.DB.QueryContext(g.ctx, query, args...)
+	return r
+}
+func (g *topologyGraph) service(id string, depth int) {
+	front := []string{id}
+	visited := map[string]bool{id: true}
 	for level := 0; level < depth; level++ {
 		next := []string{}
-		for _, id := range front {
-			rows, e := s.DB.QueryContext(ctx, `SELECT from_id,to_id,kind FROM dependencies WHERE from_id=? OR to_id=?`, id, id)
-			if e != nil {
-				return t, e
+		for _, current := range front {
+			r := g.rows(`SELECT from_id,to_id,kind FROM dependencies WHERE from_id=? OR to_id=? ORDER BY from_id,to_id,kind`, current, current)
+			if r == nil {
+				return
 			}
-			for rows.Next() {
-				var edge Edge
-				if e = rows.Scan(&edge.From, &edge.To, &edge.Kind); e != nil {
-					rows.Close()
-					return t, e
+			for r.Next() {
+				var e Edge
+				if g.err = r.Scan(&e.From, &e.To, &e.Kind); g.err != nil {
+					break
 				}
-				t.Edges = append(t.Edges, edge)
-				for _, x := range []string{edge.From, edge.To} {
-					if !seen[x] {
-						seen[x] = true
+				g.add(e.From, e.To, e.Kind)
+				for _, x := range []string{e.From, e.To} {
+					if !visited[x] {
+						visited[x] = true
 						next = append(next, x)
 					}
 				}
 			}
-			e = rows.Err()
-			rows.Close()
-			if e != nil {
-				return t, e
+			if g.err == nil {
+				g.err = r.Err()
 			}
+			r.Close()
 		}
 		front = next
 	}
-	for x := range seen {
-		t.Nodes = append(t.Nodes, x)
+	// 服务中心同时显示宿主、入口与反代，以便从节点进入详情。
+	for id := range visited {
+		var host string
+		err := g.store.DB.QueryRowContext(g.ctx, `SELECT host_id FROM services WHERE id=?`, id).Scan(&host)
+		if err == sql.ErrNoRows {
+			continue
+		}
+		if err != nil {
+			g.err = err
+			return
+		}
+		g.add(id, host, "宿主")
+		g.endpoints(id)
 	}
-	sort.Strings(t.Nodes)
-	sort.Slice(t.Edges, func(i, j int) bool { return t.Edges[i].From+t.Edges[i].To < t.Edges[j].From+t.Edges[j].To })
-	return t, nil
+}
+func (g *topologyGraph) endpoints(service string) {
+	r := g.rows(`SELECT id FROM endpoints WHERE service_id=? ORDER BY id`, service)
+	if r == nil {
+		return
+	}
+	for r.Next() {
+		var id string
+		if g.err = r.Scan(&id); g.err != nil {
+			break
+		}
+		g.add(id, service, "入口")
+	}
+	if g.err == nil {
+		g.err = r.Err()
+	}
+	r.Close()
+}
+func (g *topologyGraph) host(center string, recursive bool) {
+	front := []string{center}
+	visited := map[string]bool{center: true}
+	affected := []string{}
+	serviceSeen := map[string]bool{}
+	for len(front) > 0 {
+		id := front[0]
+		front = front[1:]
+		r := g.rows(`SELECT id FROM hosts WHERE parent_host_id=? ORDER BY id`, id)
+		if r == nil {
+			return
+		}
+		for r.Next() {
+			var child string
+			if g.err = r.Scan(&child); g.err != nil {
+				break
+			}
+			g.add(child, id, "父主机")
+			if !visited[child] {
+				visited[child] = true
+				front = append(front, child)
+			}
+		}
+		if g.err == nil {
+			g.err = r.Err()
+		}
+		r.Close()
+		if g.err != nil {
+			return
+		}
+		if !recursive {
+			break
+		}
+	}
+	for host := range visited {
+		r := g.rows(`SELECT id FROM services WHERE host_id=? ORDER BY id`, host)
+		if r == nil {
+			return
+		}
+		services := []string{}
+		for r.Next() {
+			var id string
+			if g.err = r.Scan(&id); g.err != nil {
+				break
+			}
+			services = append(services, id)
+		}
+		if g.err == nil {
+			g.err = r.Err()
+		}
+		r.Close()
+		if g.err != nil {
+			return
+		}
+		for _, id := range services {
+			g.add(id, host, "宿主")
+			g.endpoints(id)
+			serviceSeen[id] = true
+			affected = append(affected, id)
+		}
+	}
+	// 依赖受损服务的其他服务也会受到影响，沿反向依赖找出它们的入口。
+	for len(affected) > 0 {
+		id := affected[0]
+		affected = affected[1:]
+		r := g.rows(`SELECT d.from_id,d.kind FROM dependencies d JOIN services s ON s.id=d.from_id WHERE d.to_id=? ORDER BY d.from_id,d.kind`, id)
+		if r == nil {
+			return
+		}
+		type relation struct{ from, kind string }
+		relations := []relation{}
+		for r.Next() {
+			var x relation
+			if g.err = r.Scan(&x.from, &x.kind); g.err != nil {
+				break
+			}
+			relations = append(relations, x)
+		}
+		if g.err == nil {
+			g.err = r.Err()
+		}
+		r.Close()
+		if g.err != nil {
+			return
+		}
+		for _, x := range relations {
+			g.add(x.from, id, x.kind)
+			if serviceSeen[x.from] {
+				continue
+			}
+			serviceSeen[x.from] = true
+			affected = append(affected, x.from)
+			var host string
+			if g.err = g.store.DB.QueryRowContext(g.ctx, `SELECT host_id FROM services WHERE id=?`, x.from).Scan(&host); g.err != nil {
+				return
+			}
+			g.add(x.from, host, "宿主")
+			g.endpoints(x.from)
+		}
+	}
+}
+func (g *topologyGraph) accessService(service string) {
+	var host string
+	if g.err = g.store.DB.QueryRowContext(g.ctx, `SELECT host_id FROM services WHERE id=?`, service).Scan(&host); g.err != nil {
+		return
+	}
+	// 链路从入口指向服务，再顺着宿主关系追溯到最上层主机。
+	r := g.rows(`SELECT id,via_json FROM endpoints WHERE service_id=? ORDER BY id`, service)
+	if r == nil {
+		return
+	}
+	for r.Next() {
+		var id, raw string
+		if g.err = r.Scan(&id, &raw); g.err != nil {
+			break
+		}
+		var via []string
+		if g.err = json.Unmarshal([]byte(raw), &via); g.err != nil {
+			break
+		}
+		prev := id
+		for _, proxy := range via {
+			g.add(prev, proxy, "访问")
+			prev = proxy
+		}
+		g.add(prev, service, "访问")
+	}
+	if g.err == nil {
+		g.err = r.Err()
+	}
+	r.Close()
+	if g.err != nil {
+		return
+	}
+	g.add(service, host, "宿主")
+	visited := map[string]bool{}
+	for host != "" && !visited[host] {
+		visited[host] = true
+		var parent sql.NullString
+		g.err = g.store.DB.QueryRowContext(g.ctx, `SELECT parent_host_id FROM hosts WHERE id=?`, host).Scan(&parent)
+		if g.err != nil {
+			return
+		}
+		if !parent.Valid {
+			break
+		}
+		g.add(host, parent.String, "父主机")
+		host = parent.String
+	}
 }

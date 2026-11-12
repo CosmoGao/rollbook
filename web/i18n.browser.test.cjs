@@ -12,7 +12,7 @@ test('browser language, manual choice, and refresh',async()=>{
   await page.route('http://rollbook.test/**',route=>{
    const p=new URL(route.request().url()).pathname;
    if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'index.html'))});
-   for(const name of ['app.js','i18n.js','style.css'])if(p==='/'+name)return route.fulfill({contentType:name.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,name))});
+   for(const name of ['app.js','i18n.js','topology.js','dagre.min.js','style.css'])if(p==='/'+name)return route.fulfill({contentType:name.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,name))});
    if(p==='/api/config')return route.fulfill({json:{allow_insecure_http:false}});
    if(p==='/api/auth/session')return route.fulfill({status:401,json:{code:'unauthorized',message:'Authentication required'}});
    if(p==='/api/version')return route.fulfill({json:{version:'test',commit:'test'}});
@@ -37,7 +37,7 @@ test('English workbench and creation form use translated copy',async()=>{
   await page.route('http://rollbook.test/**',route=>{
    const p=new URL(route.request().url()).pathname;
    if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'index.html'))});
-   for(const name of ['app.js','i18n.js','style.css'])if(p==='/'+name)return route.fulfill({contentType:name.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,name))});
+   for(const name of ['app.js','i18n.js','topology.js','dagre.min.js','style.css'])if(p==='/'+name)return route.fulfill({contentType:name.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,name))});
    if(p==='/api/auth/session')return route.fulfill({json:{login:'owner'}});
    if(p==='/api/config')return route.fulfill({json:{allow_insecure_http:false}});
    if(p==='/api/version')return route.fulfill({json:{version:'test',commit:'test'}});
@@ -66,7 +66,7 @@ test('English interface preserves asset names and IDs while translating kind lab
   await page.route('http://rollbook.test/**',route=>{
    const url=new URL(route.request().url()),p=url.pathname;
    if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'index.html'))});
-   for(const name of ['app.js','i18n.js','style.css'])if(p==='/'+name)return route.fulfill({contentType:name.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,name))});
+   for(const name of ['app.js','i18n.js','topology.js','dagre.min.js','style.css'])if(p==='/'+name)return route.fulfill({contentType:name.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,name))});
    if(p==='/api/auth/session')return route.fulfill({json:{login:'站点'}});
    if(p==='/api/config')return route.fulfill({json:{allow_insecure_http:false}});
    if(p==='/api/version')return route.fulfill({json:{version:'test',commit:'test'}});

@@ -644,20 +644,41 @@ func (r cliRunner) command(cmd string, a []string, base, key string) (method, pa
 		}
 		path = idPath("/api/sites/", a[0])
 	case "topology":
-		if len(a) < 1 || len(a) > 3 {
-			err = errors.New("用法: rollbook topology <service-id> [--depth 1|2]")
+		if len(a) < 1 || len(a) > 5 {
+			err = errors.New("用法: rollbook topology <service-id|host-id> [--depth 1|2] [--view graph|access]")
 			return
 		}
-		path = idPath("/api/services/", a[0]) + "/topology"
-		if len(a) == 3 && a[1] == "--depth" {
-			if a[2] != "1" && a[2] != "2" {
-				err = errors.New("depth 仅支持 1 或 2")
+		base := "/api/services/"
+		if strings.HasPrefix(a[0], "host:") {
+			base = "/api/hosts/"
+		}
+		path = idPath(base, a[0]) + "/topology"
+		params := []string{}
+		for i := 1; i < len(a); i += 2 {
+			if i+1 >= len(a) {
+				err = errors.New("拓扑选项缺少参数")
 				return
 			}
-			path += "?depth=" + a[2]
-		} else if len(a) != 1 {
-			err = errors.New("用法: rollbook topology <service-id> [--depth 1|2]")
-			return
+			switch a[i] {
+			case "--depth":
+				if a[i+1] != "1" && a[i+1] != "2" {
+					err = errors.New("depth 仅支持 1 或 2")
+					return
+				}
+				params = append(params, "depth="+a[i+1])
+			case "--view":
+				if a[i+1] != "graph" && a[i+1] != "access" {
+					err = errors.New("view 仅支持 graph 或 access")
+					return
+				}
+				params = append(params, "view="+a[i+1])
+			default:
+				err = errors.New("未知拓扑选项: " + a[i])
+				return
+			}
+		}
+		if len(params) > 0 {
+			path += "?" + strings.Join(params, "&")
 		}
 	case "versions":
 		if len(a) == 0 || len(a) == 1 && a[0] == "--outdated" {

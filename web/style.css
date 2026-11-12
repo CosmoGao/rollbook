@@ -8,3 +8,8 @@
 #build-version{display:block;width:100%;color:#a9cac2;font-size:11px}
 
 .language-control{position:fixed;right:14px;top:13px;z-index:20}.language-control select{border:1px solid #a9cac2;border-radius:6px;background:#fff;color:#173d3b;padding:5px 8px;font-size:12px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+/* 拓扑画布保留实际布局尺寸，窄屏可在画布内部滚动。 */
+.topology-controls{margin-bottom:14px}.topology-controls .selected{background:#286c5c;color:#fff}
+.topology-canvas{max-width:100%;overflow:auto;border:1px solid #dce8df;border-radius:10px;background:#f8fbf8;min-height:140px;padding:10px}
+.topology-canvas svg{display:block;max-width:none;margin:auto;font-family:inherit}
+.topology-node{cursor:pointer}.topology-node rect{fill:#edf7f0;stroke:#52a278;stroke-width:2}.topology-node.status-off rect{fill:#f3f3f3;stroke:#8b9691}.topology-node.status-planned rect{fill:#fff8e8;stroke:#d4a748}.topology-node.center rect{stroke-width:3;stroke:#286c5c}.topology-node:focus{outline:none}.topology-node:focus rect,.topology-node:hover rect{stroke:#173d3b;stroke-width:3}.topology-name{font-size:13px;font-weight:700;fill:#213c32}.topology-meta{font-size:11px;fill:#607c6e}
