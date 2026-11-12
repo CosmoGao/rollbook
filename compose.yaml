@@ -1,4 +1,5 @@
 services:
+  # 首次管理员的可选 Docker secret 见 compose.bootstrap.yaml；默认部署无需该文件。
   secret-init:
     image: alpine:3.21
     command: ["sh", "-ec", "cp /run/secrets/auth_pepper /secret-data/auth_pepper && chown 10001:10001 /secret-data/auth_pepper /backups && chmod 0400 /secret-data/auth_pepper"]

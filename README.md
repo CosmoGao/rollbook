@@ -13,7 +13,7 @@ go run ./cmd/rollbook bootstrap-user owner
 go run ./cmd/rollbook serve
 ```
 
-默认监听 `127.0.0.1:8080`，数据库写入 `./data/rollbook.db`。`bootstrap-user` 只允许创建首个用户，密码从终端读取。访问 `/` 可打开清册网页，`/healthz` 返回 `ok`。网页登录的会话 Cookie 默认带 `Secure`，实际访问需要 HTTPS 反向代理。环境变量 `ROLLBOOK_LISTEN_ADDR` 和 `ROLLBOOK_DB_PATH` 可修改监听地址与数据库路径。首次启动自动迁移；再次启动不会重复执行已应用的迁移。数据库使用 WAL、外键约束和 FTS5。
+默认监听 `127.0.0.1:8080`，数据库写入 `./data/rollbook.db`。`bootstrap-user` 只允许创建首个用户，密码从终端读取；也可在首次 `serve` 前配置 `ROLLBOOK_BOOTSTRAP_USER` 与 `ROLLBOOK_BOOTSTRAP_PASSWORD` 或 `ROLLBOOK_BOOTSTRAP_PASSWORD_FILE` 自动创建。访问 `/` 可打开清册网页，`/healthz` 返回 `ok`。网页登录的会话 Cookie 默认带 `Secure`，实际访问需要 HTTPS 反向代理。环境变量 `ROLLBOOK_LISTEN_ADDR` 和 `ROLLBOOK_DB_PATH` 可修改监听地址与数据库路径。首次启动自动迁移；再次启动不会重复执行已应用的迁移。数据库使用 WAL、外键约束和 FTS5。
 
 网页侧边栏可修改密码（须输入旧密码）或退出所有设备；两种操作都撤销当前及其他登录会话，随后重新登录。本机管理员可运行 `rollbook reset-password <login>`，在终端交互输入至少 12 字符的新密码。此命令只操作 `ROLLBOOK_DB_PATH` 指向的已有数据库文件，不接受命令行明文密码，成功后撤销该账号的所有会话。重置后该账号可从重置前被锁定的 IP 使用新密码立即登录；其他账号的 IP 限速不受重置影响。
 
@@ -108,7 +108,19 @@ curl -fsS http://127.0.0.1:8080/healthz
 
 `docker compose ps` 的 `rollbook` 应变为 `healthy`，健康接口返回 `ok`。`secret-init` 一次性读取本地 `secrets/auth_pepper`，把密钥复制到仅 UID 10001 可读的 `rollbook-secret` 卷，服务从 `/run/secrets/auth_pepper` 读取；原文件保持 `0600`。此文件与 `.env` 均被 Git 和 Docker 构建忽略。密钥至少 32 字节，必须长期保存，重建容器或升级时继续使用同一文件；换密钥可能使现有凭据失效。请勿在 `.env` 中另设 `ROLLBOOK_AUTH_PEPPER`。
 
-创建首个用户，按提示在终端输入至少 12 字符的密码：
+推荐用可选的 Docker secret 自动创建首位管理员。先将用户名写入 `.env`（例如 `ROLLBOOK_BOOTSTRAP_USER=owner`），再创建仅部署管理员可读的口令文件，首次启动时带上覆盖文件：
+
+```sh
+umask 077
+read -rsp '首次管理员口令（至少12字符）: ' bootstrap_password; printf '\n'
+printf '%s' "$bootstrap_password" > secrets/bootstrap_password
+unset bootstrap_password
+docker compose -f compose.yaml -f compose.bootstrap.yaml up -d
+```
+
+`compose.bootstrap.yaml` 仅在显式指定时加载；默认 `docker compose config` 和 `docker compose up -d` 都不需要 `secrets/bootstrap_password`。口令文件内容可带一个结尾换行，程序会去掉。也可在 `compose.yaml` 的 `rollbook.environment` 中设置 `ROLLBOOK_BOOTSTRAP_USER: ${ROLLBOOK_BOOTSTRAP_USER}` 和 `ROLLBOOK_BOOTSTRAP_PASSWORD: ${ROLLBOOK_BOOTSTRAP_PASSWORD}`，在 `.env` 中提供对应值；这种方式会使口令出现在 Compose 配置和容器环境中，建议只用于本地测试。两种口令来源不可同时设置，口令至少 12 字符。
+
+首次登录后移除引导环境变量、覆盖文件配置及口令文件，再按默认命令重建服务；已有用户时自动引导只记录一次忽略提示，不会更改原密码。也可继续使用交互式命令创建首位用户，按提示输入至少 12 字符的密码：
 
 ```sh
 docker compose run --rm -it rollbook bootstrap-user owner
