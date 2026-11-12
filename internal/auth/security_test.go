@@ -75,3 +75,44 @@ func TestLoginLimitsAndPasswordSessions(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestResetPasswordAllowsLockedIPAndRevokesSessions(t *testing.T) {
+	ctx := context.Background()
+	database, err := db.Open(ctx, filepath.Join(t.TempDir(), "auth.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	s := Service{DB: database, Pepper: []byte("12345678901234567890123456789012"), LoginPolicy: LoginPolicy{Threshold: 2, LockDuration: time.Minute, MaxBackoff: time.Minute}}
+	if _, err := s.BootstrapUser(ctx, "owner", "initial password 123"); err != nil {
+		t.Fatal(err)
+	}
+	oldSession, _, _, err := s.LoginWithIP(ctx, "owner", "initial password 123", "192.0.2.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ {
+		if _, _, _, err := s.LoginWithIP(ctx, "owner", "wrong password", "192.0.2.1"); !errors.Is(err, ErrUnauthorized) {
+			t.Fatalf("failed login %d: %v", i, err)
+		}
+	}
+	for _, kind := range []string{"account", "ip"} {
+		var count int
+		if err := database.QueryRowContext(ctx, "SELECT COUNT(*) FROM login_limits WHERE kind=?", kind).Scan(&count); err != nil || count != 1 {
+			t.Fatalf("expected %s lock: count=%d err=%v", kind, count, err)
+		}
+	}
+	if err := s.ResetPassword(ctx, "owner", "replacement password 123"); err != nil {
+		t.Fatal(err)
+	}
+	var ipLimits int
+	if err := database.QueryRowContext(ctx, "SELECT COUNT(*) FROM login_limits WHERE kind='ip'").Scan(&ipLimits); err != nil || ipLimits != 1 {
+		t.Fatalf("IP limit should remain in force for other accounts: count=%d err=%v", ipLimits, err)
+	}
+	if _, err := s.Session(ctx, oldSession, "", false); !errors.Is(err, ErrUnauthorized) {
+		t.Fatalf("old session survived reset: %v", err)
+	}
+	if _, _, _, err := s.LoginWithIP(ctx, "owner", "replacement password 123", "192.0.2.1"); err != nil {
+		t.Fatalf("new password from locked IP: %v", err)
+	}
+}
