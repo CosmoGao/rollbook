@@ -50,6 +50,7 @@ func (a Args) CreateRev() (int64, error) {
 var Tools = []string{"search", "get_asset", "get_service", "list_by_host", "list_by_network", "get_site", "topology", "list_outdated", "get_changes", "get_context", "put_context", "record_note", "propose_change", "create", "update", "mark_verified", "check_versions"}
 
 func (e Engine) Call(ctx context.Context, p auth.Principal, op string, a Args, via string) (any, error) {
+	canonicalArgs(op, a)
 	q := catalog.Query{Service: e.Catalog}
 	id := a.String("id")
 	switch op {

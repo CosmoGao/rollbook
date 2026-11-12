@@ -1,10 +1,12 @@
 package mcp
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/CosmoGao/rollbook/internal/buildinfo"
 	"github.com/CosmoGao/rollbook/internal/catalog"
+	"github.com/CosmoGao/rollbook/internal/httpapi"
 )
 
 // version comes from the same Go build metadata as the running program.
@@ -65,11 +67,13 @@ func fieldSchema(name, typ string) map[string]any {
 	}
 	if name == "kind" {
 		if values := kindEnums[typ]; len(values) > 0 {
-			p["enum"] = values
+			p["enum"] = withAliases(name, typ, values)
+		} else if typ == "" {
+			p["description"] = "按对象类型填写中文值或英文别名：location site/room/rack/desk；host physical/nas/virtual/vm/lxc/container/network_device；endpoint direct/reverse_proxy/cloudflare_tunnel/navigation_card；note operations/incident/decision/todo"
 		}
 	}
 	if values := enums[name]; len(values) > 0 {
-		p["enum"] = values
+		p["enum"] = withAliases(name, typ, values)
 	}
 	if name == "cidr" {
 		p["examples"] = []string{"192.0.2.0/24"}
@@ -120,4 +124,18 @@ func patchSchema() map[string]any {
 		"status": fieldSchema("status", ""), "source": fieldSchema("source", ""), "confidence": fieldSchema("confidence", ""),
 		"fields": map[string]any{"type": "object", "properties": fields, "additionalProperties": false},
 	}, "additionalProperties": false, "examples": []any{map[string]any{"name": "新名称", "fields": map[string]any{"location_id": "location:example"}}}}
+}
+
+// Schema 列出可接受的入参；响应仍为中文规范值。
+func withAliases(name, typ string, values []string) []string {
+	out := append([]string(nil), values...)
+	key := name
+	if name == "kind" {
+		key = "kind:" + typ
+	}
+	for alias := range httpapi.EnumAliases(key) {
+		out = append(out, alias)
+	}
+	sort.Strings(out)
+	return out
 }

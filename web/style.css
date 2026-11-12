@@ -6,3 +6,5 @@
 /* 版本信息始终占据侧边栏底部的一行。 */
 .sidebar-foot{flex-wrap:wrap;gap:8px}
 #build-version{display:block;width:100%;color:#a9cac2;font-size:11px}
+
+.language-control{position:fixed;right:14px;top:13px;z-index:20}.language-control select{border:1px solid #a9cac2;border-radius:6px;background:#fff;color:#173d3b;padding:5px 8px;font-size:12px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}

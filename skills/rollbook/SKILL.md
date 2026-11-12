@@ -31,3 +31,9 @@ description: 查询和维护 Rollbook 清册中的站点、主机、IP、服务�
 - `read` 只读；`propose` 可提交待确认的新建和修改；`write` 可直接写入。审批仍由网页用户完成。
 - 不将密码、私钥、token、连接字符串等秘密写进清册、笔记、reason 或日志。凭据放在用户的密码管理器或密钥库，只在 `credential` 对象中记录 `vault` 与 `item_ref` 等引用，不记录明文。示例：`{"type":"credential","id":"credential:demo","name":"数据库凭据引用","fields":{"target_id":"service:demo","vault":"家庭密码库","item_ref":"数据库/演示","purpose":"管理员访问"}}`。
 - MCP 使用 `Authorization: Bearer <key>`。Key 只显示一次；应放在本机受保护的客户端配置或环境变量中，不提交到仓库。
+
+## 英文枚举别名
+
+REST 和 MCP 的创建、提议与修改入口接受英文别名；响应、审计和存储仍使用中文规范值。常用别名：`status` 的 `active`/`inactive`/`planned` 对应在用/停用/计划中；`host.fields.kind` 的 `physical`/`vm`/`virtual`/`container`/`network_device` 对应物理机/虚拟机/虚拟机/容器/网络设备；`location.fields.kind` 的 `site`/`room`/`rack`/`desk` 对应站点/房间/机柜/桌面；`endpoint.fields.kind` 的 `direct`/`reverse_proxy`/`cloudflare_tunnel`/`navigation_card` 对应内网直连/反向代理/Cloudflare Tunnel/导航页卡片。`confidence` 可用 `low`/`medium`/`high`；`assign` 可用 `static`/`dhcp_reservation`/`dynamic`。完整可用值以 MCP `tools/list` Schema 为准。原有中文值继续有效。
+
+REST 可通过 `Accept-Language: en` 或 `X-Rollbook-Language: en` 请求英文错误提示；后者优先。错误 `code` 和 HTTP 状态不变。
