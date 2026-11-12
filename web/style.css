@@ -3,3 +3,6 @@
 [hidden]{display:none!important}.http-mode-notice{padding:11px 13px;border:1px solid #e9bd78;border-radius:8px;background:#fff4de;color:#754a19;font-size:13px;line-height:1.5}.sidebar-http-notice{margin:12px 12px 0;text-align:center}
 .detail-actions{margin:0 0 20px}.asset-form{max-height:min(70vh,700px);overflow:auto;padding:0 4px}.asset-form label{display:block}.asset-form select[multiple]{min-height:110px}.modal:has(.asset-form){width:min(680px,100%)}.modal .check-row{display:flex;align-items:center;gap:10px;margin:12px 0}.modal .check-row input{width:auto;margin:0}.error{white-space:pre-wrap}.asset-form .modal-actions{position:sticky;bottom:0;background:#fff;padding:12px 0}
 .setup-block {margin:1rem 0;max-width:100%}.setup-block pre {overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere}.setup-block h3 {margin:.5rem 0}
+/* 版本信息始终占据侧边栏底部的一行。 */
+.sidebar-foot{flex-wrap:wrap;gap:8px}
+#build-version{display:block;width:100%;color:#a9cac2;font-size:11px}

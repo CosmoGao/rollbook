@@ -1,25 +1,16 @@
 package mcp
 
 import (
-	"runtime/debug"
 	"strings"
 
+	"github.com/CosmoGao/rollbook/internal/buildinfo"
 	"github.com/CosmoGao/rollbook/internal/catalog"
 )
 
 // version comes from the same Go build metadata as the running program.
 func programVersion() string {
-	if info, ok := debug.ReadBuildInfo(); ok {
-		if info.Main.Version != "" && info.Main.Version != "(devel)" {
-			return info.Main.Version
-		}
-		for _, setting := range info.Settings {
-			if setting.Key == "vcs.revision" && len(setting.Value) >= 12 {
-				return setting.Value[:12]
-			}
-		}
-	}
-	return "dev"
+	v, _ := buildinfo.Info()
+	return v
 }
 
 var descriptions = map[string]string{

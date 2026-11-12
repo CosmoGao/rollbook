@@ -17,13 +17,14 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/CosmoGao/rollbook/internal/buildinfo"
 	"golang.org/x/term"
 	"gopkg.in/yaml.v3"
 )
 
 const cliHelp = `用法: rollbook [--profile 名称] [--output table|json|yaml] 命令 [参数]
 命令: login search get create update propose note changes topology site versions verify
-      context get|put export import completion version
+      context get|put export import completion version mcp
 JSON 对象可直接传入或使用 @文件名。运行 rollbook <命令> --help 查看此帮助。`
 
 type cliProfile struct{ URL, Key string }
@@ -75,7 +76,8 @@ func (r cliRunner) run(args []string) error {
 	}
 	switch cmd {
 	case "version":
-		_, err = fmt.Fprintln(r.out, "rollbook dev")
+		v, commit := buildinfo.Info()
+		_, err = fmt.Fprintf(r.out, "rollbook %s (%s)\n", v, commit)
 		return err
 	case "completion":
 		if len(a) != 1 {
@@ -109,6 +111,12 @@ func (r cliRunner) run(args []string) error {
 	base = strings.TrimRight(base, "/")
 	if key == "" {
 		return fmt.Errorf("配置 %q 缺少 key；运行 rollbook login --profile %s，或设置 ROLLBOOK_KEY", profile, profile)
+	}
+	if cmd == "mcp" {
+		if len(a) != 0 {
+			return errors.New("用法: rollbook mcp")
+		}
+		return r.mcp(base, key)
 	}
 	method, path, body, ctype, err := r.command(cmd, a, base, key)
 	if err != nil {
@@ -595,7 +603,7 @@ func makePatch(sets []string) (json.RawMessage, error) {
 	return b, nil
 }
 func completion(out io.Writer, shell string) error {
-	cmds := "login search get create update propose note changes topology site versions verify context export import completion version help"
+	cmds := "login search get create update propose note changes topology site versions verify context export import completion version mcp help"
 	var script string
 	switch shell {
 	case "bash":

@@ -1,11 +1,13 @@
 FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS build
 ARG TARGETOS
 ARG TARGETARCH
+ARG ROLLBOOK_VERSION=dev
+ARG ROLLBOOK_COMMIT=
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags='-s -w' -o /rollbook ./cmd/rollbook
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w -X github.com/CosmoGao/rollbook/internal/buildinfo.Version=$ROLLBOOK_VERSION -X github.com/CosmoGao/rollbook/internal/buildinfo.Commit=$ROLLBOOK_COMMIT" -o /rollbook ./cmd/rollbook
 
 FROM alpine:3.21
 RUN addgroup -S -g 10001 rollbook && adduser -S -D -H -u 10001 -G rollbook rollbook \
