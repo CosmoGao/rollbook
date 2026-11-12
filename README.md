@@ -51,6 +51,7 @@ rollbook changes --pending
 rollbook topology service:overleaf --depth 2
 rollbook topology service:overleaf --view access
 rollbook topology host:server --depth 2
+rollbook network network:example
 rollbook versions --outdated
 rollbook versions --check
 rollbook context get

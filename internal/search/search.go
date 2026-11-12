@@ -274,11 +274,12 @@ func (s Store) GetSite(ctx context.Context, idOrName string) (Site, error) {
 }
 
 type Inventory struct {
-	ID       string   `json:"id"`
-	Hosts    []string `json:"hosts,omitempty"`
-	Services []string `json:"services,omitempty"`
-	IPs      []string `json:"ips,omitempty"`
-	RouterID string   `json:"router_id,omitempty"`
+	ID        string            `json:"id"`
+	Hosts     []string          `json:"hosts,omitempty"`
+	Services  []string          `json:"services,omitempty"`
+	IPs       []string          `json:"ips,omitempty"`
+	RouterID  string            `json:"router_id,omitempty"`
+	Occupancy *NetworkOccupancy `json:"occupancy,omitempty"`
 }
 
 func (s Store) ByHost(ctx context.Context, id string) (Inventory, error) {
@@ -302,6 +303,11 @@ func (s Store) ByNetwork(ctx context.Context, id string) (Inventory, error) {
 	if e := s.collect(ctx, `SELECT DISTINCT host_id FROM ips WHERE network_id=?`, id, &inv.Hosts); e != nil {
 		return inv, e
 	}
+	occupancy, e := s.NetworkOccupancy(ctx, id)
+	if e != nil {
+		return inv, e
+	}
+	inv.Occupancy = &occupancy
 	return inv, nil
 }
 func (s Store) collect(ctx context.Context, q, id string, dst *[]string) error {
