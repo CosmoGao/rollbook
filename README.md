@@ -15,7 +15,7 @@ go run ./cmd/rollbook serve
 
 默认监听 `127.0.0.1:8080`，数据库写入 `./data/rollbook.db`。`bootstrap-user` 只允许创建首个用户，密码从终端读取。访问 `/` 可打开清册网页，`/healthz` 返回 `ok`。网页登录的会话 Cookie 默认带 `Secure`，实际访问需要 HTTPS 反向代理。环境变量 `ROLLBOOK_LISTEN_ADDR` 和 `ROLLBOOK_DB_PATH` 可修改监听地址与数据库路径。首次启动自动迁移；再次启动不会重复执行已应用的迁移。数据库使用 WAL、外键约束和 FTS5。
 
-网页侧边栏可修改密码（须输入旧密码）或退出所有设备；两种操作都撤销当前及其他登录会话，随后重新登录。本机管理员可运行 `rollbook reset-password <login>`，在终端交互输入至少 12 字符的新密码。此命令只操作 `ROLLBOOK_DB_PATH` 指向的已有数据库文件，不接受命令行明文密码，成功后撤销该账号的所有会话。
+网页侧边栏可修改密码（须输入旧密码）或退出所有设备；两种操作都撤销当前及其他登录会话，随后重新登录。本机管理员可运行 `rollbook reset-password <login>`，在终端交互输入至少 12 字符的新密码。此命令只操作 `ROLLBOOK_DB_PATH` 指向的已有数据库文件，不接受命令行明文密码，成功后撤销该账号的所有会话。重置后该账号可从重置前被锁定的 IP 使用新密码立即登录；其他账号的 IP 限速不受重置影响。
 
 登录失败按规范化账号和客户端 IP 分别计数，默认第 5 次失败锁定 15 分钟，指数退避上限 1 小时；可通过 `ROLLBOOK_LOGIN_THRESHOLD`、`ROLLBOOK_LOGIN_LOCK_DURATION`、`ROLLBOOK_LOGIN_MAX_BACKOFF` 调整。日志记录失败及锁定类别，不记录口令、Cookie 或 Key。默认只使用 TCP 对端 IP，忽略 `X-Forwarded-For`。仅在单跳可信反向代理部署时，才将代理地址段填入 `ROLLBOOK_TRUSTED_PROXY_CIDRS`（逗号分隔的 CIDR）；届时采用代理追加的最后一个 `X-Forwarded-For` 地址。多跳代理应先在入口规范化转发头。清册 URL 字段仅接受绝对 HTTP/HTTPS 地址，页面展示链接时再次检查协议。页面响应带固定 CSP、防嵌入、防 MIME 嗅探及无来源引用头。
 
