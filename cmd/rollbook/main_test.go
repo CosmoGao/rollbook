@@ -25,9 +25,26 @@ func TestHTTP(t *testing.T) {
 		if response.Code != tc.status {
 			t.Errorf("%s: status = %d", tc.path, response.Code)
 		}
+		for _, header := range []string{"Content-Security-Policy", "X-Frame-Options", "X-Content-Type-Options", "Referrer-Policy"} {
+			if response.Header().Get(header) == "" {
+				t.Errorf("%s: missing %s", tc.path, header)
+			}
+		}
 		if !strings.Contains(response.Body.String(), tc.contains) {
 			t.Errorf("%s: body = %q", tc.path, response.Body.String())
 		}
+	}
+}
+
+func TestTrustedProxyConfig(t *testing.T) {
+	t.Setenv("ROLLBOOK_TRUSTED_PROXY_CIDRS", "127.0.0.1/32, 192.0.2.0/24")
+	got, err := trustedProxyCIDRs()
+	if err != nil || len(got) != 2 {
+		t.Fatal(got, err)
+	}
+	t.Setenv("ROLLBOOK_TRUSTED_PROXY_CIDRS", "not-a-cidr")
+	if _, err = trustedProxyCIDRs(); err == nil {
+		t.Fatal("invalid proxy CIDR accepted")
 	}
 }
 

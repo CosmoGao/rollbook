@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/netip"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -51,6 +52,21 @@ var columns = map[string][]string{
 }
 var tables = map[string]string{"location": "locations", "uplink": "uplinks", "host": "hosts", "network": "networks", "ip": "ips", "service": "services", "port": "ports", "endpoint": "endpoints", "dependency": "dependencies", "version": "versions", "credential": "credentials", "note": "notes", "context": "contexts", "change": "changes"}
 var jsonFields = map[string]bool{"inbound_ports_json": true, "resources_json": true, "upstream_json": true, "via_json": true, "nav_card_json": true, "related_ids_json": true, "diff_json": true}
+
+// ValidHTTPURL 也用于导入直写数据表之前的校验。
+func ValidHTTPURL(value string) bool {
+	u, err := url.Parse(value)
+	return err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Host != "" && u.User == nil && !strings.ContainsAny(value, "\r\n\t")
+}
+
+func validateURLFields(fields map[string]any) error {
+	for _, field := range []string{"mgmt_url", "docs_url", "url", "latest_url"} {
+		if value, ok := fields[field]; ok && value != nil && str(value) != "" && !ValidHTTPURL(str(value)) {
+			return invalidField("fields."+field, "仅接受绝对 HTTP 或 HTTPS 地址", "http:// 或 https:// 地址")
+		}
+	}
+	return nil
+}
 
 // EditableFields returns a copy of the business fields accepted for this type.
 func EditableFields(typ string) []string { return append([]string(nil), columns[typ]...) }
@@ -204,6 +220,9 @@ func validate(ctx context.Context, tx *sql.Tx, o *Object) error {
 		if !allowed[k] {
 			return invalidField("fields."+k, "对象类型不支持该字段", o.Type)
 		}
+	}
+	if err := validateURLFields(o.Fields); err != nil {
+		return err
 	}
 	refTypes := map[string]string{"parent_id": "location", "location_id": "location", "uplink_id": "uplink", "edge_device_id": "host", "parent_host_id": "host", "router_id": "host", "host_id": "host", "network_id": "network", "service_id": "service", "from_id": "*", "to_id": "*", "target_id": "*", "account_ref": "credential"}
 	for field, expected := range refTypes {

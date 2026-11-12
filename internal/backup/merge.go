@@ -12,6 +12,7 @@ import (
 
 	"github.com/CosmoGao/rollbook/internal/audit"
 	"github.com/CosmoGao/rollbook/internal/auth"
+	"github.com/CosmoGao/rollbook/internal/catalog"
 	"github.com/CosmoGao/rollbook/internal/secrets"
 )
 
@@ -94,6 +95,11 @@ func parseMerge(f File) (File, Preview, error) {
 		}
 		p.Counts[table] = len(rows)
 		for _, row := range rows {
+			for _, field := range []string{"mgmt_url", "docs_url", "url", "latest_url"} {
+				if value, ok := row[field]; ok && value != nil && fmt.Sprint(value) != "" && !catalog.ValidHTTPURL(fmt.Sprint(value)) {
+					return f, p, &catalog.ValidationError{Fields: []catalog.FieldError{{Field: "fields." + field, Reason: fmt.Sprintf("%s 中对象 %v 仅接受绝对 HTTP 或 HTTPS 地址", table, row["id"]), Expected: "http:// 或 https:// 地址"}}}
+				}
+			}
 			id, _ := row["id"].(string)
 			if id == "" {
 				return f, p, ErrInvalid
@@ -424,7 +430,7 @@ func (s Service) merge(ctx context.Context, id string, f File, actor auth.Princi
 			return err
 		}
 	}
-	result, err := tx.ExecContext(ctx, "DELETE FROM pending_imports WHERE id=? AND state='pending'", id)
+	result, err := tx.ExecContext(ctx, "UPDATE pending_imports SET state='approved',yaml=x'',reviewed_by=?,reviewed_at=? WHERE id=? AND state='pending'", reviewer, now, id)
 	if err != nil {
 		return err
 	}

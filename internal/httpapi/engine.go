@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/netip"
 	"strconv"
 	"strings"
 	"time"
@@ -21,6 +22,7 @@ type Engine struct {
 	Catalog           catalog.Service
 	VersionChecker    *versioncheck.Checker
 	AllowInsecureHTTP bool
+	TrustedProxyCIDRs []netip.Prefix
 }
 type Args map[string]json.RawMessage
 

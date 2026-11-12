@@ -2,8 +2,11 @@ package httpapi
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
+	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"strings"
 	"time"
@@ -54,7 +57,27 @@ func (e Engine) login(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	session, csrf, p, err := e.Auth.Login(r.Context(), input.Login, input.Password)
+	ip, _, splitErr := net.SplitHostPort(r.RemoteAddr)
+	if splitErr != nil {
+		ip = r.RemoteAddr
+	}
+	if peer, parseErr := netip.ParseAddr(ip); parseErr == nil {
+		for _, trusted := range e.TrustedProxyCIDRs {
+			if !trusted.Contains(peer) {
+				continue
+			}
+			// 仅采信受信任的单跳代理追加的最后一个地址。
+			forwarded := strings.TrimSpace(r.Header.Get("X-Forwarded-For"))
+			if pos := strings.LastIndex(forwarded, ","); pos >= 0 {
+				forwarded = strings.TrimSpace(forwarded[pos+1:])
+			}
+			if client, err := netip.ParseAddr(forwarded); err == nil {
+				ip = client.String()
+			}
+			break
+		}
+	}
+	session, csrf, p, err := e.Auth.LoginWithIP(r.Context(), input.Login, input.Password, ip)
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -137,6 +160,40 @@ func (e Engine) admin(w http.ResponseWriter, r *http.Request, p auth.Principal) 
 		return
 	case path == "/api/auth/session" && r.Method == http.MethodGet:
 		WriteJSON(w, 200, map[string]string{"login": p.Login})
+		return
+	case path == "/api/auth/change-password" && r.Method == http.MethodPost:
+		var input struct {
+			OldPassword string `json:"old_password"`
+			NewPassword string `json:"new_password"`
+		}
+		if err := decodeBody(w, r, &input); err != nil {
+			WriteError(w, err)
+			return
+		}
+		if len(input.NewPassword) < 12 {
+			WriteJSON(w, 422, APIError{Code: "validation", Message: "Validation failed", Fields: []catalog.FieldError{{Field: "new_password", Reason: "密码至少 12 个字符"}}})
+			return
+		}
+		if err := e.Auth.ChangePassword(r.Context(), p, input.OldPassword, input.NewPassword); err != nil {
+			if errors.Is(err, auth.ErrUnauthorized) {
+				WriteJSON(w, 422, APIError{Code: "validation", Message: "Validation failed", Fields: []catalog.FieldError{{Field: "old_password", Reason: "当前密码不正确"}}})
+			} else {
+				WriteError(w, err)
+			}
+			return
+		}
+		http.SetCookie(w, auth.ClearSessionCookie(e.AllowInsecureHTTP))
+		http.SetCookie(w, csrfCookie("", -1, e.AllowInsecureHTTP))
+		WriteJSON(w, 200, map[string]bool{"ok": true})
+		return
+	case path == "/api/auth/logout-all" && r.Method == http.MethodPost:
+		if err := e.Auth.LogoutAll(r.Context(), p); err != nil {
+			WriteError(w, err)
+			return
+		}
+		http.SetCookie(w, auth.ClearSessionCookie(e.AllowInsecureHTTP))
+		http.SetCookie(w, csrfCookie("", -1, e.AllowInsecureHTTP))
+		WriteJSON(w, 200, map[string]bool{"ok": true})
 		return
 	case path == "/api/auth/logout" && r.Method == http.MethodPost:
 		cookie, err := r.Cookie("rollbook_session")
