@@ -23,13 +23,31 @@ go run ./cmd/rollbook serve
 
 REST `/api/` 与 Streamable HTTP `/mcp` 使用 `Authorization: Bearer <key>`；网页使用用户会话。启动服务或创建首用户须设置至少 32 字节的 `ROLLBOOK_AUTH_PEPPER`，或使用 `ROLLBOOK_AUTH_PEPPER_FILE` 指向密钥文件；两者不能同时设置。文件内容按原始字节读取，不裁剪换行。该值应保存在部署环境中，不要提交到仓库。网页可搜索、浏览站点/主机/网段、查看服务和两层拓扑、审核提议，并管理 key。key 生成后只显示一次。MCP 支持 `initialize`、`tools/list`、`tools/call` 的 JSON 响应模式，工具调用与 REST 共用应用服务和权限检查。`check_versions` 由直接写 key 或网页用户手动触发；服务启动后补查过期项，并每小时扫描一次，确保成功记录不超过 24 小时未检查。
 
-CLI 通过 `ROLLBOOK_URL`（默认 `http://127.0.0.1:8080`）和 `ROLLBOOK_KEY` 连接同一 REST API：
+CLI 使用与服务端相同的 REST API。首次运行 `rollbook login`，依次输入服务地址和网页生成的 Key；交互输入 Key 时终端不回显。配置写入 `~/.config/rollbook/config.toml`（或系统的用户配置目录），文件权限为 `0600`。用 `rollbook --profile 家庭 login` 保存另一套配置；最近登录的 profile 是默认值。每次调用可用 `--profile` 选择。环境变量 `ROLLBOOK_URL`、`ROLLBOOK_KEY` 分别覆盖选中 profile 的地址和 Key；地址都未设置时默认 `http://127.0.0.1:8080`。环境变量只对当前进程生效。无 Key 时 `--help`、`version` 和 `completion` 仍可运行。
+
+`--output json|yaml|table` 适用于 REST JSON 响应，默认 JSON；`export` 始终原样输出 YAML，适合重定向到文件。表格会展平首层字段，嵌套字段以紧凑 JSON 显示。输出中的 Key、token、密码等敏感字段会隐藏。可用 `rollbook completion bash|zsh|fish` 生成相应的补全脚本，例如 `rollbook completion bash > ~/.local/share/bash-completion/completions/rollbook`。
+
+常用命令：
 
 ```sh
 rollbook search Overleaf
 rollbook get service:overleaf
-rollbook update service:overleaf 1 '{"name":"Overleaf 2"}' '修正名称'
+rollbook --output table site location:home
+rollbook create '{"id":"host:demo","type":"host","name":"演示主机","fields":{}}' '新增资产'
+rollbook update host:demo --set name=新名称 --set fields.kind=实体 --reason '更正'
+rollbook propose host:demo --set fields.kind=虚拟 --reason '待人工审批'
+rollbook propose create @new-service.json '建议新增'
+rollbook note host:demo --body '已巡检' --kind 运维笔记 --reason '巡检'
+rollbook verify host:demo --reason '现场核实'
+rollbook changes --pending
+rollbook topology service:overleaf --depth 2
+rollbook versions --outdated
+rollbook versions --check
+rollbook context get
+rollbook context put @context.json
 ```
+
+`update`、`propose`、`note`、`verify` 省略 `--rev` 时会先读取对象当前 rev；若其他人并发修改导致 409，请重新 `get` 后重试。修改字段用 `--set field=value`，普通字段如 `name` 直接写，业务字段可写 `fields.kind`；含空格的值请按 shell 规则加引号。传入有效 JSON 数字、布尔值或对象时按 JSON 解析，其余按字符串。若要提议删除，使用 `propose <id> --action delete --reason 文本`。上下文新增文件是含 `id` 的对象 JSON；更新时包含 `id`、`rev`、`body_md` 和 `reason`。401、403、409、422 会给出中文原因和下一步建议。
 
 ## 从空库到第一次查询
 
