@@ -163,6 +163,9 @@ func serve() error {
 		return err
 	}
 	defer database.Close()
+	if err := bootstrapFromEnvironment(ctx, database, pepper); err != nil {
+		return err
+	}
 	allowInsecureHTTP := insecureHTTPEnabled()
 	trustedProxies, err := trustedProxyCIDRs()
 	if err != nil {
@@ -213,6 +216,67 @@ func serve() error {
 		defer cancel()
 		return server.Shutdown(shutdownCtx)
 	}
+}
+
+func bootstrapFromEnvironment(ctx context.Context, database *sql.DB, pepper []byte) error {
+	login, hasLogin := os.LookupEnv("ROLLBOOK_BOOTSTRAP_USER")
+	password, hasPassword := os.LookupEnv("ROLLBOOK_BOOTSTRAP_PASSWORD")
+	passwordFile, hasFile := os.LookupEnv("ROLLBOOK_BOOTSTRAP_PASSWORD_FILE")
+	if !hasLogin && !hasPassword && !hasFile {
+		return nil
+	}
+	if hasPassword && hasFile {
+		return fmt.Errorf("ROLLBOOK_BOOTSTRAP_PASSWORD and ROLLBOOK_BOOTSTRAP_PASSWORD_FILE cannot both be set")
+	}
+	if !hasLogin || strings.TrimSpace(login) == "" {
+		return fmt.Errorf("ROLLBOOK_BOOTSTRAP_USER must be set when a bootstrap password is configured")
+	}
+	if !hasPassword && !hasFile {
+		return fmt.Errorf("ROLLBOOK_BOOTSTRAP_PASSWORD or ROLLBOOK_BOOTSTRAP_PASSWORD_FILE must be set with ROLLBOOK_BOOTSTRAP_USER")
+	}
+	if hasFile && passwordFile == "" {
+		return fmt.Errorf("ROLLBOOK_BOOTSTRAP_PASSWORD_FILE must name a readable file")
+	}
+
+	// 已有用户时不读取口令文件，也不修改任何凭据。最终创建仍由 BootstrapUser 的事务判断。
+	var count int
+	if err := database.QueryRowContext(ctx, "SELECT count(*) FROM users").Scan(&count); err != nil {
+		return fmt.Errorf("check bootstrap users: %w", err)
+	}
+	if count != 0 {
+		log.Print("已存在用户，忽略首次管理员自动引导")
+		return nil
+	}
+	passwordSource := "ROLLBOOK_BOOTSTRAP_PASSWORD"
+	if hasFile {
+		passwordSource = "ROLLBOOK_BOOTSTRAP_PASSWORD_FILE"
+		content, err := os.ReadFile(passwordFile)
+		if err != nil {
+			var pathErr *os.PathError
+			if errors.As(err, &pathErr) {
+				err = pathErr.Err
+			}
+			return fmt.Errorf("read %s: %w", passwordSource, err)
+		}
+		password = strings.TrimSuffix(string(content), "\n")
+		password = strings.TrimSuffix(password, "\r")
+	}
+	if len(password) < 12 {
+		return fmt.Errorf("%s must contain at least 12 characters", passwordSource)
+	}
+	_, err := (auth.Service{DB: database, Pepper: pepper}).BootstrapUser(ctx, login, password)
+	if errors.Is(err, auth.ErrForbidden) {
+		log.Print("已存在用户，忽略首次管理员自动引导")
+		return nil
+	}
+	if errors.Is(err, auth.ErrInvalid) {
+		return fmt.Errorf("invalid ROLLBOOK_BOOTSTRAP_USER or %s", passwordSource)
+	}
+	if err != nil {
+		return fmt.Errorf("create bootstrap user: %w", err)
+	}
+	log.Print("首次管理员已创建；首次登录后请移除引导环境变量和口令文件")
+	return nil
 }
 
 func authPepper() ([]byte, error) {

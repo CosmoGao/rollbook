@@ -1,0 +1,11 @@
+services:
+  rollbook:
+    environment:
+      ROLLBOOK_BOOTSTRAP_USER: ${ROLLBOOK_BOOTSTRAP_USER:?set ROLLBOOK_BOOTSTRAP_USER}
+      ROLLBOOK_BOOTSTRAP_PASSWORD_FILE: /run/secrets/bootstrap_password
+    secrets:
+      - bootstrap_password
+
+secrets:
+  bootstrap_password:
+    file: ./secrets/bootstrap_password
