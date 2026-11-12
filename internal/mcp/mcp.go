@@ -17,6 +17,7 @@ type request struct {
 	Method  string          `json:"method"`
 	Params  struct {
 		Name      string       `json:"name"`
+		URI       string       `json:"uri"`
 		Arguments httpapi.Args `json:"arguments"`
 	} `json:"params"`
 }
@@ -62,7 +63,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch req.Method {
 	case "initialize":
 		_, commit := buildinfo.Info()
-		httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"protocolVersion": "2025-03-26", "capabilities": map[string]any{"tools": map[string]any{}}, "instructions": "先 search 再 get_asset 读取 ID 与 rev；创建用 create(object,base_rev=0,reason)，提议级 key 需网页审批。更新先读取最新 rev，冲突时重读，禁止盲目覆盖。只读 key 不可写；不要保存密码、私钥、token，只保存凭据管理器的引用。每次写入给出具体 reason。", "serverInfo": map[string]string{"name": "rollbook", "version": programVersion(), "commit": commit}}})
+		httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"protocolVersion": "2025-03-26", "capabilities": map[string]any{"tools": map[string]any{}, "resources": map[string]any{}, "prompts": map[string]any{}}, "instructions": "先 search 再 get_asset 读取 ID 与 rev；创建用 create(object,base_rev=0,reason)，提议级 key 需网页审批。更新先读取最新 rev，冲突时重读，禁止盲目覆盖。只读 key 不可写；不要保存密码、私钥、token，只保存凭据管理器的引用。每次写入给出具体 reason。", "serverInfo": map[string]string{"name": "rollbook", "version": programVersion(), "commit": commit}}})
 	case "ping":
 		httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{}})
 	case "tools/list":
@@ -71,6 +72,43 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			tools = append(tools, map[string]any{"name": name, "description": descriptions[name], "inputSchema": schema(name)})
 		}
 		httpapi.WriteJSON(w, 200, response{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"tools": tools}})
+	case "resources/list":
+		writeResult(w, req.ID, map[string]any{"resources": []any{map[string]string{"uri": "rollbook://rules", "name": "Rollbook 使用规则", "mimeType": "text/plain", "description": "查询、写入和秘密处理规则"}}})
+	case "resources/templates/list":
+		writeResult(w, req.ID, map[string]any{"resourceTemplates": []any{
+			map[string]string{"uriTemplate": "rollbook://sites/{id}", "name": "站点概览", "mimeType": "application/json", "description": "站点 ID，须先搜索或用 get_asset 确认"},
+			map[string]string{"uriTemplate": "rollbook://services/{id}", "name": "服务全貌", "mimeType": "application/json", "description": "服务 ID，包含宿主、入口、依赖和凭据引用"},
+		}})
+	case "resources/read":
+		op, id, ok := resourceRoute(req.Params.URI)
+		if !ok {
+			rpcError(w, req.ID, -32602, "Invalid resource URI")
+			return
+		}
+		if op == "rules" {
+			writeResult(w, req.ID, map[string]any{"contents": []any{map[string]string{"uri": req.Params.URI, "mimeType": "text/plain", "text": rulesText}}})
+			return
+		}
+		result, err := s.Engine.Call(r.Context(), p, op, httpapi.Args{"id": httpapi.StringArg(id)}, "mcp")
+		if err != nil {
+			resourceError(w, req.ID, err)
+			return
+		}
+		data, err := json.Marshal(result)
+		if err != nil {
+			rpcError(w, req.ID, -32603, "Internal error")
+			return
+		}
+		writeResult(w, req.ID, map[string]any{"contents": []any{map[string]string{"uri": req.Params.URI, "mimeType": "application/json", "text": string(data)}}})
+	case "prompts/list":
+		writeResult(w, req.ID, map[string]any{"prompts": promptList()})
+	case "prompts/get":
+		messages, ok := promptMessages(req.Params.Name, req.Params.Arguments)
+		if !ok {
+			rpcError(w, req.ID, -32602, "Invalid prompt name or arguments")
+			return
+		}
+		writeResult(w, req.ID, map[string]any{"messages": messages})
 	case "tools/call":
 		valid := false
 		for _, name := range httpapi.Tools {

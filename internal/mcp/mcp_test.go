@@ -107,6 +107,75 @@ func TestToolsAndREST(t *testing.T) {
 	if initResult["instructions"] == "" || initResult["serverInfo"].(map[string]any)["version"] == "1.0.0" {
 		t.Fatalf("MCP initialize incomplete: %v", initResult)
 	}
+	capabilities := initResult["capabilities"].(map[string]any)
+	if capabilities["resources"] == nil || capabilities["prompts"] == nil || capabilities["tools"] == nil {
+		t.Fatalf("missing capabilities: %v", capabilities)
+	}
+	rpc := func(key, method string, params map[string]any) (int, map[string]any) {
+		t.Helper()
+		return request("POST", "/mcp", key, map[string]any{"jsonrpc": "2.0", "id": 7, "method": method, "params": params})
+	}
+	_, resourceList := rpc(keys[auth.Read], "resources/list", nil)
+	resources := resourceList["result"].(map[string]any)["resources"].([]any)
+	if len(resources) != 1 || resources[0].(map[string]any)["uri"] != "rollbook://rules" {
+		t.Fatalf("resources: %v", resourceList)
+	}
+	_, templateList := rpc(keys[auth.Read], "resources/templates/list", nil)
+	if len(templateList["result"].(map[string]any)["resourceTemplates"].([]any)) != 2 {
+		t.Fatalf("templates: %v", templateList)
+	}
+	for uri, wanted := range map[string]string{"rollbook://rules": "只读 key", "rollbook://sites/location:bj": "北京", "rollbook://services/service:overleaf": "Overleaf"} {
+		_, result := rpc(keys[auth.Read], "resources/read", map[string]any{"uri": uri})
+		contents, ok := result["result"].(map[string]any)["contents"].([]any)
+		if !ok || len(contents) != 1 {
+			t.Fatalf("read %s: %v", uri, result)
+		}
+		content := contents[0].(map[string]any)
+		if content["uri"] != uri || !bytes.Contains([]byte(content["text"].(string)), []byte(wanted)) {
+			t.Fatalf("read %s: %v", uri, content)
+		}
+		if content["mimeType"] == "application/json" {
+			var parsed any
+			if err := json.Unmarshal([]byte(content["text"].(string)), &parsed); err != nil {
+				t.Fatalf("invalid resource JSON: %v", err)
+			}
+		}
+	}
+	_, promptListing := rpc(keys[auth.Read], "prompts/list", nil)
+	if len(promptListing["result"].(map[string]any)["prompts"].([]any)) != 3 {
+		t.Fatalf("prompts: %v", promptListing)
+	}
+	for name, args := range map[string]map[string]any{"register_service": {"name": "新服务"}, "retire_host": {"host_id": "host:overleaf"}, "handoff_context": {"topic": "迁移"}} {
+		_, result := rpc(keys[auth.Read], "prompts/get", map[string]any{"name": name, "arguments": args})
+		messages, ok := result["result"].(map[string]any)["messages"].([]any)
+		if !ok || len(messages) != 1 || messages[0].(map[string]any)["role"] != "user" {
+			t.Fatalf("prompt %s: %v", name, result)
+		}
+	}
+	for _, tc := range []struct {
+		method string
+		params map[string]any
+	}{
+		{"resources/read", map[string]any{"uri": "rollbook://services/a/b"}},
+		{"resources/read", map[string]any{"uri": "rollbook://services/%2e%2e"}},
+		{"resources/read", map[string]any{"uri": "rollbook://services/service:overleaf?x=1"}},
+		{"resources/read", map[string]any{"uri": "rollbook://services/missing"}},
+		{"prompts/get", map[string]any{"name": "register_service", "arguments": map[string]any{}}},
+		{"prompts/get", map[string]any{"name": "register_service", "arguments": map[string]any{"name": 123}}},
+		{"prompts/get", map[string]any{"name": "unknown", "arguments": map[string]any{"name": "x"}}},
+	} {
+		_, result := rpc(keys[auth.Read], tc.method, tc.params)
+		if result["error"] == nil || result["result"] != nil {
+			t.Fatalf("expected protocol error: %v", result)
+		}
+	}
+	for _, method := range []string{"resources/list", "resources/templates/list", "resources/read", "prompts/list", "prompts/get"} {
+		status, result := rpc("invalid", method, map[string]any{"uri": "rollbook://services/service:overleaf", "name": "retire_host", "arguments": map[string]any{"host_id": "host:overleaf"}})
+		encoded, _ := json.Marshal(result)
+		if status != 401 || result["result"] != nil || bytes.Contains(encoded, []byte("Overleaf")) {
+			t.Fatalf("unauthenticated %s: %d %v", method, status, result)
+		}
+	}
 	_, listing := request("POST", "/mcp", keys[auth.Read], map[string]any{"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
 	listed := listing["result"].(map[string]any)["tools"].([]any)
 	for _, item := range listed {

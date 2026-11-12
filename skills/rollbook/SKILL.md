@@ -13,6 +13,12 @@ description: 查询和维护 Rollbook 清册中的站点、主机、IP、服务�
 2. 结果为空就明确说明清册未记录；不要凭空补造资产。注明数据的来源、核实时间与不确定性。
 3. `get_changes` 可查历史和待确认提议；`list_outdated` 的“待人工确认”不是已知升级版本。
 
+## MCP 资源与提示
+
+- 使用 `resources/list` 获取固定资源 `rollbook://rules`（使用规则）；`resources/templates/list` 获取参数化 URI：`rollbook://sites/{id}`（站点概览）和 `rollbook://services/{id}`（服务全貌）。先用 `search` 确认对象 ID，再以实际 ID 调 `resources/read`。两个对象资源返回 `application/json` 文本，可解析为原有 `get_site`、`get_service` 结果；不要把 URI 模板中的 `{id}` 原样提交。
+- `prompts/list` 列出 `register_service`、`retire_host`、`handoff_context`。调 `prompts/get` 时分别传 `arguments: {"name":"服务名称"}`、`{"host_id":"host:示例"}`、`{"topic":"交接主题"}`。提示只给操作步骤，不自动执行写入；仍须按 key 级别、最新 rev 和网页审批要求操作。
+- 所有 MCP 方法都要用 `Authorization: Bearer <key>`；只读 key 可读取上述资源和提示。无效 URI、提示名称或参数会返回 JSON-RPC 错误。
+
 ## 写入与提议
 
 1. 先 `search`，再 `get_asset` 读取当前 `rev` 和关系 ID。新建时按 `location → network/host → ip/service → endpoint/dependency` 的顺序建立引用对象。对象 ID 用 `type:唯一名称`，创建传 `object`、`base_rev: 0`、`reason`。提议级 key 调 `create` 会生成待确认提议，用户须在网页「待确认」批准后才生效。
