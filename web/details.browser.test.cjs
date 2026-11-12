@@ -22,7 +22,7 @@ test('四类详情安全显示笔记、凭据与引用；变更筛选和共享�
    if(['/app.js','/i18n.js','/topology.js','/dagre.min.js','/marked.umd.js','/purify.min.js','/style.css'].includes(p))return route.fulfill({contentType:p.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,p.slice(1)))});
    const reply=json=>route.fulfill({json});
    if(p==='/api/auth/session')return reply({login:'owner'});
-   if(p==='/api/config')return reply({allow_insecure_http:false});
+   if(p==='/api/config')return reply({allow_insecure_http:false,http_risk:false});
    if(p==='/api/version')return reply({version:'test',commit:'test'});
    if(p==='/api/browse')return reply([]);
    if(p==='/api/changes'){query=u.searchParams;return reply([change])}

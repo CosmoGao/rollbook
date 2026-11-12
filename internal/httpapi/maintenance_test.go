@@ -27,7 +27,7 @@ func TestBrowserMaintenanceAPI(t *testing.T) {
 	if _, err = a.BootstrapUser(ctx, "owner", "strong password 12345"); err != nil {
 		t.Fatal(err)
 	}
-	h := (httpapi.Engine{Auth: a, Catalog: catalog.Service{Store: catalog.Store{DB: database}}}).Handler()
+	h := (httpapi.Engine{Auth: a, Catalog: catalog.Service{Store: catalog.Store{DB: database}}, AllowInsecureHTTP: true}).Handler()
 	var cookies []*http.Cookie
 	csrf := ""
 	call := func(method, path, body string) *httptest.ResponseRecorder {

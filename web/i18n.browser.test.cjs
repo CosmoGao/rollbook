@@ -13,7 +13,7 @@ test('browser language, manual choice, and refresh',async()=>{
    const p=new URL(route.request().url()).pathname;
    if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'index.html'))});
    for(const name of ['app.js','i18n.js','topology.js','dagre.min.js','style.css'])if(p==='/'+name)return route.fulfill({contentType:name.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,name))});
-   if(p==='/api/config')return route.fulfill({json:{allow_insecure_http:false}});
+   if(p==='/api/config')return route.fulfill({json:{allow_insecure_http:false,http_risk:false}});
    if(p==='/api/auth/session')return route.fulfill({status:401,json:{code:'unauthorized',message:'Authentication required'}});
    if(p==='/api/version')return route.fulfill({json:{version:'test',commit:'test'}});
    return route.fulfill({status:404,json:{code:'not_found',message:'Not found'}});
@@ -39,7 +39,7 @@ test('English workbench and creation form use translated copy',async()=>{
    if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'index.html'))});
    for(const name of ['app.js','i18n.js','topology.js','dagre.min.js','style.css'])if(p==='/'+name)return route.fulfill({contentType:name.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,name))});
    if(p==='/api/auth/session')return route.fulfill({json:{login:'owner'}});
-   if(p==='/api/config')return route.fulfill({json:{allow_insecure_http:false}});
+   if(p==='/api/config')return route.fulfill({json:{allow_insecure_http:false,http_risk:false}});
    if(p==='/api/version')return route.fulfill({json:{version:'test',commit:'test'}});
    return route.fulfill({json:[]});
   });
@@ -68,7 +68,7 @@ test('English interface preserves asset names and IDs while translating kind lab
    if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'index.html'))});
    for(const name of ['app.js','i18n.js','topology.js','dagre.min.js','style.css'])if(p==='/'+name)return route.fulfill({contentType:name.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,name))});
    if(p==='/api/auth/session')return route.fulfill({json:{login:'站点'}});
-   if(p==='/api/config')return route.fulfill({json:{allow_insecure_http:false}});
+   if(p==='/api/config')return route.fulfill({json:{allow_insecure_http:false,http_risk:false}});
    if(p==='/api/version')return route.fulfill({json:{version:'test',commit:'test'}});
    if(p==='/api/browse')return route.fulfill({json:assets.filter(o=>o.type===url.searchParams.get('type'))});
    return route.fulfill({json:[]});

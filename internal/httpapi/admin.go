@@ -49,6 +49,10 @@ func (e Engine) login(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, auth.ErrForbidden)
 		return
 	}
+	if !e.secureRequest(r) && !e.AllowInsecureHTTP {
+		WriteJSON(w, 403, APIError{Code: "insecure_http", Message: "HTTP login is disabled"})
+		return
+	}
 	var input struct {
 		Login    string `json:"login"`
 		Password string `json:"password"`
@@ -82,8 +86,8 @@ func (e Engine) login(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	http.SetCookie(w, auth.SessionCookie(session, e.AllowInsecureHTTP))
-	http.SetCookie(w, csrfCookie(csrf, 12*3600, e.AllowInsecureHTTP))
+	http.SetCookie(w, auth.SessionCookie(session, !e.secureRequest(r)))
+	http.SetCookie(w, csrfCookie(csrf, 12*3600, !e.secureRequest(r)))
 	WriteJSON(w, 200, map[string]string{"login": p.Login})
 }
 func (e Engine) admin(w http.ResponseWriter, r *http.Request, p auth.Principal) {
@@ -217,8 +221,8 @@ func (e Engine) admin(w http.ResponseWriter, r *http.Request, p auth.Principal) 
 			}
 			return
 		}
-		http.SetCookie(w, auth.ClearSessionCookie(e.AllowInsecureHTTP))
-		http.SetCookie(w, csrfCookie("", -1, e.AllowInsecureHTTP))
+		http.SetCookie(w, auth.ClearSessionCookie(!e.secureRequest(r)))
+		http.SetCookie(w, csrfCookie("", -1, !e.secureRequest(r)))
 		WriteJSON(w, 200, map[string]bool{"ok": true})
 		return
 	case path == "/api/auth/logout-all" && r.Method == http.MethodPost:
@@ -226,8 +230,8 @@ func (e Engine) admin(w http.ResponseWriter, r *http.Request, p auth.Principal) 
 			WriteError(w, err)
 			return
 		}
-		http.SetCookie(w, auth.ClearSessionCookie(e.AllowInsecureHTTP))
-		http.SetCookie(w, csrfCookie("", -1, e.AllowInsecureHTTP))
+		http.SetCookie(w, auth.ClearSessionCookie(!e.secureRequest(r)))
+		http.SetCookie(w, csrfCookie("", -1, !e.secureRequest(r)))
 		WriteJSON(w, 200, map[string]bool{"ok": true})
 		return
 	case path == "/api/auth/logout" && r.Method == http.MethodPost:
@@ -240,8 +244,8 @@ func (e Engine) admin(w http.ResponseWriter, r *http.Request, p auth.Principal) 
 			WriteError(w, err)
 			return
 		}
-		http.SetCookie(w, auth.ClearSessionCookie(e.AllowInsecureHTTP))
-		http.SetCookie(w, csrfCookie("", -1, e.AllowInsecureHTTP))
+		http.SetCookie(w, auth.ClearSessionCookie(!e.secureRequest(r)))
+		http.SetCookie(w, csrfCookie("", -1, !e.secureRequest(r)))
 		WriteJSON(w, 200, map[string]bool{"ok": true})
 		return
 	case path == "/api/keys" && r.Method == http.MethodGet:

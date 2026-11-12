@@ -48,7 +48,7 @@ func (e Engine) Handler() http.Handler {
 			return
 		}
 		if r.URL.Path == "/api/config" && r.Method == http.MethodGet {
-			WriteJSON(w, 200, map[string]bool{"allow_insecure_http": e.AllowInsecureHTTP})
+			WriteJSON(w, 200, map[string]bool{"allow_insecure_http": e.AllowInsecureHTTP, "http_risk": !e.secureRequest(r)})
 			return
 		}
 		if r.URL.Path == "/api/auth/login" {

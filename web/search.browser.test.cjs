@@ -23,7 +23,7 @@ test('搜索显示名称和状态；危险入口及管理链接保持纯文本',
    if(['/app.js','/i18n.js','/topology.js','/dagre.min.js','/style.css'].includes(p))return route.fulfill({contentType:p.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,p.slice(1)))});
    const reply=json=>route.fulfill({json});
    if(p==='/api/auth/session')return reply({login:'owner'});
-   if(p==='/api/config')return reply({allow_insecure_http:false});
+   if(p==='/api/config')return reply({allow_insecure_http:false,http_risk:false});
    if(p==='/api/version')return reply({version:'test',commit:'test'});
    if(p==='/api/browse')return reply([assets['location:site']]);
    if(p==='/api/search')return reply(hits);

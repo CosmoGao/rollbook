@@ -25,7 +25,7 @@ test('主机树逐层显示 IP/状态并可折叠；网段显示冲突和空闲�
    if(['/app.js','/i18n.js','/topology.js','/dagre.min.js','/style.css'].includes(p))return route.fulfill({contentType:p.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,p.slice(1)))});
    const reply=json=>route.fulfill({json});
    if(p==='/api/auth/session')return reply({login:'owner'});
-   if(p==='/api/config')return reply({allow_insecure_http:false});
+   if(p==='/api/config')return reply({allow_insecure_http:false,http_risk:false});
    if(p==='/api/version')return reply({version:'test',commit:'test'});
    if(p==='/api/browse')return reply(assets.filter(a=>a.type===u.searchParams.get('type')));
    if(p==='/api/networks/network:n/inventory')return reply({id:'network:n',ips:[],hosts:[],occupancy:{cidr:'192.0.2.0/29',gateway:'192.0.2.1',dhcp_range:'',next_available:'192.0.2.6',used:[{address:'192.0.2.5',ip_id:'ip:a',host_id:'host:p',conflict:true},{address:'192.0.2.5',ip_id:'ip:b',host_id:'host:v',conflict:true}],free:[{start:'192.0.2.6',end:'192.0.2.6'}]}});
@@ -65,7 +65,7 @@ test('网页重复登记 IP 时显示占用主机',async()=>{
    if(['/app.js','/i18n.js','/topology.js','/dagre.min.js','/style.css'].includes(p))return route.fulfill({contentType:p.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,p.slice(1)))});
    const reply=(json,status=200)=>route.fulfill({status,json});
    if(p==='/api/auth/session')return reply({login:'owner'});
-   if(p==='/api/config')return reply({allow_insecure_http:false});
+   if(p==='/api/config')return reply({allow_insecure_http:false,http_risk:false});
    if(p==='/api/version')return reply({version:'test',commit:'test'});
    if(p==='/api/browse')return reply(assets.filter(a=>a.type===u.searchParams.get('type')));
    if(p==='/api/assets'&&req.method()==='POST'){

@@ -23,7 +23,7 @@ test('从空库用网页录入、维护并两次确认删除',async()=>{
    if(['/topology.js','/dagre.min.js','/marked.umd.js','/purify.min.js'].includes(p))return route.fulfill({contentType:'application/javascript',body:fs.readFileSync(path.join(__dirname,p.slice(1)))});
    if(p==='/i18n.js')return route.fulfill({contentType:'application/javascript',body:i18n});
    if(p==='/style.css')return route.fulfill({contentType:'text/css',body:css});
-   if(p==='/api/config')return reply({allow_insecure_http:false});
+   if(p==='/api/config')return reply({allow_insecure_http:false,http_risk:false});
    if(p==='/api/auth/session')return reply({login:'owner'});
    if(p==='/api/browse')return reply([...objects.values()].filter(o=>o.type===u.searchParams.get('type')));
    if(p==='/api/assets'&&m==='POST'){
@@ -96,7 +96,7 @@ test('空库引导导入虚构数据并展示可复制的客户端配置',async(
    if(p==='/app.js')return route.fulfill({contentType:'application/javascript',body:js});
    if(p==='/i18n.js')return route.fulfill({contentType:'application/javascript',body:i18n});
    if(p==='/style.css')return route.fulfill({contentType:'text/css',body:css});
-   if(p==='/api/config')return reply({allow_insecure_http:false});
+   if(p==='/api/config')return reply({allow_insecure_http:false,http_risk:false});
    if(p==='/api/auth/session')return reply({login:'owner'});
    if(p==='/api/browse')return reply([...objects.values()].filter(o=>o.type===u.searchParams.get('type')));
    if(p==='/api/assets'&&m==='POST'){const {object}=JSON.parse(req.postData());objects.set(object.id,object);return reply(object)}
