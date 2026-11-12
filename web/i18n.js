@@ -1,5 +1,6 @@
 // 界面文案以现有中文为键；这里不更改 API 取值。
 const translations = {
+'备注':'Note','创建时间':'Created','到期时间':'Expires','最后使用时间':'Last used','查看已吊销的 Key':'Show revoked keys','编辑 Key':'Edit key',
 '搜索 IP、服务…':'Search IP or service…',
 '最近变更':'Recent changes','共享上下文':'Shared context','按 Key、对象类型和时间查看审计记录。':'Filter audit records by key, object type, and time.','查看 agent 与用户写入的上下文。':'View context written by agents and users.','Key ID 或名称':'Key ID or name','全部类型':'All types','开始日期':'Start date','结束日期':'End date','筛选':'Filter','显示已归档':'Show archived','基本字段':'Core fields','反向引用':'Referenced by',
 '网段占用':'Network occupancy','已用地址':'Used addresses','空闲地址范围':'Available address ranges','下一个可分配 IP':'Next assignable IP','无空闲地址':'No available address','网关':'Gateway','冲突':'Conflict',
