@@ -15,7 +15,7 @@ go run ./cmd/rollbook serve
 
 默认监听 `127.0.0.1:8080`，数据库写入 `./data/rollbook.db`。`bootstrap-user` 只允许创建首个用户，密码从终端读取；也可在首次 `serve` 前配置 `ROLLBOOK_BOOTSTRAP_USER` 与 `ROLLBOOK_BOOTSTRAP_PASSWORD` 或 `ROLLBOOK_BOOTSTRAP_PASSWORD_FILE` 自动创建。访问 `/` 可打开清册网页，`/healthz` 返回 `ok`。网页登录的会话 Cookie 默认带 `Secure`，实际访问需要 HTTPS 反向代理。环境变量 `ROLLBOOK_LISTEN_ADDR` 和 `ROLLBOOK_DB_PATH` 可修改监听地址与数据库路径。首次启动自动迁移；再次启动不会重复执行已应用的迁移。数据库使用 WAL、外键约束和 FTS5。
 
-网页侧边栏可修改密码（须输入旧密码）或退出所有设备；两种操作都撤销当前及其他登录会话，随后重新登录。本机管理员可运行 `rollbook reset-password <login>`，在终端交互输入至少 12 字符的新密码。此命令只操作 `ROLLBOOK_DB_PATH` 指向的已有数据库文件，不接受命令行明文密码，成功后撤销该账号的所有会话。重置后该账号可从重置前被锁定的 IP 使用新密码立即登录；其他账号的 IP 限速不受重置影响。
+新设或重设密码不得包含用户名（不区分大小写）、不得使用常见弱口令，且不超过 bcrypt 的 72 字节上限；已有密码无需修改。网页侧边栏可修改密码（须输入旧密码）或退出所有设备；两种操作都撤销当前及其他登录会话，随后重新登录。本机管理员可运行 `rollbook reset-password <login>`，在终端交互输入至少 8 字符，且大写、小写、数字、符号四类至少三类的新密码。此命令只操作 `ROLLBOOK_DB_PATH` 指向的已有数据库文件，不接受命令行明文密码，成功后撤销该账号的所有会话。重置后该账号可从重置前被锁定的 IP 使用新密码立即登录；其他账号的 IP 限速不受重置影响。
 
 登录失败按规范化账号和客户端 IP 分别计数，默认第 5 次失败锁定 15 分钟，指数退避上限 1 小时；可通过 `ROLLBOOK_LOGIN_THRESHOLD`、`ROLLBOOK_LOGIN_LOCK_DURATION`、`ROLLBOOK_LOGIN_MAX_BACKOFF` 调整。日志记录失败及锁定类别，不记录口令、Cookie 或 Key。默认只使用 TCP 对端 IP，忽略 `X-Forwarded-For`。仅在单跳可信反向代理部署时，才将代理地址段填入 `ROLLBOOK_TRUSTED_PROXY_CIDRS`（逗号分隔的 CIDR）；届时采用代理追加的最后一个 `X-Forwarded-For` 地址。多跳代理应先在入口规范化转发头。清册 URL 字段仅接受绝对 HTTP/HTTPS 地址，页面展示链接时再次检查协议。页面响应带固定 CSP、防嵌入、防 MIME 嗅探及无来源引用头。
 
@@ -112,15 +112,15 @@ curl -fsS http://127.0.0.1:8080/healthz
 
 ```sh
 umask 077
-read -rsp '首次管理员口令（至少12字符）: ' bootstrap_password; printf '\n'
+read -rsp '首次管理员口令（至少8字符，且四类字符至少三类）: ' bootstrap_password; printf '\n'
 printf '%s' "$bootstrap_password" > secrets/bootstrap_password
 unset bootstrap_password
 docker compose -f compose.yaml -f compose.bootstrap.yaml up -d
 ```
 
-`compose.bootstrap.yaml` 仅在显式指定时加载；默认 `docker compose config` 和 `docker compose up -d` 都不需要 `secrets/bootstrap_password`。口令文件内容可带一个结尾换行，程序会去掉。也可在 `compose.yaml` 的 `rollbook.environment` 中设置 `ROLLBOOK_BOOTSTRAP_USER: ${ROLLBOOK_BOOTSTRAP_USER}` 和 `ROLLBOOK_BOOTSTRAP_PASSWORD: ${ROLLBOOK_BOOTSTRAP_PASSWORD}`，在 `.env` 中提供对应值；这种方式会使口令出现在 Compose 配置和容器环境中，建议只用于本地测试。两种口令来源不可同时设置，口令至少 12 字符。
+`compose.bootstrap.yaml` 仅在显式指定时加载；默认 `docker compose config` 和 `docker compose up -d` 都不需要 `secrets/bootstrap_password`。口令文件内容可带一个结尾换行，程序会去掉。也可在 `compose.yaml` 的 `rollbook.environment` 中设置 `ROLLBOOK_BOOTSTRAP_USER: ${ROLLBOOK_BOOTSTRAP_USER}` 和 `ROLLBOOK_BOOTSTRAP_PASSWORD: ${ROLLBOOK_BOOTSTRAP_PASSWORD}`，在 `.env` 中提供对应值；这种方式会使口令出现在 Compose 配置和容器环境中，建议只用于本地测试。两种口令来源不可同时设置，口令至少 8 字符，且大写、小写、数字、符号四类至少三类。
 
-首次登录后移除引导环境变量、覆盖文件配置及口令文件，再按默认命令重建服务；已有用户时自动引导只记录一次忽略提示，不会更改原密码。也可继续使用交互式命令创建首位用户，按提示输入至少 12 字符的密码：
+首次登录后移除引导环境变量、覆盖文件配置及口令文件，再按默认命令重建服务；已有用户时自动引导只记录一次忽略提示，不会更改原密码。也可继续使用交互式命令创建首位用户，按提示输入至少 8 字符，且大写、小写、数字、符号四类至少三类的密码：
 
 ```sh
 docker compose run --rm -it rollbook bootstrap-user owner

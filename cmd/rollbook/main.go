@@ -67,7 +67,7 @@ func resetPassword(args []string) error {
 		return err
 	}
 	defer database.Close()
-	fmt.Fprint(os.Stderr, "New password (at least 12 characters): ")
+	fmt.Fprint(os.Stderr, "New password (8+ characters; 3 of uppercase, lowercase, digits, symbols): ")
 	password, err := term.ReadPassword(int(os.Stdin.Fd()))
 	fmt.Fprintln(os.Stderr)
 	if err != nil {
@@ -132,7 +132,7 @@ func bootstrapUser(args []string) error {
 		return err
 	}
 	defer database.Close()
-	fmt.Fprint(os.Stderr, "Password (at least 12 characters): ")
+	fmt.Fprint(os.Stderr, "Password (8+ characters; 3 of uppercase, lowercase, digits, symbols): ")
 	password, err := term.ReadPassword(int(os.Stdin.Fd()))
 	fmt.Fprintln(os.Stderr)
 	if err != nil {
@@ -261,16 +261,13 @@ func bootstrapFromEnvironment(ctx context.Context, database *sql.DB, pepper []by
 		password = strings.TrimSuffix(string(content), "\n")
 		password = strings.TrimSuffix(password, "\r")
 	}
-	if len(password) < 12 {
-		return fmt.Errorf("%s must contain at least 12 characters", passwordSource)
-	}
 	_, err := (auth.Service{DB: database, Pepper: pepper}).BootstrapUser(ctx, login, password)
 	if errors.Is(err, auth.ErrForbidden) {
 		log.Print("已存在用户，忽略首次管理员自动引导")
 		return nil
 	}
 	if errors.Is(err, auth.ErrInvalid) {
-		return fmt.Errorf("invalid ROLLBOOK_BOOTSTRAP_USER or %s", passwordSource)
+		return fmt.Errorf("invalid %s: %w", passwordSource, err)
 	}
 	if err != nil {
 		return fmt.Errorf("create bootstrap user: %w", err)

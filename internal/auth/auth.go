@@ -68,8 +68,12 @@ func (s Service) BootstrapUser(ctx context.Context, login, password string) (str
 	if e := s.valid(); e != nil {
 		return "", e
 	}
-	if strings.TrimSpace(login) == "" || len(password) < 12 {
+	login = strings.TrimSpace(login)
+	if login == "" {
 		return "", ErrInvalid
+	}
+	if err := ValidateNewPassword(login, password); err != nil {
+		return "", err
 	}
 	hash, e := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if e != nil {

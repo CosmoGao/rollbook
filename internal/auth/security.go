@@ -144,15 +144,15 @@ func (s Service) ChangePassword(ctx context.Context, p Principal, oldPassword, n
 	if !p.IsUser() {
 		return ErrForbidden
 	}
-	if len(newPassword) < 12 {
-		return ErrInvalid
-	}
-	var hash string
-	if err := s.DB.QueryRowContext(ctx, "SELECT password_hash FROM users WHERE id=?", p.UserID).Scan(&hash); err != nil {
+	var hash, canonical string
+	if err := s.DB.QueryRowContext(ctx, "SELECT password_hash,login FROM users WHERE id=?", p.UserID).Scan(&hash, &canonical); err != nil {
 		return err
 	}
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(oldPassword)) != nil {
 		return ErrUnauthorized
+	}
+	if err := ValidateNewPassword(canonical, newPassword); err != nil {
+		return err
 	}
 	return s.setPassword(ctx, p.UserID, newPassword, hash, "")
 }
@@ -161,11 +161,11 @@ func (s Service) ResetPassword(ctx context.Context, login, newPassword string) e
 	if err := s.valid(); err != nil {
 		return err
 	}
-	if len(newPassword) < 12 {
-		return ErrInvalid
-	}
 	var id, canonical, hash string
 	if err := s.DB.QueryRowContext(ctx, "SELECT id,login,password_hash FROM users WHERE lower(login)=?", strings.ToLower(strings.TrimSpace(login))).Scan(&id, &canonical, &hash); err != nil {
+		return err
+	}
+	if err := ValidateNewPassword(canonical, newPassword); err != nil {
 		return err
 	}
 	return s.setPassword(ctx, id, newPassword, hash, strings.ToLower(canonical))

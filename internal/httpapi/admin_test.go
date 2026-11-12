@@ -204,6 +204,18 @@ func TestBrowserAdminAndKeyBoundary(t *testing.T) {
 	if wrong.Code != 422 || !strings.Contains(wrong.Body.String(), "old_password") {
 		t.Fatal(wrong.Code, wrong.Body)
 	}
+	for _, tc := range []struct{ password, reason string }{
+		{"short", "密码至少 8 个字符"},
+		{"abcdef12", "密码须包含大写、小写、数字、符号中的至少三类"},
+		{"Password1", "密码过于常见"},
+		{"xxOwNeR1!", "密码不能包含用户名"},
+	} {
+		body, _ := json.Marshal(map[string]string{"old_password": "strong password 12345", "new_password": tc.password})
+		result := call("POST", "/api/auth/change-password", string(body), csrf, cookies, "")
+		if result.Code != 422 || !strings.Contains(result.Body.String(), "new_password") || !strings.Contains(result.Body.String(), tc.reason) {
+			t.Fatal(result.Code, result.Body)
+		}
+	}
 	changed := call("POST", "/api/auth/change-password", `{"old_password":"strong password 12345","new_password":"new password 12345"}`, csrf, cookies, "")
 	if changed.Code != 200 {
 		t.Fatal(changed.Code, changed.Body)

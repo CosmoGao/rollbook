@@ -209,12 +209,11 @@ func (e Engine) admin(w http.ResponseWriter, r *http.Request, p auth.Principal) 
 			WriteError(w, err)
 			return
 		}
-		if len(input.NewPassword) < 12 {
-			WriteJSON(w, 422, APIError{Code: "validation", Message: "Validation failed", Fields: []catalog.FieldError{{Field: "new_password", Reason: "密码至少 12 个字符"}}})
-			return
-		}
 		if err := e.Auth.ChangePassword(r.Context(), p, input.OldPassword, input.NewPassword); err != nil {
-			if errors.Is(err, auth.ErrUnauthorized) {
+			var passwordErr *auth.PasswordError
+			if errors.As(err, &passwordErr) {
+				WriteJSON(w, 422, APIError{Code: "validation", Message: "Validation failed", Fields: []catalog.FieldError{{Field: "new_password", Reason: passwordReason(passwordErr.Reason)}}})
+			} else if errors.Is(err, auth.ErrUnauthorized) {
 				WriteJSON(w, 422, APIError{Code: "validation", Message: "Validation failed", Fields: []catalog.FieldError{{Field: "old_password", Reason: "当前密码不正确"}}})
 			} else {
 				WriteError(w, err)
