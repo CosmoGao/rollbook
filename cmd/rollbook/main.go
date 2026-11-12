@@ -257,6 +257,21 @@ func handler(engines ...httpapi.Engine) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/api/", engine.Handler())
 	mux.Handle("/mcp", mcp.Server{Engine: engine})
+	mux.HandleFunc("/manifest.webmanifest", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		w.Header().Set("Content-Type", "application/manifest+json; charset=utf-8")
+		data, err := web.Files.ReadFile("manifest.webmanifest")
+		if err != nil {
+			http.Error(w, "manifest unavailable", http.StatusInternalServerError)
+			return
+		}
+		if r.Method == http.MethodGet {
+			_, _ = w.Write(data)
+		}
+	})
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Write([]byte("ok\n"))
