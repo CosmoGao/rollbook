@@ -16,6 +16,12 @@ type ValidationError struct {
 	Fields []FieldError `json:"fields"`
 	cause  error
 }
+type ConflictError struct {
+	Fields []FieldError `json:"fields"`
+}
+
+func (e *ConflictError) Error() string        { return "field conflict" }
+func (e *ConflictError) Is(target error) bool { return target == ErrConflict }
 
 func (e *ValidationError) Error() string { return "validation failed" }
 func (e *ValidationError) Is(target error) bool {

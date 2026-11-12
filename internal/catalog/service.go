@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"database/sql"
@@ -247,7 +248,7 @@ func (s Service) applyUpdate(ctx context.Context, tx *sql.Tx, id string, rev int
 	}
 	for k, v := range patch.Fields {
 		if !allowed[k] {
-			return o, ErrInvalid
+			return o, invalidField("fields."+k, "对象类型不支持该字段", o.Type)
 		}
 		o.Fields[k] = v
 	}
@@ -259,7 +260,7 @@ func (s Service) applyUpdate(ctx context.Context, tx *sql.Tx, id string, rev int
 		o.Name = str(o.Fields["address"])
 	}
 	if o.Name == "" {
-		return o, ErrInvalid
+		return o, invalidField("name", "名称必填", "非空字符串")
 	}
 	if e = validate(ctx, tx, &o); e != nil {
 		return o, e
@@ -285,7 +286,7 @@ func (s Service) applyUpdate(ctx context.Context, tx *sql.Tx, id string, rev int
 			switch x := v.(type) {
 			case string:
 				if !json.Valid([]byte(x)) {
-					return o, ErrInvalid
+					return o, invalidField("fields."+k, "JSON 格式无效", "有效 JSON")
 				}
 			default:
 				b, e := json.Marshal(v)
@@ -496,11 +497,146 @@ func (s Service) Propose(ctx context.Context, p auth.Principal, id string, rev i
 		return "", e
 	}
 	defer tx.Rollback()
+	if _, e = tx.ExecContext(ctx, "SAVEPOINT proposal_check"); e != nil {
+		return "", e
+	}
+	_, e = s.applyUpdate(ctx, tx, id, rev, patch, actorName(p))
+	if _, rollbackErr := tx.ExecContext(ctx, "ROLLBACK TO proposal_check"); rollbackErr != nil {
+		return "", rollbackErr
+	}
+	if _, releaseErr := tx.ExecContext(ctx, "RELEASE proposal_check"); releaseErr != nil {
+		return "", releaseErr
+	}
+	if e != nil {
+		return "", e
+	}
 	change, e := audit.AppendTx(ctx, tx, audit.Entry{ObjectID: id, ObjectType: o.Type, Action: "update", Diff: patch, Actor: p, Via: via, Reason: reason, State: "待确认", BaseRev: rev})
 	if e != nil {
 		return "", e
 	}
+	if e = saveProposalBase(ctx, tx, change, o); e != nil {
+		return "", e
+	}
 	return change, tx.Commit()
+}
+
+func saveProposalBase(ctx context.Context, tx *sql.Tx, change string, o Object) error {
+	base, err := json.Marshal(o)
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, "UPDATE changes SET base_object_json=? WHERE id=?", string(base), change)
+	return err
+}
+
+func sameValue(a, b any) bool {
+	if a == nil || a == "" {
+		a = nil
+	}
+	if b == nil || b == "" {
+		b = nil
+	}
+	left, leftErr := json.Marshal(a)
+	right, rightErr := json.Marshal(b)
+	return leftErr == nil && rightErr == nil && bytes.Equal(left, right)
+}
+
+func changedFields(base, current Object, patch Patch, deleteAll bool) []string {
+	fields := []string{}
+	compare := func(name string, a, b any) {
+		if !sameValue(a, b) {
+			fields = append(fields, name)
+		}
+	}
+	if deleteAll || patch.Name != nil {
+		compare("name", base.Name, current.Name)
+	}
+	if deleteAll || patch.Aliases != nil {
+		compare("aliases", base.Aliases, current.Aliases)
+	}
+	if deleteAll || patch.Tags != nil {
+		compare("tags", base.Tags, current.Tags)
+	}
+	if deleteAll || patch.Status != nil {
+		compare("status", base.Status, current.Status)
+	}
+	if deleteAll || patch.Source != nil {
+		compare("source", base.Source, current.Source)
+	}
+	if deleteAll || patch.Confidence != nil {
+		compare("confidence", base.Confidence, current.Confidence)
+	}
+	if deleteAll {
+		for field, value := range base.Fields {
+			compare("fields."+field, value, current.Fields[field])
+		}
+		for field, value := range current.Fields {
+			if _, ok := base.Fields[field]; !ok {
+				compare("fields."+field, nil, value)
+			}
+		}
+	} else {
+		for field := range patch.Fields {
+			compare("fields."+field, base.Fields[field], current.Fields[field])
+		}
+	}
+	return fields
+}
+
+// 迁移前的待审批记录没有原值快照，只能从其 base_rev 后的审计记录保守推断。
+func legacyConflicts(ctx context.Context, tx *sql.Tx, id string, baseRev int64, patch Patch, deleteAll bool) ([]string, error) {
+	rows, err := tx.QueryContext(ctx, `SELECT action,diff_json FROM changes WHERE object_id=? AND state='已生效' AND base_rev>=? ORDER BY id`, id, baseRev)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	conflicts := []string{}
+	for rows.Next() {
+		var action, diff string
+		if err = rows.Scan(&action, &diff); err != nil {
+			return nil, err
+		}
+		if action == "record_note" || action == "mark_verified" {
+			continue
+		}
+		if deleteAll {
+			conflicts = append(conflicts, "object")
+			continue
+		}
+		if action != "update" {
+			conflicts = append(conflicts, "object")
+			continue
+		}
+		var applied Patch
+		if json.Unmarshal([]byte(diff), &applied) != nil {
+			conflicts = append(conflicts, "object")
+			continue
+		}
+		if patch.Name != nil && applied.Name != nil {
+			conflicts = append(conflicts, "name")
+		}
+		if patch.Aliases != nil && applied.Aliases != nil {
+			conflicts = append(conflicts, "aliases")
+		}
+		if patch.Tags != nil && applied.Tags != nil {
+			conflicts = append(conflicts, "tags")
+		}
+		if patch.Status != nil && applied.Status != nil {
+			conflicts = append(conflicts, "status")
+		}
+		if patch.Source != nil && applied.Source != nil {
+			conflicts = append(conflicts, "source")
+		}
+		if patch.Confidence != nil && applied.Confidence != nil {
+			conflicts = append(conflicts, "confidence")
+		}
+		for field := range patch.Fields {
+			if _, ok := applied.Fields[field]; ok {
+				conflicts = append(conflicts, "fields."+field)
+			}
+		}
+	}
+	return conflicts, rows.Err()
 }
 
 func (s Service) ProposeDelete(ctx context.Context, p auth.Principal, id string, rev int64, reason, via string) (string, error) {
@@ -525,8 +661,53 @@ func (s Service) ProposeDelete(ctx context.Context, p auth.Principal, id string,
 		return "", e
 	}
 	defer tx.Rollback()
+	// 审批会先移除自动依赖；预检也须按同一顺序试跑。
+	if _, e = tx.ExecContext(ctx, "SAVEPOINT proposal_check"); e != nil {
+		return "", e
+	}
+	rows, queryErr := tx.QueryContext(ctx, "SELECT id FROM dependencies WHERE generated=1 AND (from_id=? OR to_id=?)", id, id)
+	if queryErr != nil {
+		return "", queryErr
+	}
+	deps := []string{}
+	for rows.Next() {
+		var dep string
+		if e = rows.Scan(&dep); e != nil {
+			break
+		}
+		deps = append(deps, dep)
+	}
+	if e == nil {
+		e = rows.Err()
+	}
+	rows.Close()
+	if e == nil {
+		for _, dep := range deps {
+			if _, e = tx.ExecContext(ctx, "DELETE FROM dependencies WHERE id=?", dep); e != nil {
+				break
+			}
+			if _, e = tx.ExecContext(ctx, "DELETE FROM objects WHERE id=?", dep); e != nil {
+				break
+			}
+		}
+	}
+	if e == nil {
+		e = referencedBy(ctx, tx, id)
+	}
+	if _, rollbackErr := tx.ExecContext(ctx, "ROLLBACK TO proposal_check"); rollbackErr != nil {
+		return "", rollbackErr
+	}
+	if _, releaseErr := tx.ExecContext(ctx, "RELEASE proposal_check"); releaseErr != nil {
+		return "", releaseErr
+	}
+	if e != nil {
+		return "", e
+	}
 	change, e := audit.AppendTx(ctx, tx, audit.Entry{ObjectID: id, ObjectType: o.Type, Action: "delete", Diff: map[string]any{}, Actor: p, Via: via, Reason: reason, State: "待确认", BaseRev: rev})
 	if e != nil {
+		return "", e
+	}
+	if e = saveProposalBase(ctx, tx, change, o); e != nil {
 		return "", e
 	}
 	return change, tx.Commit()
@@ -541,8 +722,9 @@ func (s Service) Review(ctx context.Context, p auth.Principal, changeID string, 
 	}
 	defer tx.Rollback()
 	var id, diff, state, action string
+	var baseJSON sql.NullString
 	var rev int64
-	e = tx.QueryRowContext(ctx, "SELECT object_id,diff_json,state,action,base_rev FROM changes WHERE id=?", changeID).Scan(&id, &diff, &state, &action, &rev)
+	e = tx.QueryRowContext(ctx, "SELECT object_id,diff_json,state,action,base_rev,base_object_json FROM changes WHERE id=?", changeID).Scan(&id, &diff, &state, &action, &rev, &baseJSON)
 	if e != nil {
 		return Object{}, e
 	}
@@ -558,8 +740,30 @@ func (s Service) Review(ctx context.Context, p auth.Principal, changeID string, 
 			if e != nil {
 				return Object{}, e
 			}
-			if o.Rev != rev {
-				return Object{}, ErrConflict
+			if baseJSON.Valid {
+				var base Object
+				if json.Unmarshal([]byte(baseJSON.String), &base) != nil {
+					return Object{}, ErrInvalid
+				}
+				var patch Patch
+				if action == "update" && json.Unmarshal([]byte(diff), &patch) != nil {
+					return Object{}, ErrInvalid
+				}
+				if fields := changedFields(base, o, patch, action == "delete"); len(fields) > 0 {
+					return Object{}, &ConflictError{Fields: []FieldError{{Field: strings.Join(fields, ", "), Reason: "提交后字段已被修改，请重新提议"}}}
+				}
+			} else if o.Rev != rev {
+				var patch Patch
+				if action == "update" && json.Unmarshal([]byte(diff), &patch) != nil {
+					return Object{}, ErrInvalid
+				}
+				fields, checkErr := legacyConflicts(ctx, tx, id, rev, patch, action == "delete")
+				if checkErr != nil {
+					return Object{}, checkErr
+				}
+				if len(fields) > 0 {
+					return Object{}, &ConflictError{Fields: []FieldError{{Field: strings.Join(fields, ", "), Reason: "提交后字段已被修改，请重新提议"}}}
+				}
 			}
 		}
 		switch action {
@@ -589,7 +793,7 @@ func (s Service) Review(ctx context.Context, p auth.Principal, changeID string, 
 			if e = checkPatchSecrets(patch); e != nil {
 				return Object{}, e
 			}
-			o, e = s.applyUpdate(ctx, tx, id, rev, patch, p.Login)
+			o, e = s.applyUpdate(ctx, tx, id, o.Rev, patch, p.Login)
 			if e != nil {
 				return Object{}, e
 			}
@@ -630,7 +834,7 @@ func (s Service) Review(ctx context.Context, p auth.Principal, changeID string, 
 			if _, e = tx.ExecContext(ctx, "DELETE FROM "+tables[o.Type]+" WHERE id=?", id); e != nil {
 				return Object{}, e
 			}
-			if _, e = tx.ExecContext(ctx, "DELETE FROM objects WHERE id=? AND rev=?", id, rev); e != nil {
+			if _, e = tx.ExecContext(ctx, "DELETE FROM objects WHERE id=? AND rev=?", id, o.Rev); e != nil {
 				return Object{}, e
 			}
 		default:
@@ -729,6 +933,77 @@ func (s Service) MarkVerified(ctx context.Context, p auth.Principal, id string, 
 	o.VerifiedAt = &now
 	o.VerifiedBy = actorName(p)
 	return o, nil
+}
+
+type VerifyResult struct {
+	ID    string `json:"id"`
+	OK    bool   `json:"ok"`
+	Error string `json:"error,omitempty"`
+}
+
+// VerifyBatch 保留逐对象审计，且逐条返回结果，避免把部分成功误报为全部成功。
+func (s Service) VerifyBatch(ctx context.Context, p auth.Principal, ids []string, withRelated bool, reason, via string) ([]VerifyResult, error) {
+	if err := auth.Authorize(p, auth.MarkVerified, ""); err != nil {
+		return nil, err
+	}
+	if len(ids) == 0 || len(ids) > 200 || !reasonOK(reason) || via == "" {
+		return nil, ErrInvalid
+	}
+	all := append([]string{}, ids...)
+	if withRelated {
+		for _, id := range ids {
+			o, err := s.Store.Get(ctx, id)
+			if err != nil {
+				continue
+			}
+			if o.Type != "host" {
+				continue
+			}
+			for _, query := range []string{
+				"SELECT id FROM ips WHERE host_id=?",
+				"SELECT p.id FROM ports p JOIN services s ON s.id=p.service_id WHERE s.host_id=?",
+			} {
+				rows, err := s.Store.DB.QueryContext(ctx, query, id)
+				if err != nil {
+					return nil, err
+				}
+				for rows.Next() {
+					var child string
+					if err = rows.Scan(&child); err != nil {
+						break
+					}
+					all = append(all, child)
+				}
+				if err == nil {
+					err = rows.Err()
+				}
+				rows.Close()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	results := make([]VerifyResult, 0, len(all))
+	seen := map[string]bool{}
+	for _, id := range all {
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		item := VerifyResult{ID: id}
+		o, err := s.Store.Get(ctx, id)
+		if err == nil {
+			_, err = s.MarkVerified(ctx, p, id, o.Rev, reason, via)
+		}
+		if err != nil {
+			item.Error = err.Error()
+		} else {
+			item.OK = true
+		}
+		results = append(results, item)
+	}
+	return results, nil
 }
 
 func (s Service) RecordNote(ctx context.Context, p auth.Principal, target string, rev int64, kind, body, reason, via string) (string, error) {

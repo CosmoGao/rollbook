@@ -3,6 +3,7 @@ package catalog
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/CosmoGao/rollbook/internal/auth"
@@ -207,6 +208,65 @@ func (q Query) Changes(ctx context.Context, p auth.Principal, objectID, state st
 	}
 	out := []Object{}
 	err := q.collect(ctx, p, `SELECT id FROM changes WHERE (?='' OR object_id=?) AND (?='' OR state=?) ORDER BY id DESC LIMIT 200`, []any{objectID, objectID, state, state}, &out)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		if out[i].Fields["state"] != "待确认" {
+			continue
+		}
+		var baseJSON sql.NullString
+		if err = q.Service.Store.DB.QueryRowContext(ctx, "SELECT base_object_json FROM changes WHERE id=?", out[i].ID).Scan(&baseJSON); err != nil {
+			return nil, err
+		}
+		id, _ := out[i].Fields["object_id"].(string)
+		current, getErr := q.Service.Store.Get(ctx, id)
+		if out[i].Fields["action"] == "create" {
+			if getErr == nil {
+				out[i].Fields["conflicts"] = []string{"id"}
+			} else if getErr != sql.ErrNoRows {
+				return nil, getErr
+			}
+			continue
+		}
+		if getErr == nil {
+			out[i].Fields["current_rev"] = current.Rev
+		}
+		if getErr != nil && getErr != sql.ErrNoRows {
+			return nil, getErr
+		}
+		if !baseJSON.Valid || getErr != nil {
+			if getErr != nil {
+				out[i].Fields["conflicts"] = []string{"对象已不存在"}
+			} else if baseRev, ok := out[i].Fields["base_rev"].(int64); ok && current.Rev != baseRev {
+				var patch Patch
+				if out[i].Fields["action"] == "update" {
+					_ = json.Unmarshal([]byte(str(out[i].Fields["diff_json"])), &patch)
+				}
+				tx, txErr := q.Service.Store.DB.BeginTx(ctx, nil)
+				if txErr != nil {
+					return nil, txErr
+				}
+				fields, checkErr := legacyConflicts(ctx, tx, id, baseRev, patch, out[i].Fields["action"] == "delete")
+				_ = tx.Rollback()
+				if checkErr != nil {
+					return nil, checkErr
+				}
+				out[i].Fields["conflicts"] = fields
+			}
+			continue
+		}
+		var base Object
+		if err = json.Unmarshal([]byte(baseJSON.String), &base); err != nil {
+			return nil, err
+		}
+		out[i].Fields["base_object"] = base
+		var patch Patch
+		if out[i].Fields["action"] == "update" {
+			_ = json.Unmarshal([]byte(str(out[i].Fields["diff_json"])), &patch)
+		}
+		out[i].Fields["conflicts"] = changedFields(base, current, patch, out[i].Fields["action"] == "delete")
+	}
 	return out, err
 }
 func (q Query) Contexts(ctx context.Context, p auth.Principal, archived bool) ([]Object, error) {

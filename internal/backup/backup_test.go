@@ -71,6 +71,26 @@ func TestRoundTripAndRollback(t *testing.T) {
 	if err = d.QueryRowContext(ctx, "SELECT count(*) FROM hosts").Scan(&n); err != nil || n != 1 {
 		t.Fatal("old database changed", n, err)
 	}
+	for _, q := range []string{
+		`INSERT INTO objects(id,type,name,created_at,created_by,updated_at,updated_by) VALUES('change:old','change','旧提议','now','u','now','u')`,
+		`INSERT INTO changes(id,object_type,object_id,action,diff_json,actor,via,reason,state,base_rev,base_object_json) VALUES('change:old','host','host:a','update','{}','u','rest','旧提议','待确认',1,'{"id":"host:a"}')`,
+	} {
+		if _, err = d.ExecContext(ctx, q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	oldData, err := s.Export(ctx, "full")
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldFile, _, err := Parse(oldData)
+	if err != nil {
+		t.Fatal(err)
+	}
+	delete(oldFile.Tables["changes"][0], "base_object_json")
+	if err = s.Restore(ctx, oldFile); err != nil {
+		t.Fatal("旧备份应可恢复", err)
+	}
 	f.SchemaVersion = 99
 	if _, _, err := Parse(mustYAML(t, f)); err == nil {
 		t.Fatal("future version accepted")

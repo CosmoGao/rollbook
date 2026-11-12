@@ -152,6 +152,13 @@ func (e Engine) Call(ctx context.Context, p auth.Principal, op string, a Args, v
 		return e.Catalog.Update(ctx, p, id, a.Int("rev"), patch, a.String("reason"), via)
 	case "mark_verified":
 		return e.Catalog.MarkVerified(ctx, p, id, a.Int("rev"), a.String("reason"), via)
+	case "verify_batch":
+		var ids []string
+		if json.Unmarshal(a["ids"], &ids) != nil {
+			return nil, catalog.ErrInvalid
+		}
+		results, err := e.Catalog.VerifyBatch(ctx, p, ids, a.Bool("with_related"), a.String("reason"), via)
+		return map[string]any{"results": results}, err
 	case "check_versions":
 		if err := e.Catalog.CheckVersionsAllowed(p); err != nil {
 			return nil, err
@@ -173,6 +180,10 @@ type APIError struct {
 }
 
 func Error(err error) (int, APIError) {
+	var conflict *catalog.ConflictError
+	if errors.As(err, &conflict) {
+		return 409, APIError{Code: "conflict", Message: "字段已变更", Fields: conflict.Fields}
+	}
 	var validation *catalog.ValidationError
 	if errors.As(err, &validation) {
 		return 422, APIError{Code: "validation", Message: "Validation failed", Fields: validation.Fields}
