@@ -1,6 +1,9 @@
 package httpapi
 
 import (
+	"database/sql"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -19,6 +22,79 @@ func (e Engine) backup(w http.ResponseWriter, r *http.Request, p auth.Principal)
 	service := backup.Service{DB: e.Auth.DB}
 	path := r.URL.Path
 	switch {
+	case path == "/api/backup/csv/template" && r.Method == http.MethodGet:
+		data, err := backup.CSVTemplate(r.URL.Query().Get("type"))
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+		w.Header().Set("Content-Disposition", "attachment; filename=rollbook-"+r.URL.Query().Get("type")+".csv")
+		w.Header().Set("Cache-Control", "no-store")
+		w.Write(data)
+	case path == "/api/backup/csv/import" && r.Method == http.MethodPost:
+		if !p.IsUser() && p.Level == auth.Read {
+			WriteError(w, auth.ErrForbidden)
+			return
+		}
+		data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, backup.MaxSize))
+		if err != nil {
+			WriteError(w, backup.ErrInvalid)
+			return
+		}
+		merged, err := backup.CSVToMerge(r.URL.Query().Get("type"), data)
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+		f, _, err := backup.Parse(merged)
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+		refs := map[string]string{"location_id": "location", "uplink_id": "uplink", "parent_host_id": "host", "router_id": "host", "network_id": "network", "host_id": "host"}
+		for i, row := range f.Tables["objects"] {
+			typ := row["type"].(string)
+			id := row["id"].(string)
+			for _, detail := range f.Tables[map[string]string{"host": "hosts", "network": "networks", "ip": "ips", "service": "services"}[typ]] {
+				if detail["id"] != id {
+					continue
+				}
+				for field, expected := range refs {
+					ref, _ := detail[field].(string)
+					if ref == "" {
+						continue
+					}
+					inBatch := false
+					for _, candidate := range f.Tables["objects"] {
+						if candidate["id"] == ref && candidate["type"] == expected {
+							inBatch = true
+							break
+						}
+					}
+					if inBatch {
+						continue
+					}
+					var actual string
+					err = e.Auth.DB.QueryRowContext(r.Context(), "SELECT type FROM objects WHERE id=?", ref).Scan(&actual)
+					if err != nil && !errors.Is(err, sql.ErrNoRows) {
+						WriteError(w, err)
+						return
+					}
+					if err != nil || actual != expected {
+						WriteError(w, &catalog.ValidationError{Fields: []catalog.FieldError{{Field: fmt.Sprintf("第 %d 行 %s 列", i+2, field), Reason: "引用的" + expected + "对象不存在"}}})
+						return
+					}
+				}
+				break
+			}
+		}
+		item, err := service.Submit(r.Context(), merged, p)
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+		WriteJSON(w, 201, item)
 	case path == "/api/backup/files" && r.Method == http.MethodGet:
 		if !p.IsUser() {
 			WriteError(w, auth.ErrForbidden)

@@ -108,6 +108,34 @@ func TestBackupPermissionAndApproval(t *testing.T) {
 	if w := call("GET", "/api/auth/session", "", "", "", cookies); w.Code != 200 {
 		t.Fatal("merge invalidated session", w.Code)
 	}
+	if w := call("GET", "/api/backup/csv/template?type=host", "", readToken, "", nil); w.Code != 200 || !strings.Contains(w.Body.String(), "location_id") {
+		t.Fatal("CSV template", w.Code, w.Body)
+	}
+	badCSV := "id,name,kind,location_id\nhost:bad,错误主机,物理机,location:missing\n"
+	if w := call("POST", "/api/backup/csv/import?type=host", badCSV, proposeToken, "", nil); w.Code != 422 || !strings.Contains(w.Body.String(), "第 2 行 location_id 列") {
+		t.Fatal("CSV relation error", w.Code, w.Body)
+	}
+	goodCSV := "id,name,kind,location_id\nhost:csv,CSV主机,物理机,location:a\n"
+	if w := call("POST", "/api/backup/csv/import?type=host", goodCSV, readToken, "", nil); w.Code != 403 {
+		t.Fatal("read key submitted CSV", w.Code)
+	}
+	if w := call("POST", "/api/backup/csv/import?type=host", goodCSV, proposeToken, "", nil); w.Code != 201 {
+		t.Fatal("CSV submit", w.Code, w.Body)
+	} else if e = json.Unmarshal(w.Body.Bytes(), &pending); e != nil {
+		t.Fatal(e)
+	}
+	var csvCount int
+	d.QueryRowContext(ctx, "SELECT count(*) FROM hosts WHERE id='host:csv'").Scan(&csvCount)
+	if csvCount != 0 {
+		t.Fatal("CSV bypassed approval")
+	}
+	if w := call("POST", "/api/backup/imports/"+pending.ID+"/approve", "", "", csrf, cookies); w.Code != 200 {
+		t.Fatal("CSV approval", w.Code, w.Body)
+	}
+	d.QueryRowContext(ctx, "SELECT count(*) FROM search_documents WHERE object_id='host:csv'").Scan(&csvCount)
+	if csvCount != 1 {
+		t.Fatal("CSV search index missing")
+	}
 	managedData, e := (backup.Service{DB: d}).Export(ctx, "full")
 	if e != nil {
 		t.Fatal(e)
