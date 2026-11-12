@@ -70,11 +70,7 @@ func TestCreateChainAndApproval(t *testing.T) {
 	if _, e = service.Review(ctx, owner, id, true); !errors.Is(e, catalog.ErrConflict) {
 		t.Fatal(e)
 	}
-	deleteID, e := service.ProposeDelete(ctx, proposer, "host:test", 1, "清理", "rest")
-	if e != nil {
-		t.Fatal(e)
-	}
-	_, e = service.Review(ctx, owner, deleteID, true)
+	_, e = service.ProposeDelete(ctx, proposer, "host:test", 1, "清理", "rest")
 	var refErr *catalog.ValidationError
 	if !errors.As(e, &refErr) || len(refErr.Fields[0].References) == 0 {
 		t.Fatal(e)

@@ -93,6 +93,41 @@ func (e Engine) admin(w http.ResponseWriter, r *http.Request, p auth.Principal) 
 	}
 	path := r.URL.Path
 	switch {
+	case path == "/api/changes/batch" && r.Method == http.MethodPost:
+		var input struct {
+			IDs    []string `json:"ids"`
+			Action string   `json:"action"`
+		}
+		if err := decodeBody(w, r, &input); err != nil {
+			WriteError(w, err)
+			return
+		}
+		if len(input.IDs) == 0 || len(input.IDs) > 200 || (input.Action != "approve" && input.Action != "reject") {
+			WriteError(w, catalog.ErrInvalid)
+			return
+		}
+		if err := auth.Authorize(p, auth.Approve, ""); err != nil {
+			WriteError(w, err)
+			return
+		}
+		results := make([]map[string]any, 0, len(input.IDs))
+		seen := map[string]bool{}
+		for _, id := range input.IDs {
+			if id == "" || seen[id] {
+				results = append(results, map[string]any{"id": id, "ok": false, "error": "无效或重复的 ID"})
+				continue
+			}
+			seen[id] = true
+			_, err := e.Catalog.Review(r.Context(), p, id, input.Action == "approve")
+			if err != nil {
+				status, detail := Error(err)
+				results = append(results, map[string]any{"id": id, "ok": false, "status": status, "error": detail})
+			} else {
+				results = append(results, map[string]any{"id": id, "ok": true})
+			}
+		}
+		WriteJSON(w, 200, map[string]any{"results": results})
+		return
 	case strings.HasPrefix(path, "/api/hosts/") && strings.HasSuffix(path, "/offline") && r.Method == http.MethodGet:
 		id := strings.TrimSuffix(strings.TrimPrefix(path, "/api/hosts/"), "/offline")
 		preview, err := e.Catalog.OfflinePreview(r.Context(), p, id)

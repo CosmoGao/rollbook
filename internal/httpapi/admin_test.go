@@ -140,6 +140,23 @@ func TestBrowserAdminAndKeyBoundary(t *testing.T) {
 	if err != nil || updated.Name != "已批准" {
 		t.Fatal(updated, err)
 	}
+	name = "批量批准"
+	first, err := service.Propose(ctx, auth.Principal{UserID: userID, Login: "owner"}, "location:old", updated.Rev, catalog.Patch{Name: &name}, "批准", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := service.Propose(ctx, auth.Principal{UserID: userID, Login: "owner"}, "location:new", 1, catalog.Patch{Name: &name}, "批准", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	batch := call("POST", "/api/changes/batch", `{"ids":["`+first+`","`+second+`","change:missing"],"action":"approve"}`, csrf, cookies, "")
+	if batch.Code != 200 || !strings.Contains(batch.Body.String(), `"ok":true`) || !strings.Contains(batch.Body.String(), `"ok":false`) {
+		t.Fatal(batch.Code, batch.Body)
+	}
+	verified := call("POST", "/api/assets/verify-batch", `{"ids":["location:old","location:missing"],"reason":"现场核实"}`, csrf, cookies, "")
+	if verified.Code != 200 || !strings.Contains(verified.Body.String(), `"ok":true`) || !strings.Contains(verified.Body.String(), `"ok":false`) {
+		t.Fatal(verified.Code, verified.Body)
+	}
 	wrong := call("POST", "/api/auth/change-password", `{"old_password":"wrong","new_password":"new password 12345"}`, csrf, cookies, "")
 	if wrong.Code != 422 || !strings.Contains(wrong.Body.String(), "old_password") {
 		t.Fatal(wrong.Code, wrong.Body)
