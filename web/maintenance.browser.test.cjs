@@ -20,7 +20,7 @@ test('从空库用网页录入、维护并两次确认删除',async()=>{
    const reply=(data,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
    if(p==='/')return route.fulfill({contentType:'text/html',body:html});
    if(p==='/app.js')return route.fulfill({contentType:'application/javascript',body:js});
-   if(p==='/topology.js'||p==='/dagre.min.js')return route.fulfill({contentType:'application/javascript',body:fs.readFileSync(path.join(__dirname,p.slice(1)))});
+   if(['/topology.js','/dagre.min.js','/marked.umd.js','/purify.min.js'].includes(p))return route.fulfill({contentType:'application/javascript',body:fs.readFileSync(path.join(__dirname,p.slice(1)))});
    if(p==='/i18n.js')return route.fulfill({contentType:'application/javascript',body:i18n});
    if(p==='/style.css')return route.fulfill({contentType:'text/css',body:css});
    if(p==='/api/config')return reply({allow_insecure_http:false});
@@ -31,6 +31,7 @@ test('从空库用网页录入、维护并两次确认删除',async()=>{
    }
    if(p.startsWith('/api/assets/')){
     const parts=p.split('/'),id=decodeURIComponent(parts[3]),o=objects.get(id);
+    if(m==='GET'&&parts[4]==='detail')return reply({object:o,notes:[...objects.values()].filter(x=>x.type==='note'&&x.fields?.target_id===id),credentials:[],changes:[],referenced_by:[]});
     if(m==='GET')return reply(o||{},o?200:404);
     if(m==='PATCH'){const data=body();writes.push({action:'update',...data});Object.assign(o,data.patch,{fields:{...o.fields,...data.patch.fields},rev:o.rev+1});return reply(o)}
     if(parts[4]==='verify'){const data=body();writes.push({action:'verify',...data});o.rev++;o.verified_at=new Date().toISOString();return reply(o)}

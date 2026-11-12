@@ -72,6 +72,8 @@ func (e Engine) Call(ctx context.Context, p auth.Principal, op string, a Args, v
 		return q.Search(ctx, p, a.String("q"))
 	case "get_asset":
 		return e.Catalog.Get(ctx, p, id)
+	case "get_asset_detail":
+		return q.AssetDetail(ctx, p, id)
 	case "get_service":
 		return q.ServiceDetail(ctx, p, id)
 	case "list_by_host":
@@ -97,7 +99,7 @@ func (e Engine) Call(ctx context.Context, p auth.Principal, op string, a Args, v
 	case "browse":
 		return q.Browse(ctx, p, a.String("type"))
 	case "get_changes":
-		return q.Changes(ctx, p, a.String("object_id"), a.String("state"))
+		return q.FilterChanges(ctx, p, a.String("object_id"), a.String("state"), a.String("key"), a.String("object_type"), a.String("since"), a.String("until"))
 	case "get_context":
 		return q.Contexts(ctx, p, a.Bool("archived"))
 	case "put_context":

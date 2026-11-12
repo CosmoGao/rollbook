@@ -119,4 +119,12 @@ func TestBrowserMaintenanceAPI(t *testing.T) {
 	if w.Code != 200 || !strings.Contains(w.Body.String(), "host_restore") || !strings.Contains(w.Body.String(), "record_note") {
 		t.Fatal(w.Code, w.Body)
 	}
+	w = call("GET", "/api/assets/host:box/detail", "")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), note.ID) || !strings.Contains(w.Body.String(), "service:app") {
+		t.Fatal("统一详情缺少笔记或反向引用", w.Code, w.Body)
+	}
+	w = call("GET", "/api/changes?object_type=host&since=2020-01-01T00:00:00Z", "")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), "host_restore") || strings.Contains(w.Body.String(), `"object_type":"service"`) {
+		t.Fatal("变更筛选失败", w.Code, w.Body)
+	}
 }

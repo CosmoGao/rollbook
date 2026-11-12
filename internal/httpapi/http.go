@@ -130,7 +130,7 @@ func route(r *http.Request) (string, Args, bool) {
 		return "", nil, false
 	}
 	q := r.URL.Query()
-	for _, key := range []string{"q", "object_id", "state", "type"} {
+	for _, key := range []string{"q", "object_id", "state", "type", "key", "object_type", "since", "until"} {
 		if v := q.Get(key); v != "" {
 			a[key] = StringArg(v)
 		}
@@ -158,6 +158,9 @@ func route(r *http.Request) (string, Args, bool) {
 			return "get_changes", a, true
 		case path == "api/contexts":
 			return "get_context", a, true
+		case len(s) == 4 && s[1] == "assets" && s[3] == "detail":
+			a["id"] = StringArg(s[2])
+			return "get_asset_detail", a, true
 		case len(s) == 3 && s[1] == "assets":
 			a["id"] = StringArg(s[2])
 			return "get_asset", a, true
