@@ -25,7 +25,7 @@ test('四类详情安全显示笔记、凭据与引用；变更筛选和共享�
    if(p==='/api/config')return reply({allow_insecure_http:false,http_risk:false});
    if(p==='/api/version')return reply({version:'test',commit:'test'});
    if(p==='/api/browse')return reply(Object.values(assets).filter(x=>x.type===u.searchParams.get('type')));
-   if(p==='/api/changes/proposals')return reply([]);if(p==='/api/assets/unverified')return reply([]);if(p==='/api/versions/outdated')return reply([]);if(p==='/api/changes'){query=u.searchParams;return reply([change])}
+   if(p==='/api/assets/unverified')return reply([]);if(p==='/api/versions/outdated')return reply([]);if(p==='/api/changes'){query=u.searchParams;return reply(query.get('state')==='待确认'?[]:[change])}
    if(p==='/api/contexts')return reply([context]);
    if(p.startsWith('/api/assets/')&&p.endsWith('/detail')){const id=p.slice('/api/assets/'.length,-'/detail'.length);return reply({object:assets[id],notes:[note],credentials:[credential],changes:[change],referenced_by:[assets['service:app']]})}
    if(p.startsWith('/api/assets/'))return reply(assets[p.slice('/api/assets/'.length)]||credential);

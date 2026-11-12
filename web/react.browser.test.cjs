@@ -72,7 +72,6 @@ test('资产、拓扑、待处理、Key 与设置在新构建中可操作',async
       if(p==='/api/config')return reply({http_risk:false});
       if(p==='/api/version')return reply({version:'v0.4.2',commit:'235392f'});
       if(p==='/api/auth/session')return reply({login:'owner'});
-      if(p==='/api/changes/proposals')return reply([]);
       if(p==='/api/assets/unverified')return reply([]);
       if(p==='/api/versions/outdated')return reply([]);
       if(p==='/api/changes'||p==='/api/contexts')return reply([]);
@@ -177,7 +176,6 @@ test('待处理页可批准提议、核实资产和检查版本',async t=>{
       if(p==='/api/config')return reply({http_risk:false});
       if(p==='/api/version')return reply({version:'v0.4.2'});
       if(p==='/api/browse')return reply([{id:'location:test',type:'location',name:'站点',fields:{kind:'站点'}}]);
-      if(p==='/api/changes/proposals')return reply(proposals);
       if(p==='/api/changes'&&method==='GET')return reply(proposals);
       if(p==='/api/changes/change:1/approve'&&method==='POST'){calls.push(p);proposals=[];return reply({})}
       if(p==='/api/assets/unverified')return reply([{id:'host:test',type:'host',name:'待核实主机'}]);

@@ -15,7 +15,7 @@ export function mountOverview(target:Element,api:API,onNavigate:(view:string)=>v
 function Overview({api,onNavigate}:{api:API;onNavigate:(view:string)=>void}){
   const {t} = useTranslation();
   const counts = [
-    ['待确认','/api/changes/proposals','pending'],['待核实','/api/assets/unverified','unverified'],['有新版本','/api/versions/outdated','outdated'],
+    ['待确认','/api/changes?state='+encodeURIComponent('待确认'),'pending'],['待核实','/api/assets/unverified','unverified'],['有新版本','/api/versions/outdated','outdated'],
     ['站点','/api/browse?type=location','sites'],['主机','/api/browse?type=host','hosts'],['网段','/api/browse?type=network','networks'],['服务','/api/browse?type=service','services'],
   ] as const;
   const queries=useQueries({queries:counts.map(([,path])=>({queryKey:['overview',path],queryFn:()=>api<Item[]>(path)}))});
