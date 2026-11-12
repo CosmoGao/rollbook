@@ -173,7 +173,7 @@ func serve() error {
 	}
 	engine := httpapi.Engine{Auth: auth.Service{DB: database, Pepper: pepper, LoginPolicy: loginPolicy()}, Catalog: catalog.Service{Store: catalog.Store{DB: database}}, AllowInsecureHTTP: allowInsecureHTTP, TrustedProxyCIDRs: trustedProxies}
 	if allowInsecureHTTP {
-		log.Print("警告：已启用 HTTP 模式；登录口令和 API Key 可能在网络中明文传输，仅可用于可信内网。")
+		log.Print("警告：已允许通过 HTTP 登录；实际为 HTTP 的请求会显示风险提示，口令和 API Key 可能在网络中明文传输，仅可用于可信内网。")
 	}
 	checker := &versioncheck.Checker{DB: database}
 	engine.VersionChecker = checker

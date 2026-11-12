@@ -128,7 +128,9 @@ docker compose run --rm -it rollbook bootstrap-user owner
 docker compose exec rollbook rollbook bootstrap-user owner
 ```
 
-两条命令二选一。再次执行会报告用户已存在，不会覆盖密码。容器监听 8080，Compose 默认只把宿主机 `127.0.0.1:8080` 暴露给本机反向代理；在代理上配置 HTTPS 后访问网页。网页会话与 CSRF Cookie 默认带 `Secure`。若必须在可信内网直接用 HTTP 访问，把 `.env` 中 `ROLLBOOK_BIND_ADDR` 设为内网接口地址，并把 `ROLLBOOK_ALLOW_INSECURE_HTTP` 设为 `true` 后运行 `docker compose up -d`。此时页面显示 HTTP 模式提示、日志发出警告，Cookie 不带 `Secure`。**HTTP 模式下口令和 key 会在网络中明文传输，只能在可信内网使用。**不要把此端口直接暴露到公网。
+两条命令二选一。再次执行会报告用户已存在，不会覆盖密码。容器监听 8080，Compose 默认只把宿主机 `127.0.0.1:8080` 暴露给本机反向代理。反代终结 TLS 时，须将其连接到清册的 TCP 地址段填入 `ROLLBOOK_TRUSTED_PROXY_CIDRS`，例如仅同机代理可用 `127.0.0.1/32`；Zoraxy 应开启并覆盖上游 `X-Forwarded-Proto`，Nginx 可用 `proxy_set_header X-Forwarded-Proto $scheme;`。反代须先清除客户端传入的同名头和 `Forwarded` 头，或将它们规范化为单一值；不要信任整个内网或公网地址段，也不要把清册后端端口直接暴露到公网。只有 TCP 对端在可信地址段内，清册才采信协议头；直连 TLS 始终按 HTTPS 处理。页面风险提示和会话、CSRF Cookie 的 `Secure` 标记均按每次请求实际协议决定。
+
+若必须在可信内网直接用 HTTP 访问，把 `.env` 中 `ROLLBOOK_BIND_ADDR` 设为内网接口地址，并把 `ROLLBOOK_ALLOW_INSECURE_HTTP` 设为 `true` 后运行 `docker compose up -d`。HTTP 请求会显示风险提示，Cookie 不带 `Secure`；未开启该选项时 HTTP 登录会被拒绝。启动日志会提示此选项允许 HTTP 登录。**HTTP 下口令和 key 会在网络中明文传输，只能在可信内网使用。**
 
 数据库、WAL 与默认备份目录均位于 `/data`，由 Compose 的 `rollbook-data` 卷持久化。`docker compose down && docker compose up -d` 不会删除卷；不要使用 `down -v`。启动后及每 24 小时写一次完整 YAML 日备份，首次启动及每 7 天另写周备份。需要把 YAML 备份放在独立卷时，在 `.env` 设 `ROLLBOOK_BACKUP_DIR=/backups`；Compose 已为 `/backups` 提供持久卷。自行替换成宿主机绑定目录时，数据库目录与独立备份目录都要持久化，且应由容器内固定的 `10001:10001` 用户读写，例如：
 

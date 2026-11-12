@@ -18,7 +18,7 @@ test('Key 列表显示元数据，编辑后更新，吊销项默认折叠',async
    if(pathname==='/')return route.fulfill({contentType:'text/html',body:asset('index.html')});
    if(['app.js','i18n.js','style.css'].includes(pathname.slice(1)))return route.fulfill({contentType:pathname.endsWith('.css')?'text/css':'application/javascript',body:asset(pathname.slice(1))});
    if(pathname==='/api/auth/session')return reply({login:'owner'});
-   if(pathname==='/api/config')return reply({allow_insecure_http:false});
+   if(pathname==='/api/config')return reply({allow_insecure_http:false,http_risk:false});
    if(pathname==='/api/version')return reply({version:'test',commit:'test'});
    if(pathname==='/api/browse')return reply([]);
    if(pathname==='/api/keys'&&request.method()==='GET')return reply([current]);

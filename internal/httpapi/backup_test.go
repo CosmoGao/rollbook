@@ -43,7 +43,7 @@ func TestBackupPermissionAndApproval(t *testing.T) {
 	if _, e = store.Create(ctx, catalog.Object{ID: "location:a", Type: "location", Name: "北京", Fields: map[string]any{"kind": "站点"}}, "owner"); e != nil {
 		t.Fatal(e)
 	}
-	h := (httpapi.Engine{Auth: a, Catalog: catalog.Service{Store: store}}).Handler()
+	h := (httpapi.Engine{Auth: a, Catalog: catalog.Service{Store: store}, AllowInsecureHTTP: true}).Handler()
 	call := func(method, path, body, token, csrf string, cookies []*http.Cookie) *httptest.ResponseRecorder {
 		r := httptest.NewRequest(method, path, strings.NewReader(body))
 		r.Host = "rollbook.test"

@@ -29,7 +29,7 @@ test('主机和服务拓扑可绘制，访问链可切换，节点可打开详�
    if(['/app.js','/i18n.js','/topology.js','/dagre.min.js','/style.css'].includes(p))return route.fulfill({contentType:p.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,p.slice(1)))});
    const reply=json=>route.fulfill({json});
    if(p==='/api/auth/session')return reply({login:'owner'});
-   if(p==='/api/config')return reply({allow_insecure_http:false});
+   if(p==='/api/config')return reply({allow_insecure_http:false,http_risk:false});
    if(p==='/api/version')return reply({version:'test',commit:'test'});
    if(p==='/api/browse')return reply(Object.values(asset).filter(o=>o.type===u.searchParams.get('type')));
    if(p==='/api/hosts/host:physical/inventory')return reply({hosts:['host:vm'],services:['service:proxy'],ips:[]});

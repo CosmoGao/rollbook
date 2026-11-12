@@ -28,7 +28,7 @@ func TestBrowserAdminAndKeyBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := (httpapi.Engine{Auth: a, Catalog: catalog.Service{Store: catalog.Store{DB: database}}}).Handler()
+	h := (httpapi.Engine{Auth: a, Catalog: catalog.Service{Store: catalog.Store{DB: database}}, AllowInsecureHTTP: true}).Handler()
 	call := func(method, path, body, csrf string, cookies []*http.Cookie, bearer string) *httptest.ResponseRecorder {
 		r := httptest.NewRequest(method, path, strings.NewReader(body))
 		r.Host = "rollbook.test"

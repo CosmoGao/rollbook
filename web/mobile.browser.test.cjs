@@ -21,7 +21,7 @@ test('390px 搜索、查看详情、复制 IP、退出，页面没有横向溢�
    const reply=json=>route.fulfill({json});
    if(p==='/api/auth/session')return reply({login:'owner'});
    if(p==='/api/auth/logout'){signedOut=true;return reply({})}
-   if(p==='/api/config')return reply({allow_insecure_http:false});
+   if(p==='/api/config')return reply({allow_insecure_http:false,http_risk:false});
    if(p==='/api/version')return reply({version:'test',commit:'test'});
    if(p==='/api/browse')return reply(u.searchParams.get('type')==='location'?[{id:'location:site'}]:[]);
    if(p==='/api/search')return reply([host]);
