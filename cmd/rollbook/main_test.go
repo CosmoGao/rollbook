@@ -38,6 +38,21 @@ func TestHTTP(t *testing.T) {
 	}
 }
 
+func TestManifestAndIcons(t *testing.T) {
+	for _, tc := range []struct{ path, contentType string }{
+		{"/manifest.webmanifest", "application/manifest+json; charset=utf-8"},
+		{"/icon-192.png", "image/png"},
+		{"/icon-512.png", "image/png"},
+		{"/icon.svg", "image/svg+xml"},
+	} {
+		response := httptest.NewRecorder()
+		handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, tc.path, nil))
+		if response.Code != http.StatusOK || response.Header().Get("Content-Type") != tc.contentType || response.Body.Len() == 0 {
+			t.Errorf("%s: status=%d type=%q bytes=%d", tc.path, response.Code, response.Header().Get("Content-Type"), response.Body.Len())
+		}
+	}
+}
+
 func TestBuildIdentity(t *testing.T) {
 	oldVersion, oldCommit := buildinfo.Version, buildinfo.Commit
 	buildinfo.Version, buildinfo.Commit = "v0.3.0", "123456789abcdef"

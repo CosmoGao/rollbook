@@ -1,5 +1,6 @@
 // 界面文案以现有中文为键；这里不更改 API 取值。
 const translations = {
+'搜索 IP、服务…':'Search IP or service…',
 '最近变更':'Recent changes','共享上下文':'Shared context','按 Key、对象类型和时间查看审计记录。':'Filter audit records by key, object type, and time.','查看 agent 与用户写入的上下文。':'View context written by agents and users.','Key ID 或名称':'Key ID or name','全部类型':'All types','开始日期':'Start date','结束日期':'End date','筛选':'Filter','显示已归档':'Show archived','基本字段':'Core fields','反向引用':'Referenced by',
 '网段占用':'Network occupancy','已用地址':'Used addresses','空闲地址范围':'Available address ranges','下一个可分配 IP':'Next assignable IP','无空闲地址':'No available address','网关':'Gateway','冲突':'Conflict',
 '拓扑与访问链':'Topology and access paths','分层拓扑':'Layered topology','访问链':'Access path',
