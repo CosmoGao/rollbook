@@ -59,6 +59,11 @@ func TestCatalogRelationsSearchAndArchive(t *testing.T) {
 	if len(res) != 1 || res[0].HostID != "host:multica" || res[0].NetworkID != "network:beijing-sub" || !contains(res[0].RelatedIDs, "endpoint:multica") {
 		t.Fatalf("bad IP result: %+v", res)
 	}
+	for _, unrelated := range []string{"location:beijing", "network:beijing", "network:beijing-sub", "location:xianghe", "host:router"} {
+		if contains(res[0].RelatedIDs, unrelated) {
+			t.Fatalf("search expanded beyond the matched host: %s in %+v", unrelated, res[0])
+		}
+	}
 	res, e = searcher.Search(ctx, "8080")
 	if e != nil || len(res) != 1 || res[0].ID != "port:multica" || res[0].HostID != "host:multica" {
 		t.Fatalf("bad port result: %+v, %v", res, e)
@@ -108,6 +113,46 @@ func TestCatalogRelationsSearchAndArchive(t *testing.T) {
 	}
 	if e = db.Migrate(ctx, d); e != nil {
 		t.Fatal(e)
+	}
+}
+
+func TestSearchOrderingAndSiteScope(t *testing.T) {
+	ctx, d, s := setup(t)
+	add(t, ctx, s, "location:site", "location", "Alpha 站点", map[string]any{"kind": "站点"})
+	for _, item := range []struct {
+		id, name, status string
+		aliases, tags    []string
+	}{
+		{"host:exact", "Alpha", "在用", nil, nil},
+		{"host:name", "Alpha Host", "在用", nil, nil},
+		{"host:alias-exact", "别名主机", "在用", []string{"Alpha"}, nil},
+		{"host:alias-part", "别名部分", "在用", []string{"My Alpha"}, nil},
+		{"host:tag", "标签命中", "在用", nil, []string{"Alpha"}},
+		{"host:disabled", "Alpha Disabled", "停用", nil, nil},
+	} {
+		if _, err := s.Create(ctx, catalog.Object{ID: item.id, Type: "host", Name: item.name, Status: item.status, Aliases: item.aliases, Tags: item.tags, Fields: map[string]any{"kind": "物理机", "location_id": "location:site"}}, "tester"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	res, err := (search.Store{DB: d}).Search(ctx, "Alpha")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ids := make([]string, 0, len(res))
+	for _, r := range res {
+		ids = append(ids, r.ID)
+		if r.ID == "location:site" && len(r.RelatedIDs) != 0 {
+			t.Fatalf("site search expanded into the whole site: %+v", r)
+		}
+	}
+	want := []string{"host:exact", "host:alias-exact", "host:name", "location:site", "host:alias-part", "host:tag", "host:disabled"}
+	if len(ids) != len(want) {
+		t.Fatalf("search IDs = %v, want %v", ids, want)
+	}
+	for i := range want {
+		if ids[i] != want[i] {
+			t.Fatalf("search IDs = %v, want %v", ids, want)
+		}
 	}
 }
 
