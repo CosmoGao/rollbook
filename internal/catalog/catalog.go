@@ -276,6 +276,15 @@ func validate(ctx context.Context, tx *sql.Tx, o *Object) error {
 		if a.Is4In6() {
 			return invalidField("fields.address", "不支持映射 IPv4", "IPv4 或 IPv6 地址")
 		}
+		// 创建、修改与提议共用此校验；保留数据库唯一约束作为最终保护。
+		var hostID, hostName string
+		e = tx.QueryRowContext(ctx, `SELECT i.host_id,o.name FROM ips i JOIN objects o ON o.id=i.host_id WHERE i.address=? AND i.id<>? LIMIT 1`, str(o.Fields["address"]), o.ID).Scan(&hostID, &hostName)
+		if e == nil {
+			return &ValidationError{Fields: []FieldError{{Field: "fields.address", Reason: "IP 地址已被主机占用", References: []string{fmt.Sprintf("%s：%s (%s)", str(o.Fields["address"]), hostName, hostID)}}}}
+		}
+		if e != sql.ErrNoRows {
+			return e
+		}
 		var site string
 		e = tx.QueryRowContext(ctx, `WITH RECURSIVE parents(id,parent_id,kind) AS (
  SELECT l.id,l.parent_id,l.kind FROM hosts h JOIN locations l ON l.id=h.location_id WHERE h.id=?

@@ -381,13 +381,20 @@ func (r cliRunner) request(method, target, key string, body []byte, ctype string
 }
 func cliHTTPError(status int, data []byte) error {
 	var api struct {
-		Message string                           `json:"message"`
-		Fields  []struct{ Field, Reason string } `json:"fields"`
+		Message string `json:"message"`
+		Fields  []struct {
+			Field, Reason string
+			References    []string `json:"references"`
+		} `json:"fields"`
 	}
 	_ = json.Unmarshal(data, &api)
 	detail := []string{}
 	for _, f := range api.Fields {
-		detail = append(detail, f.Field+": "+f.Reason)
+		line := f.Field + ": " + f.Reason
+		if len(f.References) > 0 {
+			line += "（" + strings.Join(f.References, "、") + "）"
+		}
+		detail = append(detail, line)
 	}
 	if len(detail) == 0 && api.Message != "" && len(api.Message) < 200 {
 		detail = append(detail, api.Message)

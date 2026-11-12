@@ -47,3 +47,46 @@ test('主机树逐层显示 IP/状态并可折叠；网段显示冲突和空闲�
   assert.match(await page.locator('#content').innerText(),/下一个可分配 IP：192\.0\.2\.6/);
  }finally{await browser.close()}
 });
+
+test('网页重复登记 IP 时显示占用主机',async()=>{
+ const browser=await chromium.launch({headless:true});
+ try{
+  const page=await browser.newPage({locale:'zh-CN'});page.setDefaultTimeout(5000);
+  const assets=[
+   {id:'location:site',type:'location',name:'站点',status:'在用',fields:{kind:'站点'}},
+   {id:'network:net',type:'network',name:'网段',status:'在用',fields:{cidr:'192.0.2.0/24',location_id:'location:site'}},
+   {id:'host:owner',type:'host',name:'已占用主机',status:'在用',fields:{kind:'物理机',location_id:'location:site'}},
+   {id:'host:other',type:'host',name:'新主机',status:'在用',fields:{kind:'物理机',location_id:'location:site'}}
+  ];
+  let submitted=false;
+  await page.route('http://rollbook.test/**',route=>{
+   const req=route.request(),u=new URL(req.url()),p=decodeURIComponent(u.pathname);
+   if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'index.html'))});
+   if(['/app.js','/i18n.js','/topology.js','/dagre.min.js','/style.css'].includes(p))return route.fulfill({contentType:p.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,p.slice(1)))});
+   const reply=(json,status=200)=>route.fulfill({status,json});
+   if(p==='/api/auth/session')return reply({login:'owner'});
+   if(p==='/api/config')return reply({allow_insecure_http:false});
+   if(p==='/api/version')return reply({version:'test',commit:'test'});
+   if(p==='/api/browse')return reply(assets.filter(a=>a.type===u.searchParams.get('type')));
+   if(p==='/api/assets'&&req.method()==='POST'){
+    submitted=true;
+    return reply({code:'validation',message:'校验失败',fields:[{field:'fields.address',reason:'IP 地址已被主机占用',references:['192.0.2.5：已占用主机 (host:owner)']}]},422);
+   }
+   return reply({message:'not found'},404);
+  });
+  await page.goto('http://rollbook.test/');
+  await page.getByRole('button',{name:/资产维护/}).click();
+  await page.locator('#content select').first().selectOption('ip');
+  await page.getByRole('button',{name:'新建'}).click();
+  const form=page.locator('.asset-form');
+  await form.locator('label').filter({hasText:'ID（可修改）'}).locator('input').fill('ip:duplicate');
+  await form.locator('label').filter({hasText:'名称'}).locator('input').fill('重复 IP');
+  await form.locator('label').filter({hasText:'address'}).locator('input').fill('192.0.2.5');
+  await form.locator('label').filter({hasText:'host_id'}).locator('select').selectOption('host:other');
+  await form.locator('label').filter({hasText:'操作原因'}).locator('input').fill('登记测试');
+  await form.getByRole('button',{name:'创建'}).click();
+  await form.locator('.error').getByText(/已占用主机/).waitFor();
+  assert.equal(submitted,true);
+  assert.match(await form.locator('.error').textContent(),/192\.0\.2\.5.*host:owner/);
+ }finally{await browser.close()}
+});
