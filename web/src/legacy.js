@@ -8,6 +8,7 @@ import { mountSearch, unmountSearch } from './Search';
 import { mountPending, unmountPending } from './Pending';
 import { mountKeys, unmountKeys } from './Keys';
 import { mountBackup, unmountBackup } from './Backup';
+import { mountAudit, unmountAudit } from './Audit';
 // 界面文案以现有中文为键；这里不更改 API 取值。
 const translations = {
 '备注':'Note','创建时间':'Created','到期时间':'Expires','最后使用时间':'Last used','查看已吊销的 Key':'Show revoked keys','编辑 Key':'Edit key',
@@ -212,23 +213,8 @@ async function appendAssetDetail(id){
  root.append(history);
  root.append(listSection('反向引用',d.referenced_by,x=>`${t(types[x.type]||x.type)} · ${x.name}`));
 }
-async function renderRecentChanges(){
- add(root,heading('最近变更','按 Key、对象类型和时间查看审计记录。'));
- const form=el('form','filter-bar');const key=el('input');key.placeholder=t('Key ID 或名称');
- const type=el('select');for(const [v,label] of [['','全部类型'],['host','主机'],['network','网段'],['service','服务'],['endpoint','访问入口'],['location','站点'],['ip','IP 地址']]){const option=el('option','',label);option.value=v;type.append(option)}
- const since=el('input');since.type='date';since.setAttribute('aria-label',t('开始日期'));
- const until=el('input');until.type='date';until.setAttribute('aria-label',t('结束日期'));
- const submit=el('button','primary','筛选');submit.type='submit';add(form,key,type,since,until,submit);
- const results=el('div');add(root,form,results);
- const load=async()=>{clear(results).append(message('正在加载…'));try{const query=new URLSearchParams();if(key.value.trim())query.set('key',key.value.trim());if(type.value)query.set('object_type',type.value);if(since.value)query.set('since',new Date(since.value+'T00:00:00').toISOString());if(until.value)query.set('until',new Date(until.value+'T23:59:59.999').toISOString());const records=await api('/api/changes?'+query);clear(results);if(!records.length){results.append(empty());return}for(const c of records){const item=el('div','row');const info=add(el('div','row-main'),el('strong','',literal(`${c.fields.action} · ${c.fields.object_id}`)),el('small','',literal(`${c.fields.actor_key_name||c.fields.actor_key_id||c.fields.actor} · ${c.fields.reason} · ${c.created_at}`)));const button=el('button','ghost','查看');button.onclick=()=>openObject(c.fields.object_id,c.fields.object_type);add(item,info,button);results.append(item)}}catch(e){clear(results).append(message(e.message,'error'))}};
- form.onsubmit=e=>{e.preventDefault();load()};await load();
-}
-async function renderContexts(){
- add(root,heading('共享上下文','查看 agent 与用户写入的上下文。'));
- const archived=el('input');archived.type='checkbox';const control=add(el('label','check-row'),archived,el('span','','显示已归档'));const results=el('div');add(root,control,results);
- const load=async()=>{clear(results).append(message('正在加载…'));try{const records=await api('/api/contexts?archived='+archived.checked);clear(results);if(!records.length){results.append(empty());return}for(const c of records){const item=el('article','detail-entry');add(item,el('strong','',literal(`${c.fields.key} · ${c.fields.scope} · ${c.fields.owner}`)),el('small','muted',literal(`${c.created_at} · ${c.source} · ${c.fields.project||''}`)),safeMarkdown(c.fields.body_md));results.append(item)}}catch(e){clear(results).append(message(e.message,'error'))}};
- archived.onchange=load;await load();
-}
+async function renderRecentChanges(){mountAudit(root,'changes',api,openObject)}
+async function renderContexts(){mountAudit(root,'contexts',api,openObject)}
 
 // 使用随程序嵌入的 Dagre 计算分层布局，SVG 由安全的 DOM API 构造。
 async function appendTopology(id, type) {
@@ -295,9 +281,9 @@ let renderPendingHub=async function(tab='pending'){mountPending(root,api,openObj
 const routePaths={overview:'/',assets:'/assets',services:'/assets/services',sites:'/assets/sites',hosts:'/assets/hosts',networks:'/assets/networks',topology:'/topology',pendingHub:'/pending',pending:'/pending',unverified:'/pending?tab=unverified',outdated:'/pending?tab=outdated',agent:'/agent',keys:'/agent',settings:'/settings',backup:'/settings/backup',changes:'/changes',contexts:'/contexts',search:'/search'};
 function routeFromLocation(){const path=location.pathname;const tab=new URLSearchParams(location.search).get('tab');if(path==='/pending')return tab==='unverified'?'unverified':tab==='outdated'?'outdated':'pendingHub';return Object.keys(routePaths).find(key=>routePaths[key]===path)||'overview'}
 const originalOpenObject=openObject;
-openObject=async function(...args){unmountFlow();unmountOverview();unmountAssets();unmountSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();return originalOpenObject(...args)};
+openObject=async function(...args){unmountFlow();unmountOverview();unmountAssets();unmountSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();unmountAudit();return originalOpenObject(...args)};
 const originalNavigate=navigate;
-navigate=async function(view,push=true){unmountFlow();unmountOverview();unmountAssets();unmountSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();const target=routePaths[view];if(push&&target&&target!==location.pathname+location.search)history.pushState({},'',target);return originalNavigate(view)};
+navigate=async function(view,push=true){unmountFlow();unmountOverview();unmountAssets();unmountSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();unmountAudit();const target=routePaths[view];if(push&&target&&target!==location.pathname+location.search)history.pushState({},'',target);return originalNavigate(view)};
 window.addEventListener('popstate',()=>navigate(routeFromLocation(),false));
 document.documentElement.lang=language;
 for(const selector of ['#login','.sidebar','.topbar'])translateStatic(document.querySelector(selector));
