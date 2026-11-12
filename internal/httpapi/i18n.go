@@ -89,7 +89,8 @@ var errorMessages = map[string][2]string{
 	"internal": {"服务器内部错误", "Internal error"}, "method_not_allowed": {"不支持此请求方法", "Method not allowed"},
 }
 var reasonMessages = map[string]string{
-	"名称必填": "Name is required", "未知对象类型": "Unknown object type", "ID 缺失或类型前缀不符": "ID is missing or has the wrong type prefix",
+	"IP 地址已被主机占用": "IP address is already assigned to a host",
+	"名称必填":        "Name is required", "未知对象类型": "Unknown object type", "ID 缺失或类型前缀不符": "ID is missing or has the wrong type prefix",
 	"必填字段缺失": "Required field is missing", "关联对象不存在": "Referenced object does not exist",
 	"关联对象不存在或仍被引用": "Referenced object does not exist or is still in use",
 	"字段值不符合模型约束":   "Value is outside the allowed range", "仅接受绝对 HTTP 或 HTTPS 地址": "Only absolute HTTP or HTTPS URLs are accepted",

@@ -20,7 +20,7 @@ var descriptions = map[string]string{
 	"get_asset":       "已知资产 ID 时读取完整对象及 rev；修改前必须先调用。",
 	"get_service":     "查看服务、宿主、入口、依赖及版本；排查服务时使用。",
 	"list_by_host":    "查看主机下的 IP 和服务；已知主机 ID 时使用。",
-	"list_by_network": "查看网段内的 IP 和主机；已知网段 ID 时使用。",
+	"list_by_network": "查看网段内的 IP、主机、占用冲突、空闲范围及 next_available；已知网段 ID 时使用。",
 	"get_site":        "查看站点、网段、主机和上游；已知站点 ID 时使用。",
 	"topology":        "查看服务或主机拓扑；id 为 service: 或 host:，view=access 查看入口到宿主的访问链，depth 可指定依赖层数。",
 	"list_outdated":   "列出落后或待人工确认的版本；结果不是自动升级建议。",

@@ -23,7 +23,7 @@ import (
 )
 
 const cliHelp = `用法: rollbook [--profile 名称] [--output table|json|yaml] 命令 [参数]
-命令: login search get create update propose note changes topology site versions verify
+命令: login search get create update propose note changes topology site network versions verify
       context get|put export import template completion version mcp
 JSON 对象可直接传入或使用 @文件名。运行 rollbook <命令> --help 查看此帮助。`
 
@@ -381,13 +381,20 @@ func (r cliRunner) request(method, target, key string, body []byte, ctype string
 }
 func cliHTTPError(status int, data []byte) error {
 	var api struct {
-		Message string                           `json:"message"`
-		Fields  []struct{ Field, Reason string } `json:"fields"`
+		Message string `json:"message"`
+		Fields  []struct {
+			Field, Reason string
+			References    []string `json:"references"`
+		} `json:"fields"`
 	}
 	_ = json.Unmarshal(data, &api)
 	detail := []string{}
 	for _, f := range api.Fields {
-		detail = append(detail, f.Field+": "+f.Reason)
+		line := f.Field + ": " + f.Reason
+		if len(f.References) > 0 {
+			line += "（" + strings.Join(f.References, "、") + "）"
+		}
+		detail = append(detail, line)
 	}
 	if len(detail) == 0 && api.Message != "" && len(api.Message) < 200 {
 		detail = append(detail, api.Message)
@@ -605,7 +612,7 @@ func makePatch(sets []string) (json.RawMessage, error) {
 	return b, nil
 }
 func completion(out io.Writer, shell string) error {
-	cmds := "login search get create update propose note changes topology site versions verify context export import template completion version mcp help"
+	cmds := "login search get create update propose note changes topology site network versions verify context export import template completion version mcp help"
 	var script string
 	switch shell {
 	case "bash":
@@ -643,6 +650,12 @@ func (r cliRunner) command(cmd string, a []string, base, key string) (method, pa
 			return
 		}
 		path = idPath("/api/sites/", a[0])
+	case "network":
+		if len(a) != 1 {
+			err = errors.New("用法: rollbook network <id>")
+			return
+		}
+		path = idPath("/api/networks/", a[0]) + "/inventory"
 	case "topology":
 		if len(a) < 1 || len(a) > 5 {
 			err = errors.New("用法: rollbook topology <service-id|host-id> [--depth 1|2] [--view graph|access]")
