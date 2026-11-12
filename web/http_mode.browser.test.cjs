@@ -67,7 +67,7 @@ test('真实浏览器经 TLS 终结反代与直连 HTTP 的提示和 Cookie', {t
     assert.equal(cookie.secure,scenario.secure,`${scenario.name}: ${name} Secure`);
    }
    assert.equal(await page.locator('.sidebar-http-notice').isVisible(),!scenario.secure);
-   await page.locator('.modal-backdrop .modal button').last().click();
+   await page.locator('.modal button').last().click();
    if(artifactDir)await page.screenshot({path:path.join(artifactDir,`${scenario.name}.png`),fullPage:true});
    await context.close();
   }
