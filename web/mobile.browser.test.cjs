@@ -1,3 +1,4 @@
+const {installBundle}=require('./browser.bundle.cjs');
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -15,9 +16,8 @@ test('390px 搜索、查看详情、复制 IP、退出，页面没有横向溢�
   let signedOut=false;
   await page.route('http://localhost:8910/**',route=>{
    const u=new URL(route.request().url()),p=decodeURIComponent(u.pathname);
-   if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'index.html'))});
-   if(['/app.js','/i18n.js','/topology.js','/dagre.min.js','/marked.umd.js','/purify.min.js','/style.css'].includes(p))return route.fulfill({contentType:p.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,p.slice(1)))});
-   if(p==='/manifest.webmanifest')return route.fulfill({contentType:'application/manifest+json',body:fs.readFileSync(path.join(__dirname,'manifest.webmanifest'))});
+   if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'dist','index.html'))});
+   if(p==='/manifest.webmanifest')return route.fulfill({contentType:'application/manifest+json',body:fs.readFileSync(path.join(__dirname,'dist','manifest.webmanifest'))});
    const reply=json=>route.fulfill({json});
    if(p==='/api/auth/session')return reply({login:'owner'});
    if(p==='/api/auth/logout'){signedOut=true;return reply({})}
@@ -31,7 +31,7 @@ test('390px 搜索、查看详情、复制 IP、退出，页面没有横向溢�
    if(p==='/api/assets/host:box/detail')return reply({object:host,notes:[],credentials:[],changes:[],referenced_by:[]});
    return route.fulfill({status:404,json:{message:'unexpected '+p}});
   });
-  await page.goto('http://localhost:8910/');
+  await installBundle(page);await page.goto('http://localhost:8910/');
   await page.locator('#mobile-user-name').getByText('owner').waitFor();
   await page.locator('#mobile-search input').fill('126');
   await page.locator('#mobile-search button').click();

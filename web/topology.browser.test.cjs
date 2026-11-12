@@ -1,3 +1,4 @@
+const {installBundle}=require('./browser.bundle.cjs');
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -25,8 +26,7 @@ test('主机和服务拓扑可绘制，访问链可切换，节点可打开详�
   const page=await browser.newPage({locale:'zh-CN'});page.setDefaultTimeout(5000);
   await page.route('http://rollbook.test/**',route=>{
    const u=new URL(route.request().url()),p=decodeURIComponent(u.pathname);
-   if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'index.html'))});
-   if(['/app.js','/i18n.js','/topology.js','/dagre.min.js','/style.css'].includes(p))return route.fulfill({contentType:p.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,p.slice(1)))});
+   if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'dist','index.html'))});
    const reply=json=>route.fulfill({json});
    if(p==='/api/auth/session')return reply({login:'owner'});
    if(p==='/api/config')return reply({allow_insecure_http:false,http_risk:false});
@@ -40,17 +40,17 @@ test('主机和服务拓扑可绘制，访问链可切换，节点可打开详�
    if(p.startsWith('/api/assets/'))return reply(asset[p.slice('/api/assets/'.length)]);
    return route.fulfill({status:404,json:{message:'not found'}});
   });
-  await page.goto('http://rollbook.test/');
-  await page.locator('#nav button[data-view="hosts"]').click();
+  await installBundle(page);await page.goto('http://rollbook.test/');
+  await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('button',{name:'主机浏览树'}).click();
   await page.getByText('实体主机').first().click();
-  await page.locator('.topology-canvas svg').waitFor();
-  assert.equal(await page.locator('.topology-node').count(),5);
-  await page.locator('.topology-node').filter({hasText:'Overleaf'}).click();
+  await page.locator('.topology-canvas .react-flow').waitFor();
+  assert.equal(await page.locator('.react-flow__node').count(),5);
+  await page.locator('.react-flow__node').filter({hasText:'Overleaf'}).click();
   await page.getByRole('heading',{name:'Overleaf'}).waitFor();
   await page.getByRole('button',{name:'访问链'}).click();
-  await page.locator('.topology-node').filter({hasText:'外网入口'}).waitFor();
-  assert.equal(await page.locator('.topology-edge').count(),4);
-  await page.locator('.topology-node').filter({hasText:'应用虚机'}).click();
+  await page.locator('.react-flow__node').filter({hasText:'外网入口'}).waitFor();
+  assert.equal(await page.locator('.react-flow__edge').count(),4);
+  await page.locator('.react-flow__node').filter({hasText:'应用虚机'}).click();
   await page.getByRole('heading',{name:'应用虚机'}).waitFor();
  } finally {await browser.close()}
 });

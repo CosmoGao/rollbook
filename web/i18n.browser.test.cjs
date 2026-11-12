@@ -1,3 +1,4 @@
+const {installBundle}=require('./browser.bundle.cjs');
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -11,17 +12,16 @@ test('browser language, manual choice, and refresh',async()=>{
   const page=await context.newPage();
   await page.route('http://rollbook.test/**',route=>{
    const p=new URL(route.request().url()).pathname;
-   if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'index.html'))});
-   for(const name of ['app.js','i18n.js','topology.js','dagre.min.js','style.css'])if(p==='/'+name)return route.fulfill({contentType:name.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,name))});
+   if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'dist','index.html'))});
    if(p==='/api/config')return route.fulfill({json:{allow_insecure_http:false,http_risk:false}});
    if(p==='/api/auth/session')return route.fulfill({status:401,json:{code:'unauthorized',message:'Authentication required'}});
    if(p==='/api/version')return route.fulfill({json:{version:'test',commit:'test'}});
    return route.fulfill({status:404,json:{code:'not_found',message:'Not found'}});
   });
-  await page.goto('http://rollbook.test/');
+  await installBundle(page);await page.goto('http://rollbook.test/');
   await page.getByRole('heading',{name:'Sign in to Rollbook'}).waitFor();
   assert.equal(await page.locator('html').getAttribute('lang'),'en');
-  await page.locator('#language').selectOption('zh-CN');
+  await page.locator('#login-language').selectOption('zh-CN');
   await page.getByRole('heading',{name:'登录清册'}).waitFor();
   await page.reload();
   await page.getByRole('heading',{name:'登录清册'}).waitFor();
@@ -33,17 +33,16 @@ test('browser language, manual choice, and refresh',async()=>{
 test('English workbench and creation form use translated copy',async()=>{
  const browser=await chromium.launch({headless:true});
  try {
-  const page=await browser.newPage({locale:'en-US'});
+  const page=await browser.newPage({locale:'en-US'});page.setDefaultTimeout(5000);
   await page.route('http://rollbook.test/**',route=>{
    const p=new URL(route.request().url()).pathname;
-   if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'index.html'))});
-   for(const name of ['app.js','i18n.js','topology.js','dagre.min.js','style.css'])if(p==='/'+name)return route.fulfill({contentType:name.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,name))});
+   if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'dist','index.html'))});
    if(p==='/api/auth/session')return route.fulfill({json:{login:'owner'}});
    if(p==='/api/config')return route.fulfill({json:{allow_insecure_http:false,http_risk:false}});
    if(p==='/api/version')return route.fulfill({json:{version:'test',commit:'test'}});
    return route.fulfill({json:[]});
   });
-  await page.goto('http://rollbook.test/');
+  await installBundle(page);await page.goto('http://rollbook.test/');
   await page.getByRole('button',{name:'Maybe later'}).click();
   await page.locator('#nav button[data-view="assets"]').click();
   await page.getByRole('heading',{name:'Manage assets'}).waitFor();
@@ -57,7 +56,7 @@ test('English workbench and creation form use translated copy',async()=>{
 test('English interface preserves asset names and IDs while translating kind labels',async()=>{
  const browser=await chromium.launch({headless:true});
  try {
-  const page=await browser.newPage({locale:'en-US'});
+  const page=await browser.newPage({locale:'en-US'});page.setDefaultTimeout(5000);
   const assets=[
    {id:'location:zh',type:'location',name:'中文站点',status:'在用',fields:{kind:'站点'}},
    {id:'location:exact',type:'location',name:'站点',status:'在用',fields:{kind:'站点'}},
@@ -65,16 +64,15 @@ test('English interface preserves asset names and IDs while translating kind lab
   ];
   await page.route('http://rollbook.test/**',route=>{
    const url=new URL(route.request().url()),p=url.pathname;
-   if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'index.html'))});
-   for(const name of ['app.js','i18n.js','topology.js','dagre.min.js','style.css'])if(p==='/'+name)return route.fulfill({contentType:name.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(__dirname,name))});
+   if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'dist','index.html'))});
    if(p==='/api/auth/session')return route.fulfill({json:{login:'站点'}});
    if(p==='/api/config')return route.fulfill({json:{allow_insecure_http:false,http_risk:false}});
    if(p==='/api/version')return route.fulfill({json:{version:'test',commit:'test'}});
    if(p==='/api/browse')return route.fulfill({json:assets.filter(o=>o.type===url.searchParams.get('type'))});
    return route.fulfill({json:[]});
   });
-  await page.goto('http://rollbook.test/');
-  assert.equal(await page.locator('#user-name').textContent(),'站点');
+  await installBundle(page);await page.goto('http://rollbook.test/');
+  await page.locator('#user-name').getByText('站点').waitFor();
   await page.locator('#nav button[data-view="assets"]').click();
   await page.locator('.card-title').first().waitFor();
   assert.deepEqual(await page.locator('.card-title').allTextContents(),['中文站点','站点']);

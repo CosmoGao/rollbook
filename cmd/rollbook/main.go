@@ -317,6 +317,7 @@ func handler(engines ...httpapi.Engine) http.Handler {
 		engine = engines[0]
 	}
 	mux := http.NewServeMux()
+	mux.HandleFunc("/api", http.NotFound)
 	mux.Handle("/api/", engine.Handler())
 	mux.Handle("/mcp", mcp.Server{Engine: engine})
 	mux.HandleFunc("/manifest.webmanifest", func(w http.ResponseWriter, r *http.Request) {
