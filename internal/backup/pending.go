@@ -44,6 +44,13 @@ func (s Service) Submit(ctx context.Context, data []byte, actor auth.Principal) 
 	if err != nil {
 		return Pending{}, err
 	}
+	previewHash := ""
+	if f.Kind != "merge" {
+		p, previewHash, err = s.RestorePreview(ctx, f)
+		if err != nil {
+			return Pending{}, err
+		}
+	}
 	var b [16]byte
 	if _, err = rand.Read(b[:]); err != nil {
 		return Pending{}, err
@@ -71,7 +78,8 @@ func (s Service) Submit(ctx context.Context, data []byte, actor auth.Principal) 
 	if total >= 100 || mine >= 10 {
 		return Pending{}, fmt.Errorf("%w: pending import limit reached", ErrInvalid)
 	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO pending_imports(id,kind,yaml,proposer,created_at,state,actor_json) VALUES(?,?,?,?,?,'pending',?)", item.ID, item.Kind, data, item.Proposer, item.CreatedAt, string(actorData))
+	previewJSON, _ := json.Marshal(item.Preview)
+	_, err = tx.ExecContext(ctx, "INSERT INTO pending_imports(id,kind,yaml,proposer,created_at,state,actor_json,preview_json,preview_hash) VALUES(?,?,?,?,?,'pending',?,?,?)", item.ID, item.Kind, data, item.Proposer, item.CreatedAt, string(actorData), string(previewJSON), previewHash)
 	if err != nil {
 		return Pending{}, err
 	}
@@ -89,20 +97,29 @@ func (s Service) List(ctx context.Context) ([]Pending, error) {
 	if err := s.CleanupExpired(ctx); err != nil {
 		return nil, err
 	}
-	rows, err := s.DB.QueryContext(ctx, "SELECT id,kind,proposer,created_at,state,yaml FROM pending_imports ORDER BY created_at DESC")
+	rows, err := s.DB.QueryContext(ctx, "SELECT id,kind,proposer,created_at,state,yaml,preview_json,preview_hash FROM pending_imports ORDER BY created_at DESC")
 	if err != nil {
 		return nil, err
 	}
 	result := []Pending{}
 	dataByID := map[string][]byte{}
+	hashByID := map[string]string{}
 	for rows.Next() {
 		var item Pending
 		var data []byte
-		if err = rows.Scan(&item.ID, &item.Kind, &item.Proposer, &item.CreatedAt, &item.State, &data); err != nil {
+		var previewJSON, previewHash string
+		if err = rows.Scan(&item.ID, &item.Kind, &item.Proposer, &item.CreatedAt, &item.State, &data, &previewJSON, &previewHash); err != nil {
 			rows.Close()
 			return nil, err
 		}
 		dataByID[item.ID] = data
+		hashByID[item.ID] = previewHash
+		if previewJSON != "" {
+			if err = json.Unmarshal([]byte(previewJSON), &item.Preview); err != nil {
+				rows.Close()
+				return nil, err
+			}
+		}
 		result = append(result, item)
 	}
 	err = rows.Err()
@@ -116,7 +133,19 @@ func (s Service) List(ctx context.Context) ([]Pending, error) {
 			if e != nil {
 				return nil, e
 			}
-			result[i].Preview = p
+			if result[i].Preview.Kind == "" {
+				result[i].Preview = p
+			}
+			if f.Kind != "merge" && hashByID[result[i].ID] == "" {
+				result[i].Preview, hashByID[result[i].ID], e = s.RestorePreview(ctx, f)
+				if e != nil {
+					return nil, e
+				}
+				encoded, _ := json.Marshal(result[i].Preview)
+				if _, e = s.DB.ExecContext(ctx, "UPDATE pending_imports SET preview_json=?,preview_hash=? WHERE id=? AND state='pending' AND preview_hash=''", string(encoded), hashByID[result[i].ID], result[i].ID); e != nil {
+					return nil, e
+				}
+			}
 			if f.Kind == "merge" {
 				result[i].Preview, e = s.MergePreview(ctx, f)
 				if e != nil {
@@ -143,8 +172,8 @@ func (s Service) Review(ctx context.Context, id string, approve bool, reviewer s
 		return nil
 	}
 	var data []byte
-	var proposer, actorData string
-	err := s.DB.QueryRowContext(ctx, "SELECT yaml,proposer,actor_json FROM pending_imports WHERE id=? AND state='pending'", id).Scan(&data, &proposer, &actorData)
+	var proposer, actorData, previewHash string
+	err := s.DB.QueryRowContext(ctx, "SELECT yaml,proposer,actor_json,preview_hash FROM pending_imports WHERE id=? AND state='pending'", id).Scan(&data, &proposer, &actorData, &previewHash)
 	if err != nil {
 		return err
 	}
@@ -159,8 +188,22 @@ func (s Service) Review(ctx context.Context, id string, approve bool, reviewer s
 		}
 		err = s.merge(ctx, id, f, actor, reviewer)
 	} else {
+		_, currentHash, previewErr := s.RestorePreview(ctx, f)
+		if previewErr != nil {
+			return previewErr
+		}
+		if previewHash == "" || currentHash != previewHash {
+			return fmt.Errorf("%w: data changed, preview again", ErrConflict)
+		}
 		if err = s.saveBeforeRestore(ctx); err != nil {
 			return err
+		}
+		_, currentHash, previewErr = s.RestorePreview(ctx, f)
+		if previewErr != nil {
+			return previewErr
+		}
+		if currentHash != previewHash {
+			return fmt.Errorf("%w: data changed, preview again", ErrConflict)
 		}
 		err = s.Restore(ctx, f)
 	}

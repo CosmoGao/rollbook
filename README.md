@@ -101,14 +101,14 @@ docker compose exec rollbook rollbook bootstrap-user owner
 
 两条命令二选一。再次执行会报告用户已存在，不会覆盖密码。容器监听 8080，Compose 默认只把宿主机 `127.0.0.1:8080` 暴露给本机反向代理；在代理上配置 HTTPS 后访问网页。网页会话与 CSRF Cookie 默认带 `Secure`。若必须在可信内网直接用 HTTP 访问，把 `.env` 中 `ROLLBOOK_BIND_ADDR` 设为内网接口地址，并把 `ROLLBOOK_ALLOW_INSECURE_HTTP` 设为 `true` 后运行 `docker compose up -d`。此时页面显示 HTTP 模式提示、日志发出警告，Cookie 不带 `Secure`。**HTTP 模式下口令和 key 会在网络中明文传输，只能在可信内网使用。**不要把此端口直接暴露到公网。
 
-数据库、WAL 与默认的 `rollbook-latest.yaml` 均位于 `/data`，由 Compose 的 `rollbook-data` 卷持久化。`docker compose down && docker compose up -d` 不会删除卷；不要使用 `down -v`。启动后及每 24 小时写一次完整 YAML 备份。需要把 YAML 备份放在独立卷时，在 `.env` 设 `ROLLBOOK_BACKUP_DIR=/backups`；Compose 已为 `/backups` 提供持久卷。自行替换成宿主机绑定目录时，数据库目录与独立备份目录都要持久化，且应由容器内固定的 `10001:10001` 用户读写，例如：
+数据库、WAL 与默认备份目录均位于 `/data`，由 Compose 的 `rollbook-data` 卷持久化。`docker compose down && docker compose up -d` 不会删除卷；不要使用 `down -v`。启动后及每 24 小时写一次完整 YAML 日备份，首次启动及每 7 天另写周备份。需要把 YAML 备份放在独立卷时，在 `.env` 设 `ROLLBOOK_BACKUP_DIR=/backups`；Compose 已为 `/backups` 提供持久卷。自行替换成宿主机绑定目录时，数据库目录与独立备份目录都要持久化，且应由容器内固定的 `10001:10001` 用户读写，例如：
 
 ```sh
 sudo mkdir -p /srv/rollbook/data /srv/rollbook/backups
 sudo chown -R 10001:10001 /srv/rollbook/data /srv/rollbook/backups
 ```
 
-然后在 `compose.yaml` 将相应卷映射改为 `/srv/rollbook/data:/data` 和 `/srv/rollbook/backups:/backups`。密钥文件保持仅部署管理员可读；初始化后的密钥卷在服务中只读挂载。独立备份卷仅保存最新一份 YAML，应定期复制到其他安全位置。
+然后在 `compose.yaml` 将相应卷映射改为 `/srv/rollbook/data:/data` 和 `/srv/rollbook/backups:/backups`。密钥文件保持仅部署管理员可读；初始化后的密钥卷在服务中只读挂载。备份卷应定期复制到其他安全位置。
 
 ### 升级和回退
 
@@ -130,6 +130,6 @@ GitHub Actions 在 PR 上运行测试、vet 和镜像构建；main 推送发布 
 
 ## 备份与恢复
 
-服务启动时及每 24 小时在 `ROLLBOOK_BACKUP_DIR` 指定目录原子写入 `rollbook-latest.yaml`（0600）；未设置时使用数据库目录。网页的「备份与恢复」可下载清册或完整备份、提交 YAML 并查看预览计数；批准后恢复会清除所有会话，需重新登录。完整备份含密码与 key 的哈希，请按敏感文件管理。
+服务启动时及每 24 小时在 `ROLLBOOK_BACKUP_DIR` 指定目录原子写入带唯一时间戳的日备份（0600）；未设置时使用数据库目录。首次启动及每 7 天另写周备份。默认保留最近 7 份日备份、4 份周备份，仅轮转 `rollbook-daily-*` 和 `rollbook-weekly-*` 受管文件。`ROLLBOOK_BACKUP_INTERVAL` 与 `ROLLBOOK_BACKUP_WEEKLY_INTERVAL` 使用 Go duration 格式，例如 `1h`、`168h`；`ROLLBOOK_BACKUP_DAILY_KEEP` 与 `ROLLBOOK_BACKUP_WEEKLY_KEEP` 是正整数。周期或保留数无效时使用默认值。网页的「备份与恢复」可列出受管文件的时间和大小、下载或选择一份提交恢复，也可上传 YAML。恢复预览列出每类对象的新增、修改、删除及将丢失的变更；审批时若数据已变化会返回冲突，需重新提交。恢复前必须成功保存当前库快照；批准后会清除所有会话，需重新登录。完整备份含密码与 key 的哈希，请按敏感文件管理。
 
 CLI 使用 `ROLLBOOK_KEY`：`rollbook export > catalog.yaml` 下载清册；`rollbook import catalog.yaml` 校验并提交待确认导入，网页用户批准后才会恢复。只读 key 可以导出，提议/直接写 key 可以提交导入，任何 key 都无法下载完整备份或批准恢复。未知 `schema_version` 和校验不通过的文件会被拒绝，旧数据库保持不变。

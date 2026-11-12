@@ -8,8 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/CosmoGao/rollbook/internal/auth"
+	"github.com/CosmoGao/rollbook/internal/backup"
 	"github.com/CosmoGao/rollbook/internal/catalog"
 	"github.com/CosmoGao/rollbook/internal/db"
 	"github.com/CosmoGao/rollbook/internal/httpapi"
@@ -105,6 +107,46 @@ func TestBackupPermissionAndApproval(t *testing.T) {
 	}
 	if w := call("GET", "/api/auth/session", "", "", "", cookies); w.Code != 200 {
 		t.Fatal("merge invalidated session", w.Code)
+	}
+	managedData, e := (backup.Service{DB: d}).Export(ctx, "full")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = backup.SaveManaged(filepath.Dir(dbPath), managedData, time.Now(), 7, 4, 7*24*time.Hour); e != nil {
+		t.Fatal(e)
+	}
+	managedFiles, e := backup.ListManaged(filepath.Dir(dbPath))
+	if e != nil || len(managedFiles) != 2 {
+		t.Fatal(managedFiles, e)
+	}
+	filePath := "/api/backup/files/" + managedFiles[0].Name
+	if w := call("GET", "/api/backup/files", "", readToken, "", nil); w.Code != 403 {
+		t.Fatal("key listed backups", w.Code)
+	}
+	if w := call("GET", filePath+"/download", "", readToken, "", nil); w.Code != 403 {
+		t.Fatal("key downloaded managed backup", w.Code)
+	}
+	if w := call("POST", filePath+"/restore", "", proposeToken, "", nil); w.Code != 403 {
+		t.Fatal("key submitted managed restore", w.Code)
+	}
+	if w := call("GET", "/api/backup/files/..%2Fsecret/download", "", "", "", cookies); w.Code == 200 {
+		t.Fatal("traversal downloaded")
+	}
+	if w := call("GET", filePath+"/download", "", "", "", cookies); w.Code != 200 || w.Body.String() != string(managedData) {
+		t.Fatal("managed download", w.Code)
+	}
+	managed := call("POST", filePath+"/restore", "", "", csrf, cookies)
+	if managed.Code != 201 {
+		t.Fatal("managed restore submit", managed.Code, managed.Body)
+	}
+	if e = json.Unmarshal(managed.Body.Bytes(), &pending); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = store.Create(ctx, catalog.Object{ID: "location:c", Type: "location", Name: "广州", Fields: map[string]any{"kind": "站点"}}, "owner"); e != nil {
+		t.Fatal(e)
+	}
+	if w := call("POST", "/api/backup/imports/"+pending.ID+"/approve", "", "", csrf, cookies); w.Code != 409 {
+		t.Fatal("stale preview accepted", w.Code, w.Body)
 	}
 	restore := call("POST", "/api/backup/import", catalogFile.Body.String(), "", csrf, cookies)
 	if restore.Code != 201 {
