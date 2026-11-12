@@ -145,3 +145,7 @@ GitHub Actions 在 PR 上运行测试、vet 和镜像构建；main 推送发布 
 服务启动时及每 24 小时在 `ROLLBOOK_BACKUP_DIR` 指定目录原子写入带唯一时间戳的日备份（0600）；未设置时使用数据库目录。首次启动及每 7 天另写周备份。默认保留最近 7 份日备份、4 份周备份，仅轮转 `rollbook-daily-*` 和 `rollbook-weekly-*` 受管文件。`ROLLBOOK_BACKUP_INTERVAL` 与 `ROLLBOOK_BACKUP_WEEKLY_INTERVAL` 使用 Go duration 格式，例如 `1h`、`168h`；`ROLLBOOK_BACKUP_DAILY_KEEP` 与 `ROLLBOOK_BACKUP_WEEKLY_KEEP` 是正整数。周期或保留数无效时使用默认值。网页的「备份与恢复」可列出受管文件的时间和大小、下载或选择一份提交恢复，也可上传 YAML。恢复预览列出每类对象的新增、修改、删除及将丢失的变更；审批时若数据已变化会返回冲突，需重新提交。恢复前必须成功保存当前库快照；批准后会清除所有会话，需重新登录。完整备份含密码与 key 的哈希，请按敏感文件管理。
 
 CLI 使用 `ROLLBOOK_KEY`：`rollbook export > catalog.yaml` 下载清册；`rollbook import catalog.yaml` 校验并提交待确认导入，网页用户批准后才会恢复。只读 key 可以导出，提议/直接写 key 可以提交导入，任何 key 都无法下载完整备份或批准恢复。未知 `schema_version` 和校验不通过的文件会被拒绝，旧数据库保持不变。
+
+CSV 合并导入支持 `host`、`network`、`ip`、`service` 四类对象。网页「备份与恢复」可下载各类模板并提交 CSV；CLI 用 `rollbook template csv host > hosts.csv` 下载模板，用 `rollbook import csv host hosts.csv` 提交，其他类型替换 `host` 即可。CLI 使用所选 profile 的服务地址与 Key。文件提交后进入与 YAML 合并导入相同的预览和审批队列；即使使用提议级 Key，也须由网页用户批准后才能写入。导入文件上限 16 MiB；待处理数量与 7 天过期规则同 YAML。
+
+CSV 使用 UTF-8 编码（可带 BOM），首行是模板列名，列名区分大小写；未知、重复、缺少必填列会返回行列错误。每行 `id` 必须带类型前缀（如 `host:`），文件内重复 ID 会被拒绝。新增对象不填 `rev`；更新现有对象必须填写当前正整数 `rev`，不一致会在预览中标为冲突。空单元格表示不提供该字段，不会把现有值清空；必填列不能留空。JSON 列填写合法 JSON；URL 列只接受绝对 HTTP/HTTPS 地址。关联列填对象 ID，可引用库中已有对象或同批文件中的对象；不存在的引用会显示定位错误。CSV 会映射到原合并模型，原 YAML 导入格式与行为不变。

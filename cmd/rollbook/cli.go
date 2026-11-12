@@ -24,7 +24,7 @@ import (
 
 const cliHelp = `用法: rollbook [--profile 名称] [--output table|json|yaml] 命令 [参数]
 命令: login search get create update propose note changes topology site versions verify
-      context get|put export import completion version mcp
+      context get|put export import template completion version mcp
 JSON 对象可直接传入或使用 @文件名。运行 rollbook <命令> --help 查看此帮助。`
 
 type cliProfile struct{ URL, Key string }
@@ -126,7 +126,7 @@ func (r cliRunner) run(args []string) error {
 	if err != nil {
 		return err
 	}
-	if cmd == "export" {
+	if cmd == "export" || cmd == "template" {
 		_, err = r.out.Write(data)
 		return err
 	}
@@ -168,6 +168,8 @@ func cliGlobals(args []string) (profile, output string, rest []string, err error
 	}
 	return
 }
+
+func csvType(s string) bool { return s == "host" || s == "network" || s == "ip" || s == "service" }
 func (r cliRunner) login(profile string, a []string) error {
 	if len(a) != 0 {
 		return errors.New("用法: rollbook login [--profile 名称]")
@@ -603,7 +605,7 @@ func makePatch(sets []string) (json.RawMessage, error) {
 	return b, nil
 }
 func completion(out io.Writer, shell string) error {
-	cmds := "login search get create update propose note changes topology site versions verify context export import completion version mcp help"
+	cmds := "login search get create update propose note changes topology site versions verify context export import template completion version mcp help"
 	var script string
 	switch shell {
 	case "bash":
@@ -822,9 +824,31 @@ func (r cliRunner) command(cmd string, a []string, base, key string) (method, pa
 			return
 		}
 		path = "/api/backup/export?kind=catalog"
+	case "template":
+		if len(a) != 2 || a[0] != "csv" || !csvType(a[1]) {
+			err = errors.New("用法: rollbook template csv host|network|ip|service")
+			return
+		}
+		path = "/api/backup/csv/template?type=" + a[1]
 	case "import":
+		if len(a) >= 1 && a[0] == "csv" {
+			if len(a) != 3 || !csvType(a[1]) {
+				err = errors.New("用法: rollbook import csv host|network|ip|service <file.csv>")
+				return
+			}
+			body, err = os.ReadFile(a[2])
+			if err != nil {
+				return
+			}
+			if len(body) > 16<<20 {
+				err = errors.New("导入文件过大")
+				return
+			}
+			method, path, ctype = "POST", "/api/backup/csv/import?type="+a[1], "text/csv"
+			return
+		}
 		if len(a) != 1 {
-			err = errors.New("用法: rollbook import <file.yaml>")
+			err = errors.New("用法: rollbook import <file.yaml> 或 rollbook import csv <类型> <file.csv>")
 			return
 		}
 		body, err = os.ReadFile(a[0])
