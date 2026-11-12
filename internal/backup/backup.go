@@ -222,6 +222,11 @@ func apply(ctx context.Context, conn *sql.Conn, f File) error {
 		sort.Strings(cols)
 		for _, row := range f.Tables[name] {
 			// 旧备份没有提议提交时快照；恢复后沿用审计记录做保守冲突判断。
+			if name == "versions" && len(row) == len(cols)-1 {
+				if _, ok := row["raw_tag"]; !ok {
+					row["raw_tag"] = nil
+				}
+			}
 			if name == "changes" && len(row) == len(cols)-1 {
 				if _, ok := row["base_object_json"]; !ok {
 					row["base_object_json"] = nil

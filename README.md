@@ -81,7 +81,11 @@ rollbook search 示例
 {"provider":"endoflife_date","product":"go"}
 ```
 
-只使用固定公开 API 域名，标识符不接受 URL。Docker Hub 从最多 100 个标签中选择最高的纯数字版本，忽略 `latest` 等别名；GitHub 取最新正式 Release；endoflife.date 使用 v1 API 的最新 release。版本比较只接受 `v1.2.3` 这类数字格式，无法判断的版本显示“待人工确认”。上游错误和最近尝试时间另存，不覆盖上次成功值，也不改当前版本、固定版本理由或清册 rev。网页“有新版本”页提供手动重查；REST 为 `POST /api/versions/check`，MCP 为 `check_versions`。GHCR 暂不支持。
+只使用固定公开 API 域名，标识符不接受 URL。Docker Hub 从最多 100 个标签中选择匹配且可比较的最高版本，忽略 `latest` 等别名；GitHub 默认取最新正式 Release；endoflife.date 使用 v1 API 的最新 release。`tag_prefix` 可限制前缀，`tag_regex` 可限制正则；Docker Hub 的正则若含第一个捕获组，会把该组当作数字版本比较，同时保留完整原始 tag。例如 `{"provider":"docker_hub","image":"namespace/image","tag_regex":"^([0-9]+\\.[0-9]+)-alpine$"}`。非法或过宽正则在保存服务时拒绝。网页显示上游来源和原始 tag。
+
+版本状态分为“已锁定”“90 天内停止支持”“有新版本”“上游数据可疑，需人工确认”“无法判断”“已是最新”。锁定版本不会出现在“有新版本”列表或提醒中；当前版本高于上游值时须人工确认。手动重查仍是 `POST /api/versions/check`，MCP 为 `check_versions`；自动检查在启动及每小时扫描，成功记录每 24 小时重查。上游错误不覆盖上次成功值，也不改当前版本、固定理由或清册 rev。GHCR 暂不支持。
+
+网页登录后可在版本页填写机器人 Webhook URL、选择飞书或企业微信格式并启用提醒；默认关闭，未启用时不会发送外部请求。发现新版本或 90 天内停止支持时每天最多发送一次摘要；失败记录在数据库中，最多重试 3 次，每次至少间隔 1 小时。Webhook 请求 5 秒超时、拒绝重定向、响应最多读取 4 KiB，失败记录不含 URL 或响应正文。每天生成一条全局共享 context（key 为 `version-alert:YYYY-MM-DD`），agent 可以通过 `get_context` 读取。YAML 全量和清册备份包含共享 context 与版本数据；Webhook 地址及投递记录仅保存在本机数据库，不进入 YAML 备份。恢复 YAML 时保留本机提醒配置与投递记录；文件级数据库快照包含两者。
 
 ## Docker Compose 部署
 

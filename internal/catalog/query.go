@@ -116,17 +116,19 @@ func (q Query) versionState(ctx context.Context, o *Object) error {
 	}
 	current, _ := o.Fields["current_version"].(string)
 	latest, _ := o.Fields["latest_version"].(string)
-	if current == "" || latest == "" {
-		o.Fields["version_state"] = "待人工确认"
-		return nil
+	state := versioncheck.State(current, latest, o.Fields["pinned"], o.Fields["eol_date"], time.Now().UTC())
+	o.Fields["version_state"] = state
+	var raw sql.NullString
+	if err := q.Service.Store.DB.QueryRowContext(ctx, `SELECT raw_tag FROM versions WHERE id=?`, o.ID).Scan(&raw); err != nil {
+		return err
 	}
-	comparison, ok := versioncheck.Compare(current, latest)
-	if !ok {
-		o.Fields["version_state"] = "待人工确认"
-	} else if comparison < 0 {
-		o.Fields["version_state"] = "有新版本"
-	} else {
-		o.Fields["version_state"] = "已是最新"
+	if raw.Valid {
+		o.Fields["upstream_tag"] = raw.String
+	} else if latest != "" {
+		o.Fields["upstream_tag"] = latest
+	}
+	if source, ok := o.Fields["latest_source"].(string); ok && source != "" {
+		o.Fields["upstream_source"] = source
 	}
 	return nil
 }
@@ -176,7 +178,7 @@ func (q Query) Outdated(ctx context.Context, p auth.Principal) ([]Object, error)
 		if err = q.versionState(ctx, &all[i]); err != nil {
 			return nil, err
 		}
-		if all[i].Fields["version_state"] != "已是最新" || all[i].Fields["check_error"] != nil {
+		if all[i].Fields["version_state"] != "已锁定" && (all[i].Fields["version_state"] != "已是最新" || all[i].Fields["check_error"] != nil) {
 			out = append(out, all[i])
 		}
 	}

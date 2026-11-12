@@ -95,16 +95,10 @@ func TestProvidersPreserveInventoryAndFailure(t *testing.T) {
 	}
 	q := catalog.Query{Service: catalog.Service{Store: store}}
 	list, err := q.Outdated(ctx, auth.Principal{UserID: "owner"})
-	if err != nil || len(list) != 3 {
-		t.Fatalf("outdated list: %+v %v", list, err)
+	if err != nil || len(list) != 0 {
+		t.Fatalf("locked versions must be absent from outdated list: %+v %v", list, err)
 	}
-	states := map[string]string{}
-	for _, v := range list {
-		states[v.ID] = v.Fields["version_state"].(string)
-	}
-	if states["version:eol"] != "待人工确认" || states["version:docker"] != "有新版本" {
-		t.Fatal(states)
-	}
+
 	githubMode = "timeout"
 	dockerMode = "limit"
 	eolMode = "limit"
@@ -177,5 +171,102 @@ func TestScheduledCreatesVersionAndSkipsFresh(t *testing.T) {
 	third, err := checker.Run(ctx, true)
 	if err != nil || third.Checked != 1 || hits != 2 {
 		t.Fatalf("due %+v %v hits=%d", third, err, hits)
+	}
+}
+
+func TestStateAndDailyWebhook(t *testing.T) {
+	ctx := context.Background()
+	database, err := db.Open(ctx, filepath.Join(t.TempDir(), "alerts.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	store := catalog.Store{DB: database}
+	add := func(id, typ string, fields map[string]any) {
+		t.Helper()
+		if _, err := store.Create(ctx, catalog.Object{ID: id, Type: typ, Name: id, Fields: fields}, "seed"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	add("location:x", "location", map[string]any{"kind": "站点"})
+	add("host:x", "host", map[string]any{"kind": "物理机", "location_id": "location:x"})
+	add("service:x", "service", map[string]any{"host_id": "host:x", "upstream_json": `{"provider":"docker_hub","image":"org/image","tag_regex":"^([0-9]+\\.[0-9]+)-alpine$"}`})
+	add("version:x", "version", map[string]any{"service_id": "service:x", "current_version": "1.0"})
+	calls := 0
+	var posted map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/v2/") {
+			w.Write([]byte(`{"results":[{"name":"latest"},{"name":"9.9-ubuntu"},{"name":"1.2-alpine"},{"name":"1.4-alpine"}]}`))
+			return
+		}
+		calls++
+		if err := json.NewDecoder(r.Body).Decode(&posted); err != nil {
+			t.Error(err)
+		}
+		w.Write([]byte(`{"code":0}`))
+	}))
+	defer srv.Close()
+	checker := versioncheck.Checker{DB: database, DockerURL: srv.URL, Now: func() time.Time { return time.Date(2026, 11, 12, 0, 0, 0, 0, time.UTC) }}
+	if _, err := checker.Run(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 0 {
+		t.Fatalf("disabled webhook made %d calls", calls)
+	}
+	var latest, raw string
+	if err := database.QueryRow(`SELECT latest_version,raw_tag FROM versions WHERE id='version:x'`).Scan(&latest, &raw); err != nil {
+		t.Fatal(err)
+	}
+	if latest != "1.4" || raw != "1.4-alpine" {
+		t.Fatalf("tag filter got %q %q", latest, raw)
+	}
+	if got := versioncheck.State("1.0", latest, int64(0), nil, checker.Now()); got != "有新版本" {
+		t.Fatal(got)
+	}
+	if got := versioncheck.State("2.0", latest, int64(0), nil, checker.Now()); got != "上游数据可疑，需人工确认" {
+		t.Fatal(got)
+	}
+	if got := versioncheck.State("1.0", latest, int64(1), nil, checker.Now()); got != "已锁定" {
+		t.Fatal(got)
+	}
+	if got := versioncheck.State("1.0", latest, int64(0), "2026-12-01", checker.Now()); got != "90 天内停止支持" {
+		t.Fatal(got)
+	}
+	if err := versioncheck.SaveAlertSettings(ctx, database, versioncheck.AlertSettings{Enabled: true, WebhookURL: srv.URL, Format: "feishu"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := checker.DailyAlert(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := checker.DailyAlert(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 || posted["msg_type"] != "text" {
+		t.Fatalf("daily delivery calls=%d payload=%v", calls, posted)
+	}
+	var count int
+	if err := database.QueryRow(`SELECT count(*) FROM contexts WHERE key='version-alert:2026-11-12'`).Scan(&count); err != nil || count != 1 {
+		t.Fatalf("daily context count=%d %v", count, err)
+	}
+	if err := database.QueryRow(`SELECT count(*) FROM version_alert_delivery WHERE sent_at IS NOT NULL`).Scan(&count); err != nil || count != 1 {
+		t.Fatalf("delivery count=%d %v", count, err)
+	}
+	if err := versioncheck.SaveAlertSettings(ctx, database, versioncheck.AlertSettings{Enabled: true, WebhookURL: srv.URL, Format: "wecom"}); err != nil {
+		t.Fatal(err)
+	}
+	checker.Now = func() time.Time { return time.Date(2026, 11, 13, 0, 0, 0, 0, time.UTC) }
+	if err := checker.DailyAlert(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 2 || posted["msgtype"] != "text" {
+		t.Fatalf("wecom delivery calls=%d payload=%v", calls, posted)
+	}
+}
+
+func TestInvalidTagFilters(t *testing.T) {
+	for _, cfg := range []versioncheck.Config{{TagRegex: "["}, {TagRegex: ".*"}, {TagRegex: "^latest$"}, {TagPrefix: strings.Repeat("a", 81)}} {
+		if err := versioncheck.ValidateConfig(cfg); err == nil {
+			t.Fatalf("accepted invalid filter %+v", cfg)
+		}
 	}
 }
