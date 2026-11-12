@@ -6,6 +6,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/CosmoGao/rollbook/internal/auth"
 	"github.com/CosmoGao/rollbook/internal/catalog"
 )
 
@@ -95,7 +96,27 @@ var reasonMessages = map[string]string{
 	"关联对象不存在或仍被引用": "Referenced object does not exist or is still in use",
 	"字段值不符合模型约束":   "Value is outside the allowed range", "仅接受绝对 HTTP 或 HTTPS 地址": "Only absolute HTTP or HTTPS URLs are accepted",
 	"疑似包含秘密": "Content appears to contain a secret", "创建时必须提供整数版本": "An integer base revision is required for creation",
-	"对象必填且必须是有效 JSON": "Object is required and must be valid JSON", "密码至少 12 个字符": "Password must have at least 12 characters", "当前密码不正确": "Current password is incorrect",
+	"对象必填且必须是有效 JSON": "Object is required and must be valid JSON", "当前密码不正确": "Current password is incorrect",
+	"密码至少 8 个字符": "Password must have at least 8 characters", "密码不能超过 72 字节": "Password must not exceed 72 bytes",
+	"密码须包含大写、小写、数字、符号中的至少三类": "Password must use at least three of uppercase, lowercase, digits and symbols",
+	"密码不能包含用户名":              "Password must not contain the username", "密码过于常见": "Password is too common",
+}
+
+func passwordReason(reason auth.PasswordFailure) string {
+	switch reason {
+	case auth.PasswordTooShort:
+		return "密码至少 8 个字符"
+	case auth.PasswordTooLong:
+		return "密码不能超过 72 字节"
+	case auth.PasswordTooSimple:
+		return "密码须包含大写、小写、数字、符号中的至少三类"
+	case auth.PasswordContainsLogin:
+		return "密码不能包含用户名"
+	case auth.PasswordCommon:
+		return "密码过于常见"
+	default:
+		return "密码无效"
+	}
 }
 
 func hasHan(s string) bool {

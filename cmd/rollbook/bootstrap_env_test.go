@@ -24,7 +24,7 @@ func TestBootstrapFromEnvironment(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer database.Close()
-			password := "long password 123"
+			password := "Abcdef1!"
 			t.Setenv("ROLLBOOK_BOOTSTRAP_USER", "owner")
 			if source == "file" {
 				path := filepath.Join(t.TempDir(), "password")
@@ -79,7 +79,7 @@ func TestBootstrapEnvironmentErrors(t *testing.T) {
 		{"missing user", "", "long password 123", "", "ROLLBOOK_BOOTSTRAP_USER"},
 		{"missing password", "owner", "", "", "ROLLBOOK_BOOTSTRAP_PASSWORD"},
 		{"both", "owner", "long password 123", "/missing", "cannot both be set"},
-		{"short", "owner", "short", "", "at least 12"},
+		{"short", "owner", "short", "", "at least 8"},
 		{"missing file", "owner", "", "/missing", "read ROLLBOOK_BOOTSTRAP_PASSWORD_FILE"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -119,6 +119,26 @@ func TestBootstrapEnvironmentErrors(t *testing.T) {
 	defer database.Close()
 	if err := bootstrapFromEnvironment(context.Background(), database, []byte(pepper)); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestBootstrapPasswordFilePolicyFailure(t *testing.T) {
+	clearBootstrapEnv(t)
+	database, err := db.Open(context.Background(), filepath.Join(t.TempDir(), "rollbook.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	secret := "Password1"
+	path := filepath.Join(t.TempDir(), "password")
+	if err := os.WriteFile(path, []byte(secret+"\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("ROLLBOOK_BOOTSTRAP_USER", "owner")
+	t.Setenv("ROLLBOOK_BOOTSTRAP_PASSWORD_FILE", path)
+	err = bootstrapFromEnvironment(context.Background(), database, []byte("0123456789abcdef0123456789abcdef"))
+	if err == nil || !strings.Contains(err.Error(), "ROLLBOOK_BOOTSTRAP_PASSWORD_FILE") || !strings.Contains(err.Error(), "too common") || strings.Contains(err.Error(), secret) {
+		t.Fatalf("unsafe or unclear error: %v", err)
 	}
 }
 
