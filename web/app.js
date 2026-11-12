@@ -70,7 +70,8 @@ $('#change-password').onclick=()=>modal('修改密码',(box,close,overlay)=>{con
 $('#logout-all').onclick=async()=>{if(!confirm('退出所有设备，包括当前会话？'))return;try{await api('/api/auth/logout-all',{method:'POST'});showLogin()}catch(e){alert(e.message)}};
 document.querySelectorAll('#nav button[data-view]').forEach(b=>b.onclick=()=>navigate(b.dataset.view));
 api('/api/config').then(p=>{document.querySelectorAll('.http-mode-notice').forEach(el=>{el.hidden=!p.http_risk})}).catch(err=>{$('#login-error').textContent=err.message});
-api('/api/version').then(p=>{$('#build-version').textContent=`${p.version} (${p.commit})`}).catch(()=>{});
+function buildVersionLabel(info){const version=String(info?.version||'').trim();const commit=String(info?.commit||'').trim().match(/^[0-9a-f]{7}/i)?.[0].toLowerCase();if(/^v\d+\.\d+\.\d+$/.test(version))return `Rollbook ${version}`;if(version==='main'||version==='dev')return `Rollbook ${version}${commit?' '+commit:''}`;return 'Rollbook'}
+api('/api/version').then(p=>{const label=buildVersionLabel(p);$('#build-version').textContent=label;$('#login-build-version').textContent=label}).catch(()=>{$('#build-version').textContent='Rollbook';$('#login-build-version').textContent='Rollbook'});
 api('/api/auth/session').then(p=>{showApp(p.login);navigate('search');showFirstRun()}).catch(()=>showLogin());
 
 async function renderBackup(){add(root,heading('备份与恢复','清册导出用于迁移资产；完整备份含账号和 Key 哈希，仅网页用户可下载。恢复会清除所有登录会话。'));
