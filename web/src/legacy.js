@@ -9,6 +9,7 @@ import { mountPending, unmountPending } from './Pending';
 import { mountKeys, unmountKeys } from './Keys';
 import { mountBackup, unmountBackup } from './Backup';
 import { mountAudit, unmountAudit } from './Audit';
+import { mountTopology, unmountTopology } from './Topology';
 // 界面文案以现有中文为键；这里不更改 API 取值。
 const translations = {
 '备注':'Note','创建时间':'Created','到期时间':'Expires','最后使用时间':'Last used','查看已吊销的 Key':'Show revoked keys','编辑 Key':'Edit key',
@@ -244,33 +245,7 @@ function drawTopology(target, data, view) {
   mountFlow(target, data, openObject, view==='access'?'LR':'TB');
 }
 
-// 新导航沿用现有 REST 操作，逐页接入 React 外壳。
-async function renderTopologyPage(){
-  add(root,heading('拓扑','按站点筛选整体拓扑，或选择服务查看访问链。'));
-  const [services,sites,hosts]=await Promise.all(['service','location','host'].map(type=>api('/api/browse?type='+type)));
-  const locations=new Map(hosts.map(host=>[host.id,host.fields?.location_id]));
-  const controls=el('div','controls');const site=el('select');site.setAttribute('aria-label',t('站点'));
-  for(const [id,name] of [['','全部站点'],...sites.filter(x=>x.fields?.kind==='站点').map(x=>[x.id,x.name])]){const option=el('option','',literal(t(name)));option.value=id;site.append(option)}
-  const service=el('select');service.setAttribute('aria-label',t('服务'));const view=el('select');view.setAttribute('aria-label',t('拓扑视图'));
-  for(const [id,name] of [['graph','分层拓扑'],['access','访问链']]){const option=el('option','',name);option.value=id;view.append(option)}
-  add(controls,site,service,view);root.append(controls);const canvas=el('div','flow-container');root.append(canvas);
-  let visible=[],loadSeq=0;
-  const refreshService=()=>{visible=services.filter(item=>!site.value||item.site_id===site.value||item.fields?.location_id===site.value||locations.get(item.fields?.host_id)===site.value);service.replaceChildren();const all=el('option','','整体拓扑');all.value='';service.append(all);for(const item of visible){const option=el('option','',literal(item.name));option.value=item.id;service.append(option)}load()};
-  const load=async()=>{const seq=++loadSeq;unmountFlow();canvas.replaceChildren(message('正在加载…'));
-    if(view.value==='access'&&!service.value){canvas.replaceChildren(empty('请选择服务查看访问链'));return}
-    const ids=service.value?[service.value]:visible.map(item=>item.id);
-    if(!ids.length){canvas.replaceChildren(empty());return}
-    const results=await Promise.allSettled(ids.map(id=>api('/api/services/'+encodeURIComponent(id)+'/topology'+(view.value==='access'?'?view=access':''))));
-    if(seq!==loadSeq)return;
-    const graphs=results.filter(result=>result.status==='fulfilled').map(result=>result.value);
-    if(!graphs.length){canvas.replaceChildren(message(results[0]?.reason?.message||'拓扑加载失败','error'));return}
-    const details=new Map(),edges=new Map();
-    for(const graph of graphs){for(const node of graph.details||[])details.set(node.id,node);for(const id of graph.nodes||[])if(!details.has(id))details.set(id,{id,name:id,type:id.split(':')[0]});for(const edge of graph.edges||[])edges.set(edge.from+'|'+edge.to+'|'+edge.kind,edge)}
-    canvas.replaceChildren();mountFlow(canvas,{details:[...details.values()],edges:[...edges.values()]},openObject,view.value==='access'?'LR':'TB');
-    if(graphs.length<ids.length)root.append(message('部分服务拓扑加载失败','error'))
-  };
-  site.onchange=refreshService;service.onchange=load;view.onchange=load;refreshService()
-}
+async function renderTopologyPage(){mountTopology(root,api,openObject)}
 let renderOverview=async function(){mountOverview(root,api,navigate)};
 let renderAssets=async function(initialType='location'){mountAssets(root,api,assetForm,openObject,navigate,initialType)};
 let renderSettings=function(){mountSettings(root,()=>navigate('backup'),()=>$('#change-password').click(),()=>$('#logout-all').click(),setLanguage)};
@@ -281,9 +256,9 @@ let renderPendingHub=async function(tab='pending'){mountPending(root,api,openObj
 const routePaths={overview:'/',assets:'/assets',services:'/assets/services',sites:'/assets/sites',hosts:'/assets/hosts',networks:'/assets/networks',topology:'/topology',pendingHub:'/pending',pending:'/pending',unverified:'/pending?tab=unverified',outdated:'/pending?tab=outdated',agent:'/agent',keys:'/agent',settings:'/settings',backup:'/settings/backup',changes:'/changes',contexts:'/contexts',search:'/search'};
 function routeFromLocation(){const path=location.pathname;const tab=new URLSearchParams(location.search).get('tab');if(path==='/pending')return tab==='unverified'?'unverified':tab==='outdated'?'outdated':'pendingHub';return Object.keys(routePaths).find(key=>routePaths[key]===path)||'overview'}
 const originalOpenObject=openObject;
-openObject=async function(...args){unmountFlow();unmountOverview();unmountAssets();unmountSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();unmountAudit();return originalOpenObject(...args)};
+openObject=async function(...args){unmountFlow();unmountOverview();unmountAssets();unmountSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();unmountAudit();unmountTopology();return originalOpenObject(...args)};
 const originalNavigate=navigate;
-navigate=async function(view,push=true){unmountFlow();unmountOverview();unmountAssets();unmountSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();unmountAudit();const target=routePaths[view];if(push&&target&&target!==location.pathname+location.search)history.pushState({},'',target);return originalNavigate(view)};
+navigate=async function(view,push=true){unmountFlow();unmountOverview();unmountAssets();unmountSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();unmountAudit();unmountTopology();const target=routePaths[view];if(push&&target&&target!==location.pathname+location.search)history.pushState({},'',target);return originalNavigate(view)};
 window.addEventListener('popstate',()=>navigate(routeFromLocation(),false));
 document.documentElement.lang=language;
 for(const selector of ['#login','.sidebar','.topbar'])translateStatic(document.querySelector(selector));
