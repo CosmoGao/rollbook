@@ -37,10 +37,13 @@ func (q Query) Inventory(ctx context.Context, p auth.Principal, typ, id string) 
 	return s.ByNetwork(ctx, id)
 }
 func (q Query) Topology(ctx context.Context, p auth.Principal, id string, depth int) (search.Topology, error) {
+	return q.TopologyView(ctx, p, id, depth, "graph")
+}
+func (q Query) TopologyView(ctx context.Context, p auth.Principal, id string, depth int, view string) (search.Topology, error) {
 	if err := auth.Authorize(p, auth.View, ""); err != nil {
 		return search.Topology{}, err
 	}
-	return (search.Store{DB: q.Service.Store.DB}).Topology(ctx, id, depth)
+	return (search.Store{DB: q.Service.Store.DB}).TopologyView(ctx, id, depth, view)
 }
 
 type ServiceDetail struct {

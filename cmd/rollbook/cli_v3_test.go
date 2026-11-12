@@ -105,6 +105,24 @@ func TestCLIHelpErrorsAndCompletion(t *testing.T) {
 	}
 }
 
+func TestCLITopologyHostAndAccessRoute(t *testing.T) {
+	var path string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path = r.URL.RequestURI()
+		w.Write([]byte(`{"nodes":[],"edges":[]}`))
+	}))
+	defer server.Close()
+	t.Setenv("ROLLBOOK_URL", server.URL)
+	t.Setenv("ROLLBOOK_KEY", "secret")
+	r := cliRunner{out: &bytes.Buffer{}, configPath: filepath.Join(t.TempDir(), "missing")}
+	if err := r.run([]string{"topology", "host:vm", "--depth", "2", "--view", "access"}); err != nil {
+		t.Fatal(err)
+	}
+	if path != "/api/hosts/host:vm/topology?depth=2&view=access" {
+		t.Fatal(path)
+	}
+}
+
 func TestCLILoginSavesSecretWithoutEcho(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "rollbook", "config.toml")
 	var out, prompt bytes.Buffer

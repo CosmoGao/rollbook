@@ -49,6 +49,8 @@ rollbook note host:demo --body '已巡检' --kind 运维笔记 --reason '巡检'
 rollbook verify host:demo --reason '现场核实'
 rollbook changes --pending
 rollbook topology service:overleaf --depth 2
+rollbook topology service:overleaf --view access
+rollbook topology host:server --depth 2
 rollbook versions --outdated
 rollbook versions --check
 rollbook context get
@@ -56,6 +58,8 @@ rollbook context put @context.json
 ```
 
 `update`、`propose`、`note`、`verify` 省略 `--rev` 时会先读取对象当前 rev；若其他人并发修改导致 409，请重新 `get` 后重试。修改字段用 `--set field=value`，普通字段如 `name` 直接写，业务字段可写 `fields.kind`；含空格的值请按 shell 规则加引号。传入有效 JSON 数字、布尔值或对象时按 JSON 解析，其余按字符串。若要提议删除，使用 `propose <id> --action delete --reason 文本`。上下文新增文件是含 `id` 的对象 JSON；更新时包含 `id`、`rev`、`body_md` 和 `reason`。401、403、409、422 会给出中文原因和下一步建议。
+
+拓扑也可通过 `GET /api/services/{id}/topology` 和 `GET /api/hosts/{id}/topology` 查询。`view=access` 返回入口经反代、服务和宿主到父主机的访问链；默认返回拓扑。响应保留原有 `nodes`（ID 数组）与 `edges`，另有 `details`（名称、类型、状态）供绘图使用。MCP `topology` 工具接受同样的 `id`、`depth` 和 `view` 参数。
 
 ## 从空库到第一次查询
 

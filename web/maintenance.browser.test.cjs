@@ -20,6 +20,7 @@ test('从空库用网页录入、维护并两次确认删除',async()=>{
    const reply=(data,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
    if(p==='/')return route.fulfill({contentType:'text/html',body:html});
    if(p==='/app.js')return route.fulfill({contentType:'application/javascript',body:js});
+   if(p==='/topology.js'||p==='/dagre.min.js')return route.fulfill({contentType:'application/javascript',body:fs.readFileSync(path.join(__dirname,p.slice(1)))});
    if(p==='/i18n.js')return route.fulfill({contentType:'application/javascript',body:i18n});
    if(p==='/style.css')return route.fulfill({contentType:'text/css',body:css});
    if(p==='/api/config')return reply({allow_insecure_http:false});
