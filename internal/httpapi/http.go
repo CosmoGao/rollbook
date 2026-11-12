@@ -60,6 +60,14 @@ func (e Engine) Handler() http.Handler {
 			WriteError(w, err)
 			return
 		}
+		if r.URL.Path == "/api/agent/skill.zip" {
+			if !p.IsUser() {
+				WriteError(w, auth.ErrForbidden)
+				return
+			}
+			skillZip(w, r)
+			return
+		}
 		if r.URL.Path == "/api/versions/alerts" {
 			e.versionAlerts(w, r, p)
 			return

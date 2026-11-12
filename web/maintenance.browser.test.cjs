@@ -116,6 +116,8 @@ test('空库引导导入虚构数据并展示可复制的客户端配置',async(
   const setup=page.locator('.modal');
   await setup.locator('.setup-block').first().waitFor();
   for(const label of ['CLI 环境变量','Claude Code（.mcp.json）','Codex（config.toml）','Cursor（mcp.json）'])assert.match(await setup.innerText(),new RegExp(label.split('（')[0]));
+  assert.match(await setup.locator('.setup-block pre').first().innerText(),/<ROLLBOOK_KEY>/);
+  await setup.locator('input[type="checkbox"]').check();
   const snippets=await setup.locator('.setup-block pre').allTextContents();
   for(const snippet of snippets.slice(0,4))assert.match(snippet,/rb_test_token/);
   assert.equal(JSON.parse(snippets[1]).mcpServers.rollbook.type,'http');
