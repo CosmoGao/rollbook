@@ -3,11 +3,11 @@ const root=$('#content');
 const labels={search:'全局搜索',assets:'资产维护',sites:'站点',hosts:'主机',networks:'网段',outdated:'有新版本',pending:'待确认',unverified:'待核实',keys:'Key 管理',backup:'备份与恢复'};
 const types={location:'站点',uplink:'网络接入',host:'主机',network:'网段',ip:'IP 地址',service:'服务',port:'端口',endpoint:'访问入口',version:'版本',credential:'凭据引用',note:'笔记',change:'变更',dependency:'依赖'};
 let current='search',searchSeq=0;
-function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=String(text);return n}
+function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=t(text);return n}
 function add(parent,...nodes){nodes.forEach(n=>parent.append(n));return parent}
 function clear(parent){parent.replaceChildren();return parent}
 function cookie(name){return document.cookie.split('; ').find(x=>x.startsWith(name+'='))?.slice(name.length+1)||''}
-async function api(path,options={}){const opts={...options,credentials:'same-origin',headers:{Accept:'application/json',...(options.body?{'Content-Type':'application/json'}:{}),...(options.method&&options.method!=='GET'?{'X-CSRF-Token':cookie('rollbook_csrf')}:{}),...options.headers}};const r=await fetch(path,opts);const data=await r.json().catch(()=>({}));if(!r.ok){if(r.status===401&&path!=='/api/auth/login')showLogin();const fields=(data.fields||[]).map(f=>`${f.field}: ${f.reason}${f.expected?'（期望：'+f.expected+'）':''}${f.references?.length?'；引用方：'+f.references.join('、'):''}`);throw new Error(fields.join('\n')||data.message||`请求失败 (${r.status})`)}return data}
+async function api(path,options={}){const opts={...options,credentials:'same-origin',headers:{Accept:'application/json',...(options.body?{'Content-Type':'application/json'}:{}),'X-Rollbook-Language':language,...(options.method&&options.method!=='GET'?{'X-CSRF-Token':cookie('rollbook_csrf')}:{}),...options.headers}};const r=await fetch(path,opts);const data=await r.json().catch(()=>({}));if(!r.ok){if(r.status===401&&path!=='/api/auth/login')showLogin();const fields=(data.fields||[]).map(f=>`${f.field}: ${f.reason}${f.expected?' ('+t('期望：')+f.expected+')':''}${f.references?.length?'; '+t('引用方：')+f.references.join(', '):''}`);throw new Error(t(fields.join('\n')||data.message||`请求失败 (${r.status})`))}return data}
 function showLogin(){ $('#app').hidden=true;$('#login').hidden=false }
 function showApp(login){$('#login').hidden=true;$('#app').hidden=false;$('#user-name').textContent=login}
 function heading(title,desc){return add(el('div','hero'),el('p','eyebrow','ROLLBOOK / '+(labels[current]||'资产详情')),el('h1','',title),el('p','muted',desc))}

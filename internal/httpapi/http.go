@@ -13,6 +13,9 @@ import (
 )
 
 func WriteJSON(w http.ResponseWriter, status int, v any) {
+	if lw, ok := w.(*localizedWriter); ok && status >= 400 {
+		v = localizeError(v, lw.language)
+	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(status)
@@ -38,6 +41,7 @@ func (e Engine) Principal(r *http.Request) (auth.Principal, error) {
 
 func (e Engine) Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w = &localizedWriter{ResponseWriter: w, language: requestLanguage(r)}
 		if r.URL.Path == "/api/version" && r.Method == http.MethodGet {
 			version, commit := buildinfo.Info()
 			WriteJSON(w, 200, map[string]string{"version": version, "commit": commit})

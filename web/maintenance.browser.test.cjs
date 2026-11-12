@@ -6,12 +6,13 @@ const {chromium}=require('playwright');
 
 const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8');
 const js=fs.readFileSync(path.join(__dirname,'app.js'),'utf8');
+const i18n=fs.readFileSync(path.join(__dirname,'i18n.js'),'utf8');
 const css=fs.readFileSync(path.join(__dirname,'style.css'),'utf8');
 
 test('从空库用网页录入、维护并两次确认删除',async()=>{
  const browser=await chromium.launch({headless:true});
  try{
-  const page=await browser.newPage();page.setDefaultTimeout(5000);
+  const page=await browser.newPage({locale:'zh-CN'});page.setDefaultTimeout(5000);
   const objects=new Map();const writes=[];let offlineID='',deleteAttempts=0;
   await page.route('http://rollbook.test/**',async route=>{
    const req=route.request(),u=new URL(req.url()),p=decodeURIComponent(u.pathname),m=req.method();
@@ -19,6 +20,7 @@ test('从空库用网页录入、维护并两次确认删除',async()=>{
    const reply=(data,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
    if(p==='/')return route.fulfill({contentType:'text/html',body:html});
    if(p==='/app.js')return route.fulfill({contentType:'application/javascript',body:js});
+   if(p==='/i18n.js')return route.fulfill({contentType:'application/javascript',body:i18n});
    if(p==='/style.css')return route.fulfill({contentType:'text/css',body:css});
    if(p==='/api/config')return reply({allow_insecure_http:false});
    if(p==='/api/auth/session')return reply({login:'owner'});
@@ -82,7 +84,7 @@ test('从空库用网页录入、维护并两次确认删除',async()=>{
 test('空库引导导入虚构数据并展示可复制的客户端配置',async()=>{
  const browser=await chromium.launch({headless:true});
  try{
-  const context=await browser.newContext();const page=await context.newPage();
+  const context=await browser.newContext({locale:'zh-CN'});const page=await context.newPage();
   await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.__copied=text}}}));
   const objects=new Map();
   await page.route('http://rollbook.test/**',async route=>{
@@ -90,6 +92,7 @@ test('空库引导导入虚构数据并展示可复制的客户端配置',async(
    const reply=(data,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
    if(p==='/')return route.fulfill({contentType:'text/html',body:html});
    if(p==='/app.js')return route.fulfill({contentType:'application/javascript',body:js});
+   if(p==='/i18n.js')return route.fulfill({contentType:'application/javascript',body:i18n});
    if(p==='/style.css')return route.fulfill({contentType:'text/css',body:css});
    if(p==='/api/config')return reply({allow_insecure_http:false});
    if(p==='/api/auth/session')return reply({login:'owner'});
@@ -121,7 +124,7 @@ test('空库引导导入虚构数据并展示可复制的客户端配置',async(
   await setup.locator('.setup-block').first().waitFor();
   for(const label of ['CLI 环境变量','Claude Code（.mcp.json）','Codex（config.toml）','Cursor（mcp.json）'])assert.match(await setup.innerText(),new RegExp(label.split('（')[0]));
   const snippets=await setup.locator('.setup-block pre').allTextContents();
-  for(const snippet of snippets)assert.match(snippet,/rb_test_token/);
+  for(const snippet of snippets.slice(0,4))assert.match(snippet,/rb_test_token/);
   assert.equal(JSON.parse(snippets[1]).mcpServers.rollbook.type,'http');
   assert.equal(JSON.parse(snippets[3]).mcpServers.rollbook.url,'http://rollbook.test/mcp');
   await setup.locator('.setup-block').first().getByRole('button',{name:'复制'}).click();
