@@ -168,3 +168,7 @@ CLI 使用 `ROLLBOOK_KEY`：`rollbook export > catalog.yaml` 下载清册；`rol
 CSV 合并导入支持 `host`、`network`、`ip`、`service` 四类对象。网页「备份与恢复」可下载各类模板并提交 CSV；CLI 用 `rollbook template csv host > hosts.csv` 下载模板，用 `rollbook import csv host hosts.csv` 提交，其他类型替换 `host` 即可。CLI 使用所选 profile 的服务地址与 Key。文件提交后进入与 YAML 合并导入相同的预览和审批队列；即使使用提议级 Key，也须由网页用户批准后才能写入。导入文件上限 16 MiB；待处理数量与 7 天过期规则同 YAML。
 
 CSV 使用 UTF-8 编码（可带 BOM），首行是模板列名，列名区分大小写；未知、重复、缺少必填列会返回行列错误。每行 `id` 必须带类型前缀（如 `host:`），文件内重复 ID 会被拒绝。新增对象不填 `rev`；更新现有对象必须填写当前正整数 `rev`，不一致会在预览中标为冲突。空单元格表示不提供该字段，不会把现有值清空；必填列不能留空。JSON 列填写合法 JSON；URL 列只接受绝对 HTTP/HTTPS 地址。关联列填对象 ID，可引用库中已有对象或同批文件中的对象；不存在的引用会显示定位错误。CSV 会映射到原合并模型，原 YAML 导入格式与行为不变。
+
+## 前端开发
+
+网页源码位于 `web/src/`，使用 React、TypeScript 和 Vite。首次开发运行 `npm ci --prefix web`，修改后运行 `npm run typecheck --prefix web` 与 `npm run build --prefix web`。构建产物 `web/dist/` 随仓库提交，并由 Go 内嵌，因此直接执行 `go build ./cmd/rollbook` 无需 Node。提交前确认重新构建后的 `web/dist/` 与源码一致。

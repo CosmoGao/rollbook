@@ -7,4 +7,5 @@
 /snapshot-data/
 /snapshot-backups/
 /node_modules/
+/web/node_modules/
 /.browser-libs/
