@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/netip"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -35,12 +37,82 @@ func main() {
 		err = serve()
 	} else if os.Args[1] == "bootstrap-user" {
 		err = bootstrapUser(os.Args[2:])
+	} else if os.Args[1] == "reset-password" {
+		err = resetPassword(os.Args[2:])
 	} else {
 		err = runCLI(os.Args[1:])
 	}
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func resetPassword(args []string) error {
+	if len(args) != 1 || strings.TrimSpace(args[0]) == "" {
+		return fmt.Errorf("usage: rollbook reset-password <login>")
+	}
+	path := os.Getenv("ROLLBOOK_DB_PATH")
+	if path == "" {
+		path = "./data/rollbook.db"
+	}
+	if _, err := os.Stat(path); err != nil {
+		return err
+	}
+	pepper, err := authPepper()
+	if err != nil {
+		return err
+	}
+	database, err := db.Open(context.Background(), path)
+	if err != nil {
+		return err
+	}
+	defer database.Close()
+	fmt.Fprint(os.Stderr, "New password (at least 12 characters): ")
+	password, err := term.ReadPassword(int(os.Stdin.Fd()))
+	fmt.Fprintln(os.Stderr)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		for i := range password {
+			password[i] = 0
+		}
+	}()
+	return (auth.Service{DB: database, Pepper: pepper}).ResetPassword(context.Background(), args[0], string(password))
+}
+
+func loginPolicy() auth.LoginPolicy {
+	readInt := func(name string) int {
+		n, err := strconv.Atoi(os.Getenv(name))
+		if err != nil || n <= 0 {
+			return 0
+		}
+		return n
+	}
+	readDuration := func(name string) time.Duration {
+		d, err := time.ParseDuration(os.Getenv(name))
+		if err != nil || d <= 0 {
+			return 0
+		}
+		return d
+	}
+	return auth.LoginPolicy{Threshold: readInt("ROLLBOOK_LOGIN_THRESHOLD"), MaxBackoff: readDuration("ROLLBOOK_LOGIN_MAX_BACKOFF"), LockDuration: readDuration("ROLLBOOK_LOGIN_LOCK_DURATION")}
+}
+
+func trustedProxyCIDRs() ([]netip.Prefix, error) {
+	var result []netip.Prefix
+	for _, part := range strings.Split(os.Getenv("ROLLBOOK_TRUSTED_PROXY_CIDRS"), ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		prefix, err := netip.ParsePrefix(part)
+		if err != nil {
+			return nil, fmt.Errorf("ROLLBOOK_TRUSTED_PROXY_CIDRS: %w", err)
+		}
+		result = append(result, prefix.Masked())
+	}
+	return result, nil
 }
 
 func bootstrapUser(args []string) error {
@@ -92,7 +164,11 @@ func serve() error {
 	}
 	defer database.Close()
 	allowInsecureHTTP := insecureHTTPEnabled()
-	engine := httpapi.Engine{Auth: auth.Service{DB: database, Pepper: pepper}, Catalog: catalog.Service{Store: catalog.Store{DB: database}}, AllowInsecureHTTP: allowInsecureHTTP}
+	trustedProxies, err := trustedProxyCIDRs()
+	if err != nil {
+		return err
+	}
+	engine := httpapi.Engine{Auth: auth.Service{DB: database, Pepper: pepper, LoginPolicy: loginPolicy()}, Catalog: catalog.Service{Store: catalog.Store{DB: database}}, AllowInsecureHTTP: allowInsecureHTTP, TrustedProxyCIDRs: trustedProxies}
 	if allowInsecureHTTP {
 		log.Print("警告：已启用 HTTP 模式；登录口令和 API Key 可能在网络中明文传输，仅可用于可信内网。")
 	}
@@ -100,6 +176,24 @@ func serve() error {
 	engine.VersionChecker = checker
 	checker.Start(ctx)
 	go periodicBackup(ctx, database, backupPath(path))
+	go func() {
+		service := backup.Service{DB: database}
+		if err := service.CleanupExpired(ctx); err != nil {
+			log.Printf("导入过期清理失败: %v", err)
+		}
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if err := service.CleanupExpired(ctx); err != nil {
+					log.Printf("导入过期清理失败: %v", err)
+				}
+			}
+		}
+	}()
 	addr := os.Getenv("ROLLBOOK_LISTEN_ADDR")
 	if addr == "" {
 		addr = "127.0.0.1:8080"
@@ -177,6 +271,10 @@ func handler(engines ...httpapi.Engine) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// 资源和接口均不缓存，避免页面显示失效的会话或旧数据。
 		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Referrer-Policy", "no-referrer")
 		mux.ServeHTTP(w, r)
 	})
 }

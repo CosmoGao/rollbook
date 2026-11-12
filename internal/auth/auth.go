@@ -36,8 +36,9 @@ type Principal struct {
 func (p Principal) IsUser() bool { return p.UserID != "" && p.KeyID == "" }
 
 type Service struct {
-	DB     *sql.DB
-	Pepper []byte
+	DB          *sql.DB
+	Pepper      []byte
+	LoginPolicy LoginPolicy
 }
 
 func (s Service) valid() error {
@@ -97,27 +98,7 @@ func (s Service) BootstrapUser(ctx context.Context, login, password string) (str
 }
 
 func (s Service) Login(ctx context.Context, login, password string) (session, csrf string, p Principal, err error) {
-	if err = s.valid(); err != nil {
-		return
-	}
-	var hash string
-	var enabled int
-	err = s.DB.QueryRowContext(ctx, "SELECT id,password_hash,enabled FROM users WHERE login=?", login).Scan(&p.UserID, &hash, &enabled)
-	if err != nil || enabled != 1 || bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) != nil {
-		err = ErrUnauthorized
-		return
-	}
-	p.Login = login
-	session, err = random()
-	if err != nil {
-		return
-	}
-	csrf, err = random()
-	if err != nil {
-		return
-	}
-	_, err = s.DB.ExecContext(ctx, "INSERT INTO sessions(id_hash,user_id,expires_at,csrf_hash) VALUES(?,?,?,?)", s.digest("session", session), p.UserID, time.Now().UTC().Add(12*time.Hour).Format(time.RFC3339Nano), s.digest("csrf", csrf))
-	return
+	return s.LoginWithIP(ctx, login, password, "")
 }
 
 // Session verifies the cookie and, for mutating methods, the double-submit CSRF token.

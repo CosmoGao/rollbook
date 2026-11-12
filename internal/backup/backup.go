@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/CosmoGao/rollbook/internal/catalog"
 	"github.com/CosmoGao/rollbook/internal/db"
 	"github.com/CosmoGao/rollbook/internal/secrets"
 	"gopkg.in/yaml.v3"
@@ -163,6 +164,11 @@ func Parse(data []byte) (File, Preview, error) {
 		for _, row := range rows {
 			if len(row) == 0 {
 				return f, p, ErrInvalid
+			}
+			for _, field := range []string{"mgmt_url", "docs_url", "url", "latest_url"} {
+				if value, ok := row[field]; ok && value != nil && fmt.Sprint(value) != "" && !catalog.ValidHTTPURL(fmt.Sprint(value)) {
+					return f, p, &catalog.ValidationError{Fields: []catalog.FieldError{{Field: "fields." + field, Reason: fmt.Sprintf("%s 中对象 %v 仅接受绝对 HTTP 或 HTTPS 地址", name, row["id"]), Expected: "http:// 或 https:// 地址"}}}
+				}
 			}
 			if name != "users" && name != "api_keys" {
 				if err := secrets.Check(row); err != nil {

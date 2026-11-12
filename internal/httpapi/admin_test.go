@@ -60,6 +60,10 @@ func TestBrowserAdminAndKeyBoundary(t *testing.T) {
 	if csrf == "" {
 		t.Fatal("no CSRF cookie")
 	}
+	badURL := call("POST", "/api/assets", `{"object":{"id":"endpoint:bad","type":"endpoint","name":"入口","fields":{"url":"javascript:alert(1)"}},"base_rev":0,"reason":"测试"}`, csrf, cookies, "")
+	if badURL.Code != 422 || !strings.Contains(badURL.Body.String(), "fields.url") {
+		t.Fatal("URL validation", badURL.Code, badURL.Body.String())
+	}
 	if w := call("POST", "/api/keys", `{"name":"agent","level":"read"}`, "", cookies, ""); w.Code != 403 {
 		t.Fatal(w.Code)
 	}
@@ -135,5 +139,32 @@ func TestBrowserAdminAndKeyBoundary(t *testing.T) {
 	updated, err = store.Get(ctx, "location:old")
 	if err != nil || updated.Name != "已批准" {
 		t.Fatal(updated, err)
+	}
+	wrong := call("POST", "/api/auth/change-password", `{"old_password":"wrong","new_password":"new password 12345"}`, csrf, cookies, "")
+	if wrong.Code != 422 || !strings.Contains(wrong.Body.String(), "old_password") {
+		t.Fatal(wrong.Code, wrong.Body)
+	}
+	changed := call("POST", "/api/auth/change-password", `{"old_password":"strong password 12345","new_password":"new password 12345"}`, csrf, cookies, "")
+	if changed.Code != 200 {
+		t.Fatal(changed.Code, changed.Body)
+	}
+	if w := call("GET", "/api/auth/session", "", "", cookies, ""); w.Code != 401 {
+		t.Fatal("old session", w.Code)
+	}
+	login = call("POST", "/api/auth/login", `{"login":"owner","password":"new password 12345"}`, "", nil, "")
+	if login.Code != 200 {
+		t.Fatal(login.Code, login.Body)
+	}
+	cookies = login.Result().Cookies()
+	for _, c := range cookies {
+		if c.Name == "rollbook_csrf" {
+			csrf = c.Value
+		}
+	}
+	if w := call("POST", "/api/auth/logout-all", "", csrf, cookies, ""); w.Code != 200 {
+		t.Fatal(w.Code, w.Body)
+	}
+	if w := call("GET", "/api/auth/session", "", "", cookies, ""); w.Code != 401 {
+		t.Fatal("logout all", w.Code)
 	}
 }

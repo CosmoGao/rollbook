@@ -49,15 +49,46 @@ func (s Service) Submit(ctx context.Context, data []byte, actor auth.Principal) 
 		return Pending{}, err
 	}
 	proposer := actor.Login
+	ownerID := actor.UserID
 	if !actor.IsUser() {
 		proposer = actor.KeyName + " (" + actor.IssuerName + ")"
+		ownerID = actor.IssuerID
 	}
 	item := Pending{ID: hex.EncodeToString(b[:]), Kind: f.Kind, Proposer: proposer, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano), State: "pending", Preview: p}
 	actorData, _ := json.Marshal(actor)
-	_, err = s.DB.ExecContext(ctx, "INSERT INTO pending_imports(id,kind,yaml,proposer,created_at,state,actor_json) VALUES(?,?,?,?,?,'pending',?)", item.ID, item.Kind, data, item.Proposer, item.CreatedAt, string(actorData))
-	return item, err
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return Pending{}, err
+	}
+	defer tx.Rollback()
+	if err = cleanExpired(ctx, tx); err != nil {
+		return Pending{}, err
+	}
+	var total, mine int
+	if err = tx.QueryRowContext(ctx, "SELECT count(*),count(*) FILTER (WHERE coalesce(nullif(json_extract(actor_json,'$.UserID'),''),nullif(json_extract(actor_json,'$.IssuerID'),''),proposer)=?) FROM pending_imports WHERE state='pending'", ownerID).Scan(&total, &mine); err != nil {
+		return Pending{}, err
+	}
+	if total >= 100 || mine >= 10 {
+		return Pending{}, fmt.Errorf("%w: pending import limit reached", ErrInvalid)
+	}
+	_, err = tx.ExecContext(ctx, "INSERT INTO pending_imports(id,kind,yaml,proposer,created_at,state,actor_json) VALUES(?,?,?,?,?,'pending',?)", item.ID, item.Kind, data, item.Proposer, item.CreatedAt, string(actorData))
+	if err != nil {
+		return Pending{}, err
+	}
+	return item, tx.Commit()
+}
+func cleanExpired(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, "UPDATE pending_imports SET state='expired',yaml=x'' WHERE state='pending' AND created_at<?", time.Now().UTC().Add(-7*24*time.Hour).Format(time.RFC3339Nano))
+	return err
+}
+func (s Service) CleanupExpired(ctx context.Context) error {
+	_, err := s.DB.ExecContext(ctx, "UPDATE pending_imports SET state='expired',yaml=x'' WHERE state='pending' AND created_at<?", time.Now().UTC().Add(-7*24*time.Hour).Format(time.RFC3339Nano))
+	return err
 }
 func (s Service) List(ctx context.Context) ([]Pending, error) {
+	if err := s.CleanupExpired(ctx); err != nil {
+		return nil, err
+	}
 	rows, err := s.DB.QueryContext(ctx, "SELECT id,kind,proposer,created_at,state,yaml FROM pending_imports ORDER BY created_at DESC")
 	if err != nil {
 		return nil, err
@@ -97,8 +128,11 @@ func (s Service) List(ctx context.Context) ([]Pending, error) {
 	return result, nil
 }
 func (s Service) Review(ctx context.Context, id string, approve bool, reviewer string) error {
+	if err := s.CleanupExpired(ctx); err != nil {
+		return err
+	}
 	if !approve {
-		r, err := s.DB.ExecContext(ctx, "UPDATE pending_imports SET state='rejected',yaml=x'' WHERE id=? AND state='pending'", id)
+		r, err := s.DB.ExecContext(ctx, "UPDATE pending_imports SET state='rejected',yaml=x'',reviewed_by=?,reviewed_at=? WHERE id=? AND state='pending'", reviewer, time.Now().UTC().Format(time.RFC3339Nano), id)
 		if err != nil {
 			return err
 		}
@@ -136,7 +170,7 @@ func (s Service) Review(ctx context.Context, id string, approve bool, reviewer s
 	if f.Kind == "merge" {
 		return nil
 	}
-	_, err = s.DB.ExecContext(ctx, "DELETE FROM pending_imports WHERE id=?", id)
+	_, err = s.DB.ExecContext(ctx, "UPDATE pending_imports SET state='approved',yaml=x'',reviewed_by=?,reviewed_at=? WHERE id=?", reviewer, time.Now().UTC().Format(time.RFC3339Nano), id)
 	return err
 }
 func IsInvalid(err error) bool { return errors.Is(err, ErrInvalid) }

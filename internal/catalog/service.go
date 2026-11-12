@@ -478,6 +478,9 @@ func (s Service) Propose(ctx context.Context, p auth.Principal, id string, rev i
 	if e := checkPatchSecrets(patch); e != nil {
 		return "", e
 	}
+	if e := validateURLFields(patch.Fields); e != nil {
+		return "", e
+	}
 	o, e := s.Store.Get(ctx, id)
 	if e != nil {
 		return "", e
