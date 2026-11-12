@@ -10,6 +10,7 @@ import { mountKeys, unmountKeys } from './Keys';
 import { mountBackup, unmountBackup } from './Backup';
 import { mountAudit, unmountAudit } from './Audit';
 import { mountTopology, unmountTopology } from './Topology';
+import { openAssetForm, formFields } from './AssetForm';
 // 界面文案以现有中文为键；这里不更改 API 取值。
 const translations = {
 '备注':'Note','创建时间':'Created','到期时间':'Expires','最后使用时间':'Last used','查看已吊销的 Key':'Show revoked keys','编辑 Key':'Edit key',
@@ -125,37 +126,7 @@ api('/api/auth/session').then(p=>{showApp(p.login);navigate(routeFromLocation())
 async function renderBackup(){mountBackup(root,api,showLogin)}
 
 // 表单字段与数据库中的业务模型保持一致；关联项从当前清册选择。
-const formFields={
- location:['kind','parent_id','city','region','address','timezone','description'],
- uplink:['location_id','isp','type','bandwidth','public_ipv4','public_ipv4_addr','public_ipv6','ddns','inbound_ports_json','edge_device_id','account_ref'],
- host:['kind','net_role','uplink_id','parent_host_id','location_id','model','os','os_version','resources_json','mgmt_url'],
- network:['cidr','location_id','router_id','uplink_id','vlan_id','gateway','dhcp_range','purpose'],
- ip:['address','network_id','host_id','interface','mac','assign'],
- service:['host_id','kind','deploy_method','upstream_json','owner','config_path','docs_url'],
- port:['service_id','bind','port','protocol','purpose'],
- endpoint:['service_id','kind','url','via_json','auth','exposure','nav_card_json'],
- dependency:['from_id','to_id','kind','note'],
- version:['service_id','current_version','current_source','latest_version','latest_source','latest_url','eol_date','pinned','pinned_reason','checked_at'],
- credential:['target_id','vault','item_ref','purpose'],
- note:['target_id','kind','body_md']
-};
-const requiredFields={location:['kind'],uplink:['location_id'],host:['kind','location_id'],network:['cidr','location_id'],ip:['address','host_id'],service:['host_id'],port:['service_id','port','protocol'],endpoint:['service_id','kind','url'],dependency:['from_id','to_id','kind'],version:['service_id'],credential:['target_id','vault','item_ref'],note:['target_id','kind','body_md']};
-const choices={status:['在用','停用','计划中'],source:['人工','agent','自动发现'],confidence:['低','中','高'],kind:{location:['站点','房间','机柜','桌面'],host:['物理机','NAS','虚拟机','LXC','容器','网络设备'],endpoint:['内网直连','反向代理','Cloudflare Tunnel','导航页卡片'],note:['运维笔记','故障','决策','待办']},net_role:['光猫','主路由','旁路由','交换机','AP'],type:{uplink:['光纤宽带','专线','4G·5G','其他']},public_ipv4:['无或CGNAT','动态公网','固定公网','待核实'],assign:['静态','DHCP保留','动态'],protocol:['tcp','udp']};
-const relationType={parent_id:'location',location_id:'location',uplink_id:'uplink',edge_device_id:'host',account_ref:'credential',parent_host_id:'host',router_id:'host',network_id:'network',host_id:'host',service_id:'service'};
-const editableTypes=Object.keys(formFields);
-function choiceValues(type,field){const value=choices[field];return Array.isArray(value)?value:value?.[type]||null}
-async function assetForm(type,original=null){const related={};const needed=new Set(formFields[type].map(f=>relationType[f]).filter(Boolean));if(['dependency','credential','note'].includes(type))for(const t of editableTypes)needed.add(t);if(type==='endpoint')needed.add('service');await Promise.all([...needed].map(async t=>{related[t]=await api('/api/browse?type='+t)}));
- modal(original?'编辑'+types[type]:'新建'+types[type],(box,close,overlay)=>{const form=el('form','asset-form');const controls={};const id=el('input');if(!original){id.value=type+':'+Array.from(crypto.getRandomValues(new Uint8Array(16)),x=>x.toString(16).padStart(2,'0')).join('');id.required=true;add(form,add(el('label','','ID（可修改）'),id))}const name=el('input');name.value=original?.name||'';name.required=true;add(form,add(el('label','','名称'),name));for(const field of ['status','source','confidence',...formFields[type]]){const values=choiceValues(type,field);const relation=relationType[field];let input;
- if(relation||field==='from_id'||field==='to_id'||field==='target_id'||field==='via_json'){
- input=el('select');if(field==='via_json'){input.multiple=true;input.size=4}else{const blank=el('option','','请选择');blank.value='';input.append(blank)}
- const pool=relation?related[relation]:Object.values(related).flat();for(const o of pool){if(o.id===original?.id)continue;const option=el('option','',literal(`${t(types[o.type])} · ${o.name} (${o.id})`));option.value=o.id;input.append(option)}
- }else if(values){input=el('select');if(!requiredFields[type].includes(field)){const blank=el('option','','请选择');blank.value='';input.append(blank)}for(const value of values){const option=el('option','',literal(enumLabel(field,value)));option.value=value;input.append(option)}}else if(field.endsWith('_json')||['description','note','body_md'].includes(field)){input=el('textarea')}else{input=el('input');if(field==='port'||field==='vlan_id')input.type='number';if(field==='pinned')input.type='checkbox'}
- const old=field in (original?.fields||{})?original.fields[field]:original?.[field];if(input.multiple){let arr=old;try{if(typeof arr==='string')arr=JSON.parse(arr)}catch{}for(const option of input.options)option.selected=Array.isArray(arr)&&arr.includes(option.value)}else if(input.type==='checkbox')input.checked=Boolean(old);else if(old!=null)input.value=typeof old==='object'?JSON.stringify(old):String(old);
- input.required=requiredFields[type].includes(field);controls[field]=input;add(form,add(el('label','',field+(input.required?' *':'')),input))}
- const reason=el('input');reason.required=true;reason.placeholder=t('例如：登记新主机、更新服务配置');add(form,add(el('label','','操作原因 *'),reason));const errors=el('div','error');const submit=el('button','primary',original?'保存修改':'创建');submit.type='submit';add(form,errors,add(el('div','modal-actions'),close,submit));box.append(form);
- form.onsubmit=async event=>{event.preventDefault();errors.textContent='';submit.disabled=true;try{const fields={};for(const [key,input] of Object.entries(controls)){if(['status','source','confidence'].includes(key))continue;let value=input.multiple?[...input.selectedOptions].map(x=>x.value):input.type==='checkbox'?Number(input.checked):input.value.trim();if(value===''&&!original)continue;if(key.endsWith('_json')&&typeof value==='string'&&value){try{value=JSON.parse(value)}catch{throw Error(key+'：请输入有效 JSON')}}if((key==='port'||key==='vlan_id')&&value!=='')value=Number(value);fields[key]=value===''?null:value}
- const common={};for(const key of ['status','source','confidence'])if(controls[key].value)common[key]=controls[key].value;
- if(original){const patch={name:name.value.trim(),fields,...common};await api('/api/assets/'+encodeURIComponent(original.id),{method:'PATCH',body:JSON.stringify({rev:original.rev,patch,reason:reason.value.trim()})});overlay.remove();await openObject(original.id,type)}else{const object={id:id.value.trim(),type,name:name.value.trim(),fields,...common};await api('/api/assets',{method:'POST',body:JSON.stringify({object,base_rev:0,reason:reason.value.trim()})});overlay.remove();await openObject(object.id,type)}}catch(e){errors.textContent=e.message;submit.disabled=false}}})}
+async function assetForm(type,original=null){openAssetForm(type,original,api,t,enumLabel,types,openObject)}
 async function refreshObject(o){await openObject(o.id,o.type)}
 function detailActions(o){const bar=el('div','controls detail-actions');const button=(label,fn,cls='ghost')=>{const b=el('button',cls,label);b.onclick=fn;bar.append(b)};
  if(formFields[o.type]&&o.type!=='note')button('编辑',()=>assetForm(o.type,o));
