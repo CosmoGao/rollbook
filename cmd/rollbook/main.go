@@ -279,19 +279,23 @@ func handler(engines ...httpapi.Engine) http.Handler {
 	})
 }
 
-// periodicBackup persists a private complete snapshot on startup and every day.
+// periodicBackup 在启动及可配置的周期内保存完整快照。
 func periodicBackup(ctx context.Context, database *sql.DB, path string) {
+	interval := backupDuration("ROLLBOOK_BACKUP_INTERVAL", 24*time.Hour)
+	weeklyInterval := backupDuration("ROLLBOOK_BACKUP_WEEKLY_INTERVAL", 7*24*time.Hour)
+	dailyKeep := backupCount("ROLLBOOK_BACKUP_DAILY_KEEP", 7)
+	weeklyKeep := backupCount("ROLLBOOK_BACKUP_WEEKLY_KEEP", 4)
 	run := func() {
 		data, err := (backup.Service{DB: database}).Export(ctx, "full")
 		if err == nil {
-			err = backup.WriteAtomic(path, data)
+			err = backup.SaveManaged(filepath.Dir(path), data, time.Now(), dailyKeep, weeklyKeep, weeklyInterval)
 		}
 		if err != nil && ctx.Err() == nil {
 			log.Printf("backup failed: %v", err)
 		}
 	}
 	run()
-	ticker := time.NewTicker(24 * time.Hour)
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
 		select {
@@ -301,4 +305,19 @@ func periodicBackup(ctx context.Context, database *sql.DB, path string) {
 			run()
 		}
 	}
+}
+
+func backupDuration(key string, fallback time.Duration) time.Duration {
+	v, err := time.ParseDuration(os.Getenv(key))
+	if err != nil || v <= 0 {
+		return fallback
+	}
+	return v
+}
+func backupCount(key string, fallback int) int {
+	v, err := strconv.Atoi(os.Getenv(key))
+	if err != nil || v < 1 {
+		return fallback
+	}
+	return v
 }

@@ -40,9 +40,12 @@ type File struct {
 	Objects       []map[string]any            `yaml:"objects,omitempty" json:"objects,omitempty"`
 }
 type Preview struct {
-	Kind    string          `json:"kind"`
-	Counts  map[string]int  `json:"counts"`
-	Objects []ObjectPreview `json:"objects,omitempty"`
+	Kind              string                     `json:"kind"`
+	Counts            map[string]int             `json:"counts"`
+	Objects           []ObjectPreview            `json:"objects,omitempty"`
+	Differences       map[string]DifferenceCount `json:"differences,omitempty"`
+	ObjectDifferences map[string]DifferenceCount `json:"object_differences,omitempty"`
+	LostChanges       []ChangePreview            `json:"lost_changes,omitempty"`
 }
 type Service struct{ DB *sql.DB }
 

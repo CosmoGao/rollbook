@@ -3,6 +3,7 @@ package httpapi
 import (
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/CosmoGao/rollbook/internal/auth"
@@ -18,6 +19,64 @@ func (e Engine) backup(w http.ResponseWriter, r *http.Request, p auth.Principal)
 	service := backup.Service{DB: e.Auth.DB}
 	path := r.URL.Path
 	switch {
+	case path == "/api/backup/files" && r.Method == http.MethodGet:
+		if !p.IsUser() {
+			WriteError(w, auth.ErrForbidden)
+			return
+		}
+		dir, err := backup.Directory(r.Context(), e.Auth.DB)
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+		files, err := backup.ListManaged(dir)
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+		WriteJSON(w, 200, files)
+	case strings.HasPrefix(path, "/api/backup/files/"):
+		if !p.IsUser() {
+			WriteError(w, auth.ErrForbidden)
+			return
+		}
+		remainder := strings.TrimPrefix(path, "/api/backup/files/")
+		name, action, ok := strings.Cut(remainder, "/")
+		if !ok || strings.Contains(action, "/") {
+			WriteError(w, backup.ErrInvalid)
+			return
+		}
+		name, err := url.PathUnescape(name)
+		if err != nil {
+			WriteError(w, backup.ErrInvalid)
+			return
+		}
+		dir, err := backup.Directory(r.Context(), e.Auth.DB)
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+		data, err := backup.ReadManaged(dir, name)
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+		if action == "download" && r.Method == http.MethodGet {
+			w.Header().Set("Content-Type", "application/yaml; charset=utf-8")
+			w.Header().Set("Content-Disposition", "attachment; filename="+name)
+			w.Write(data)
+			return
+		}
+		if action == "restore" && r.Method == http.MethodPost {
+			item, err := service.Submit(r.Context(), data, p)
+			if err != nil {
+				WriteError(w, err)
+				return
+			}
+			WriteJSON(w, 201, item)
+			return
+		}
+		WriteError(w, backup.ErrInvalid)
 	case path == "/api/backup/export" && r.Method == http.MethodGet:
 		kind := r.URL.Query().Get("kind")
 		if kind == "" {
