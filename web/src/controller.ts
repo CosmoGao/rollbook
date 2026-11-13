@@ -40,7 +40,7 @@ export async function navigate(view:string,push=true){
   document.querySelectorAll<HTMLButtonElement>('#nav button[data-view]').forEach(button=>button.classList.toggle('active',button.dataset.view===menuView));
   root.replaceChildren();
   try{switch(view){
-    case 'overview':mountOverview(root,api,navigate);break;
+    case 'overview':mountOverview(root,api,navigate,(term)=>{setSearchQuery(term);navigate('search')},()=>assetForm('location'),(siteID)=>{history.pushState({},'',routePaths.topology+'?site='+encodeURIComponent(siteID));navigate('topology',false)});break;
     case 'assets':mountAssets(root,api,assetForm,openObject,enumLabel);break;
     case 'services':mountAssets(root,api,assetForm,openObject,enumLabel,'service');break;
     case 'sites':mountAssets(root,api,assetForm,openObject,enumLabel,'location');break;

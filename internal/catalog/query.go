@@ -260,7 +260,7 @@ func (q Query) Unverified(ctx context.Context, p auth.Principal) ([]Object, erro
 	}
 	out := []Object{}
 	cutoff := time.Now().UTC().AddDate(0, 0, -30).Format(time.RFC3339Nano)
-	err := q.collect(ctx, p, `SELECT id FROM objects WHERE type NOT IN ('change','note','dependency') AND (verified_at IS NULL OR verified_at < ?) ORDER BY updated_at DESC LIMIT 500`, []any{cutoff}, &out)
+	err := q.collect(ctx, p, `SELECT o.id FROM objects o LEFT JOIN locations l ON l.id=o.id AND o.type='location' WHERE (o.type IN ('host','service') OR (o.type='location' AND l.kind='站点')) AND (o.verified_at IS NULL OR o.verified_at < ?) ORDER BY o.updated_at DESC LIMIT 500`, []any{cutoff}, &out)
 	return out, err
 }
 func (q Query) Browse(ctx context.Context, p auth.Principal, typ string) ([]Object, error) {

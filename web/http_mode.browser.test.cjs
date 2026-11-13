@@ -70,8 +70,8 @@ test('真实浏览器经 TLS 终结反代与直连 HTTP 的提示和 Cookie', {t
    }
    assert.equal(await page.locator('.sidebar-http-notice').isVisible(),!scenario.secure);
    await page.locator('.modal button').last().click();
-   await page.waitForFunction(()=>document.querySelector('.overview-card strong')?.textContent==='0');
-   assert.equal(await page.locator('.overview-card').first().locator('strong').innerText(),'0');
+   await page.waitForFunction(()=>document.querySelector('.overview-task-count strong')?.textContent==='0');
+   assert.equal(await page.locator('.overview-task-count').first().locator('strong').innerText(),'0');
    assert.ok(pendingResponses.length>=2,`${scenario.name}: 总览和侧栏应分别请求待确认变更`);
    assert.ok(pendingResponses.every(status=>status===200),`${scenario.name}: 待确认变更请求应成功`);
    if(artifactDir)await page.screenshot({path:path.join(artifactDir,`${scenario.name}.png`),fullPage:true});
