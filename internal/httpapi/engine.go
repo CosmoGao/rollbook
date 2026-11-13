@@ -94,6 +94,8 @@ func (e Engine) Call(ctx context.Context, p auth.Principal, op string, a Args, v
 			view = "graph"
 		}
 		return q.TopologyView(ctx, p, id, depth, view)
+	case "topology_layers":
+		return q.TopologyLayers(ctx, p)
 	case "list_outdated":
 		return q.Outdated(ctx, p)
 	case "list_unverified":

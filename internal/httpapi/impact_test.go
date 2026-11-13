@@ -40,6 +40,9 @@ func TestImpactRESTAuthorizationAndPreview(t *testing.T) {
 	if w := call("/api/hosts/host:root/impact?recursive=1", nil); w.Code != 401 {
 		t.Fatalf("unauthorized: %d", w.Code)
 	}
+	if w := call("/api/topology/layers", nil); w.Code != 401 {
+		t.Fatalf("layers unauthorized: %d", w.Code)
+	}
 	for _, object := range []catalog.Object{
 		{ID: "location:site", Type: "location", Name: "站点", Fields: map[string]any{"kind": "站点"}},
 		{ID: "host:root", Type: "host", Name: "Proxmox", Fields: map[string]any{"kind": "物理机", "location_id": "location:site"}},
@@ -58,6 +61,9 @@ func TestImpactRESTAuthorizationAndPreview(t *testing.T) {
 		t.Fatal(response.Body)
 	}
 	cookies := response.Result().Cookies()
+	if w := call("/api/topology/layers", cookies); w.Code != 200 || !strings.Contains(w.Body.String(), "host:vm") || !strings.Contains(w.Body.String(), "https://example.invalid") {
+		t.Fatalf("layers: %d %s", w.Code, w.Body)
+	}
 	for _, path := range []string{"/api/hosts/host:root/impact?recursive=1", "/api/services/service:app/impact?recursive=1", "/api/hosts/host:root/offline"} {
 		w := call(path, cookies)
 		if w.Code != 200 {
