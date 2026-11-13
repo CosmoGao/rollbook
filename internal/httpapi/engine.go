@@ -82,6 +82,8 @@ func (e Engine) Call(ctx context.Context, p auth.Principal, op string, a Args, v
 		return q.Inventory(ctx, p, "network", id)
 	case "get_site":
 		return q.Site(ctx, p, id)
+	case "impact":
+		return q.Impact(ctx, p, a.String("kind"), id, a.Bool("recursive"))
 	case "topology":
 		depth := int(a.Int("depth"))
 		if len(a["depth"]) == 0 {

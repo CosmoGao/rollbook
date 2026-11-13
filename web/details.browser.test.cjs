@@ -12,6 +12,7 @@ test('四类详情安全显示笔记、凭据与引用；变更筛选和共享�
   const ids=['host:box','network:lan','service:app','endpoint:web'];
   const types=['host','network','service','endpoint'];
   const assets=Object.fromEntries(ids.map((id,i)=>[id,{id,type:types[i],name:id,rev:1,status:'在用',fields:{kind:i===0?'物理机':undefined,host_id:i===2?'host:box':undefined,url:i===3?'https://example.invalid':undefined}}]));
+  assets['location:site']={id:'location:site',type:'location',name:'站点',rev:1,status:'在用',fields:{kind:'站点'}};
   const note={id:'note:one',type:'note',name:'测试笔记',fields:{kind:'运维笔记',body_md:'**安全** <script>window.__pwned=true</script> [危险](javascript:alert(1)) [文档](https://example.invalid)',author:'agent'},created_at:'2026-11-12T10:00:00Z'};
   const credential={id:'credential:one',type:'credential',name:'引用',fields:{vault:'vault',item_ref:'item',purpose:'访问'}};
   const change={id:'change:one',type:'change',name:'变更',created_at:'2026-11-12T10:00:00Z',fields:{action:'update',actor:'agent',actor_key_name:'robot',object_id:'host:box',object_type:'host',reason:'更新'}};
@@ -34,8 +35,8 @@ test('四类详情安全显示笔记、凭据与引用；变更筛选和共享�
    if(p==='/api/services/service:app/topology')return reply({nodes:[],edges:[]});
    return route.fulfill({status:404,json:{message:'unexpected '+p}});
   });
-  await installBundle(page);await page.goto('http://rollbook.test/');
-  await page.getByRole('button',{name:'稍后再说'}).click();
+  await installBundle(page);await page.goto('http://rollbook.test/');await page.locator('#nav button[data-view="assets"]').waitFor({state:'visible',timeout:15000});
+
   for(const id of ids){
    await page.locator('#nav button[data-view="assets"]').click();{const type=id.split(':')[0];if(({location:1,host:1,network:1,service:1})[type])await page.getByRole('tab',{name:{location:'站点',host:'主机',network:'网段',service:'服务'}[type]}).click();else await page.locator('.asset-type-select').selectOption(type)};await page.locator('.card').filter({hasText:id}).click();
    await page.getByRole('heading',{name:'笔记'}).waitFor();

@@ -146,6 +146,9 @@ func route(r *http.Request) (string, Args, bool) {
 	if v := q.Get("archived"); v == "true" {
 		a["archived"] = json.RawMessage("true")
 	}
+	if v := q.Get("recursive"); v == "1" || v == "true" {
+		a["recursive"] = json.RawMessage("true")
+	}
 	if v := q.Get("depth"); v != "" {
 		a["depth"] = IntArg(v)
 	}
@@ -175,6 +178,10 @@ func route(r *http.Request) (string, Args, bool) {
 		case len(s) == 3 && s[1] == "services":
 			a["id"] = StringArg(s[2])
 			return "get_service", a, true
+		case len(s) == 4 && (s[1] == "services" || s[1] == "hosts") && s[3] == "impact":
+			a["id"] = StringArg(s[2])
+			a["kind"] = StringArg(strings.TrimSuffix(s[1], "s"))
+			return "impact", a, true
 		case len(s) == 4 && s[1] == "services" && s[3] == "topology":
 			a["id"] = StringArg(s[2])
 			return "topology", a, true
