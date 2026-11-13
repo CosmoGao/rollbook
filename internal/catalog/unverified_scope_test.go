@@ -1,6 +1,7 @@
 package catalog_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -28,6 +29,18 @@ func TestUnverifiedOnlySitesHostsServices(t *testing.T) {
 		}
 		if err != nil {
 			t.Fatal(asset.ID, err)
+		}
+	}
+	// 以足以挤满旧查询结果的辅助对象验证角标口径不会随库规模膨胀。
+	for i := 0; i < 180; i++ {
+		for _, asset := range []catalog.Object{
+			{ID: fmt.Sprintf("ip:extra-%d", i), Type: "ip", Name: "附加 IP", Fields: map[string]any{"address": fmt.Sprintf("192.0.2.%d", i+30), "host_id": "host:box", "network_id": "network:lan"}},
+			{ID: fmt.Sprintf("port:extra-%d", i), Type: "port", Name: "附加端口", Fields: map[string]any{"service_id": "service:app", "port": i + 8000, "protocol": "tcp"}},
+			{ID: fmt.Sprintf("context:extra-%d", i), Type: "context", Name: "附加上下文", Fields: map[string]any{"scope": "全局", "key": fmt.Sprintf("hint-%d", i), "body_md": "内容", "owner": "tester"}},
+		} {
+			if _, err := service.Store.Create(ctx, asset, "tester"); err != nil {
+				t.Fatal(asset.ID, err)
+			}
 		}
 	}
 	query := catalog.Query{Service: service}
@@ -60,7 +73,7 @@ func TestUnverifiedOnlySitesHostsServices(t *testing.T) {
 	}
 	check("location:site", "host:box", "service:app")
 	var total int
-	if err := database.QueryRowContext(ctx, "SELECT count(*) FROM objects WHERE type IN ('ip','port','context')").Scan(&total); err != nil || total != 3 {
+	if err := database.QueryRowContext(ctx, "SELECT count(*) FROM objects WHERE type IN ('ip','port','context')").Scan(&total); err != nil || total != 543 {
 		t.Fatal(total, err)
 	}
 }
