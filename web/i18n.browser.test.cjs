@@ -76,13 +76,13 @@ test('English interface preserves asset names and IDs while translating kind lab
   await page.locator('#nav button[data-view="assets"]').click();
   await page.locator('.table-name').first().waitFor();
   assert.deepEqual(await page.locator('.table-name').allTextContents(),['中文站点','站点']);
-  await page.locator('#content select').first().selectOption('host');
+  await page.getByRole('tab',{name:'Hosts'}).click();
   await page.locator('.table-name').first().waitFor();
   assert.deepEqual(await page.locator('.table-name').allTextContents(),['【示例】演示主机']);
   await page.getByRole('button',{name:'New',exact:true}).click();
   assert.equal(await page.locator('.asset-form select').last().locator('option[value="location:zh"]').textContent(),'Sites · 中文站点 (location:zh)');
   await page.locator('.modal .ghost').click();
-  await page.locator('#content select').first().selectOption('location');
+  await page.getByRole('tab',{name:'Sites'}).click();
   await page.getByRole('button',{name:'New',exact:true}).click();
   assert.equal(await page.locator('.asset-form label').filter({hasText:'kind'}).locator('option[value="站点"]').textContent(),'Site');
   await page.locator('.asset-form label').filter({hasText:'Name'}).locator('input').fill('中文站点');

@@ -97,10 +97,10 @@ test('资产、拓扑、待处理、Key 与设置在新构建中可操作',async
   await page.locator('.overview-grid').waitFor();await shot(page,'desktop-overview-light');
   await page.locator('#nav button[data-view="assets"]').click();
   await page.getByRole('heading',{name:'资产维护'}).waitFor();await shot(page,'desktop-assets-sites-light');
-  await page.locator('.asset-type-select').selectOption('host');
+  await page.getByRole('tab',{name:'主机'}).click();
   await page.getByText('测试主机').first().waitFor();await shot(page,'desktop-assets-hosts-light');
-  await page.locator('.asset-type-select').selectOption('network');await shot(page,'desktop-assets-networks-light');
-  await page.locator('.asset-type-select').selectOption('service');await page.getByText('测试服务').first().waitFor();await shot(page,'desktop-assets-services-light');
+  await page.getByRole('tab',{name:'网段'}).click();await shot(page,'desktop-assets-networks-light');
+  await page.getByRole('tab',{name:'服务'}).click();await page.getByText('测试服务').first().waitFor();await shot(page,'desktop-assets-services-light');
   await page.locator('#nav button[data-view="topology"]').click();
   await page.locator('.flow-container .react-flow__node').first().waitFor({timeout:5000});
   await page.getByRole('combobox',{name:'站点'}).selectOption(site.id);

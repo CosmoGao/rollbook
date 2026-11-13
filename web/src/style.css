@@ -80,3 +80,6 @@ input,select,textarea,.field,.login-card input,.modal input,.modal select,.modal
 .controls select{min-height:36px;border:1px solid var(--border);border-radius:7px;padding:6px 10px;background:var(--card);color:var(--foreground)}.controls{align-items:center}
 :root{--flow-node-bg:#eff6ff;--flow-node-text:#1e3a8a}:root[data-theme=dark]{--flow-node-bg:#172554;--flow-node-text:#bfdbfe}@media(prefers-color-scheme:dark){:root[data-theme=system]{--flow-node-bg:#172554;--flow-node-text:#bfdbfe}}
 .eyebrow{color:var(--primary)}.login-card{border:1px solid var(--border)}.login-card .primary{width:100%}
+/* 账号操作保持同一行，避免侧栏底部按钮折字。 */
+.sidebar-foot{display:grid;grid-template-columns:repeat(3,max-content);justify-content:space-between;align-items:center;column-gap:4px}.sidebar-foot #user-name,.sidebar-foot #build-version{grid-column:1/-1;min-width:0}.sidebar-foot button{white-space:nowrap;font-size:12px}
+.view-switch button[aria-pressed=true]{background:var(--primary)!important;color:var(--primary-foreground)!important;border-color:var(--primary)!important}.view-switch button[aria-pressed=false]{background:var(--card)!important;color:var(--foreground)!important;border-color:var(--border)!important}.sidebar-foot #user-name{overflow-wrap:anywhere}
