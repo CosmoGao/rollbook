@@ -18,7 +18,23 @@ func (q Query) Search(ctx context.Context, p auth.Principal, term string) ([]sea
 	if err := auth.Authorize(p, auth.View, ""); err != nil {
 		return nil, err
 	}
-	return (search.Store{DB: q.Service.Store.DB}).Search(ctx, term)
+	s := search.Store{DB: q.Service.Store.DB}
+	results, err := s.Search(ctx, term)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, len(results))
+	for i := range results {
+		ids[i] = results[i].ID
+	}
+	contexts, err := s.Contexts(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	for i := range results {
+		results[i].Summary = contexts[results[i].ID]
+	}
+	return results, nil
 }
 func (q Query) Site(ctx context.Context, p auth.Principal, id string) (search.Site, error) {
 	if err := auth.Authorize(p, auth.View, ""); err != nil {
@@ -256,6 +272,20 @@ func (q Query) Browse(ctx context.Context, p auth.Principal, typ string) ([]Obje
 	}
 	out := []Object{}
 	err := q.collect(ctx, p, `SELECT id FROM objects WHERE type=? ORDER BY name LIMIT 500`, []any{typ}, &out)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, len(out))
+	for i := range out {
+		ids[i] = out[i].ID
+	}
+	contexts, err := (search.Store{DB: q.Service.Store.DB}).Contexts(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		out[i].Summary = contexts[out[i].ID]
+	}
 	return out, err
 }
 func (q Query) Changes(ctx context.Context, p auth.Principal, objectID, state string) ([]Object, error) {

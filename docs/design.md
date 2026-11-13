@@ -108,3 +108,9 @@ tables:
 ## 测试与交付
 
 单元测试覆盖 CIDR 最长前缀、关系环、版本比较、秘密检测；SQLite 集成测试覆盖迁移、FTS 与 IP 搜索、rev 冲突、审计事务、context 过期归档、YAML 往返与失败回滚。HTTP/MCP/CLI 端到端测试使用 issue 示例数据逐条验证 16 条验收标准，尤其是 key 级别、即时吊销、管理员接口 403、`get_service("Overleaf")` 和搜索 `126`。CI 执行 `go test ./...`、前端构建与镜像构建/推送 GHCR；不含部署。每个实施 PR 交测试审查独立验收，CI 通过后由测试审查 squash 合并 main；失败退回工程师。任何人不得直接推 main。
+
+## 浏览与搜索的派生站点字段
+
+`/api/browse` 与 `/api/search` 返回只读展示摘要：`site_id`、`site_name`、`kind`、`primary_ip`、`host_id`、`host_name`、`services`、`endpoints`。`site_id` 总是沿对象所属位置的 `parent_id` 链向上找到的首个 `kind=站点` 的位置 ID；机柜和房间自身不能当作站点。主机、网段与网络接入取各自 `location_id`，IP 和服务先取宿主的 `location_id`，入口先取服务的宿主。找不到站点时省略该字段。位置父链有环时停止遍历。后续拓扑站点筛选应复用此约定。
+
+主 IP 按地址排序取该主机登记的第一条 IP，服务沿用宿主主 IP。`services` 是宿主上的服务名称，`endpoints` 只含无用户信息的 HTTP(S) URL；凭据、密钥及其他私有字段不进入摘要。以上字段不落库，也不修改备份 YAML。

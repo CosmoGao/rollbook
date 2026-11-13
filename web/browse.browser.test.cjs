@@ -80,8 +80,8 @@ test('网页重复登记 IP 时显示占用主机',async()=>{
   const form=page.locator('.asset-form');
   await form.locator('label').filter({hasText:'ID（可修改）'}).locator('input').fill('ip:duplicate');
   await form.locator('label').filter({hasText:'名称'}).locator('input').fill('重复 IP');
-  await form.locator('label').filter({hasText:'address'}).locator('input').fill('192.0.2.5');
-  await form.locator('label').filter({hasText:'host_id'}).locator('select').selectOption('host:other');
+  await form.locator('label').filter({hasText:'地址'}).first().locator('input').fill('192.0.2.5');
+  await form.locator('label').filter({hasText:'宿主'}).locator('select').selectOption('host:other');
   await form.locator('label').filter({hasText:'操作原因'}).locator('input').fill('登记测试');
   await form.getByRole('button',{name:'创建'}).click();
   await form.locator('.error').getByText(/已占用主机/).waitFor();

@@ -52,7 +52,7 @@ test('从空库用网页录入、维护并两次确认删除',async()=>{
    const form=page.locator('.asset-form');
    await form.locator('label').filter({hasText:'名称'}).locator('input').fill(name);
    await form.locator('label').filter({hasText:'ID（可修改）'}).locator('input').fill(type+':'+({location:'site',network:'net',host:'box',ip:'one',service:'app'}[type]));
-   for(const [field,value] of Object.entries(fields)){const input=form.locator('label').filter({hasText:field}).first().locator('input, select');if(await input.evaluate(el=>el.tagName)==='SELECT')await input.selectOption(value);else await input.fill(value)}
+   for(const [field,value] of Object.entries(fields)){if(field==='source')await form.locator('.form-advanced summary').click();const label=({kind:'类别',source:'来源',cidr:'CIDR',location_id:'位置',address:'地址',host_id:'宿主',network_id:'网段'})[field]||field;const input=form.locator('label').filter({hasText:label}).first().locator('input, select');if(await input.evaluate(el=>el.tagName)==='SELECT')await input.selectOption(value);else await input.fill(value)}
    await form.locator('label').filter({hasText:'操作原因'}).locator('input').fill('录入测试');
    await form.getByRole('button',{name:'创建'}).click();
    await page.locator('.modal').waitFor({state:'detached'});
@@ -64,12 +64,12 @@ test('从空库用网页录入、维护并两次确认删除',async()=>{
   await create('service','应用',{host_id:'host:box'});
   assert.equal(writes.filter(x=>x.action==='create').length,5);
   assert.equal(writes[0].object.source,'自动发现');
-  await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('tab',{name:'主机'}).click();await page.locator('.card').filter({hasText:'host:box'}).click();
+  await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('tab',{name:'主机'}).click();await page.locator('.card').filter({hasText:'主机'}).click();
   await page.getByRole('button',{name:'编辑'}).click();const form=page.locator('.asset-form');await form.locator('label').filter({hasText:'名称'}).locator('input').fill('主机改名');await form.locator('label').filter({hasText:'操作原因'}).locator('input').fill('改名');await form.getByRole('button',{name:'保存修改'}).click();await page.locator('.modal').waitFor({state:'detached'});
   page.once('dialog',d=>d.accept('现场确认'));await page.getByRole('button',{name:'标记核实'}).click();await page.waitForTimeout(50);
   await page.getByRole('button',{name:'加笔记'}).click();await page.locator('.modal textarea').fill('检查完成');await page.locator('.modal input').fill('巡检');await page.getByRole('button',{name:'保存笔记'}).click();await page.locator('.modal').waitFor({state:'detached'});
-  await page.locator('#nav button[data-view="assets"]').click();await page.locator('.asset-type-select').first().selectOption('note');await page.locator('.card').filter({hasText:'note:one'}).click();await page.getByRole('button',{name:'删除'}).waitFor();assert.equal(await page.getByRole('button',{name:'编辑'}).count(),0);
-  await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('tab',{name:'主机'}).click();await page.locator('.card').filter({hasText:'host:box'}).click();
+  await page.locator('#nav button[data-view="assets"]').click();await page.locator('.asset-type-select').first().selectOption('note');await page.locator('.card').filter({hasText:'运维笔记'}).click();await page.getByRole('button',{name:'删除'}).waitFor();assert.equal(await page.getByRole('button',{name:'编辑'}).count(),0);
+  await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('tab',{name:'主机'}).click();await page.locator('.card').filter({hasText:'主机'}).click();
   await page.getByRole('button',{name:'停用主机'}).click();assert.match(await page.locator('.modal').innerText(),/应用/);assert.match(await page.locator('.modal').innerText(),/192.0.2.5/);await page.locator('.modal .check-row input').nth(0).check();await page.locator('.modal .check-row input').nth(1).check();await page.locator('.modal input[placeholder="停用原因"]').fill('换机');await page.getByRole('button',{name:'确认停用'}).click();await page.locator('.modal').waitFor({state:'detached'});
   await page.getByRole('button',{name:'恢复主机'}).click();await page.locator('.modal input[placeholder="恢复原因"]').fill('设备恢复');await page.getByRole('button',{name:'恢复',exact:true}).click();await page.locator('.modal').waitFor({state:'detached'});
   await page.locator('#nav button[data-view="assets"]').click();await page.locator('.asset-type-select').first().selectOption('ip');await page.locator('.card').click();await page.getByRole('button',{name:'删除'}).click();await page.locator('.modal input[placeholder="删除原因"]').fill('撤销测试数据');let dialogs=0;page.on('dialog',d=>{dialogs++;d.accept()});await page.getByRole('button',{name:'继续删除'}).click();await page.locator('.modal .error').getByText(/service:app/).waitFor();await page.getByRole('button',{name:'继续删除'}).click();await page.locator('.modal').waitFor({state:'detached'});assert.equal(dialogs,2);
