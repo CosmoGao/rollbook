@@ -74,11 +74,11 @@ test('English interface preserves asset names and IDs while translating kind lab
   await installBundle(page);await page.goto('http://rollbook.test/');
   await page.locator('#user-name').getByText('站点').waitFor();
   await page.locator('#nav button[data-view="assets"]').click();
-  await page.locator('.card-title').first().waitFor();
-  assert.deepEqual(await page.locator('.card-title').allTextContents(),['中文站点','站点']);
+  await page.locator('.table-name').first().waitFor();
+  assert.deepEqual(await page.locator('.table-name').allTextContents(),['中文站点','站点']);
   await page.locator('#content select').first().selectOption('host');
-  await page.locator('.card-title').first().waitFor();
-  assert.deepEqual(await page.locator('.card-title').allTextContents(),['【示例】演示主机']);
+  await page.locator('.table-name').first().waitFor();
+  assert.deepEqual(await page.locator('.table-name').allTextContents(),['【示例】演示主机']);
   await page.getByRole('button',{name:'New',exact:true}).click();
   assert.equal(await page.locator('.asset-form select').last().locator('option[value="location:zh"]').textContent(),'Sites · 中文站点 (location:zh)');
   await page.locator('.modal .ghost').click();

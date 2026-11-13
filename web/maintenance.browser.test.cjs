@@ -106,7 +106,7 @@ test('空库引导导入虚构数据并展示可复制的客户端配置',async(
   assert.equal([...objects.values()].find(o=>o.type==='network').fields.cidr,'192.0.2.0/24');
   assert.equal([...objects.values()].find(o=>o.type==='endpoint').fields.url,'https://demo.example.invalid');
   for(const [view,name] of [['sites','【示例】云杉站点'],['hosts','【示例】演示主机'],['networks','【示例】文档网段']]){
-   await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('button',{name:{sites:'站点',hosts:'主机浏览树',networks:'网段'}[view]}).click();
+   await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('tab',{name:{sites:'站点',hosts:'主机',networks:'网段'}[view]}).click();
    await page.locator('#content').getByText(name).waitFor();
   }
   await page.locator('#nav button[data-view="agent"]').click();

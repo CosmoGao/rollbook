@@ -31,12 +31,12 @@ export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
 }
 const unmountAll=()=>{unmountOverview();unmountAssets();unmountSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();unmountAudit();unmountTopology();unmountDetail();unmountBrowse()};
 const error=(value:unknown)=>{const element=document.createElement('div');element.className='error';element.textContent=value instanceof Error?value.message:String(value);root.replaceChildren(element)};
-export function openObject(id:string,type?:string){unmountAll();document.getElementById('crumb')!.textContent=t('资产详情');document.querySelectorAll('#nav button').forEach(button=>button.classList.remove('active'));root.replaceChildren();mountDetail(root,{id,type,api,t,enumLabel,types,open:openObject,navigate})}
+export function openObject(id:string,type?:string){unmountAll();document.querySelectorAll('#nav button').forEach(button=>button.classList.remove('active'));root.replaceChildren();mountDetail(root,{id,type,api,t,enumLabel,types,open:openObject,navigate})}
 const assetForm=(type:string)=>openAssetForm(type,null,api,t,enumLabel,types,openObject);
 export async function navigate(view:string,push=true){
   unmountAll();const target=routePaths[view];if(push&&target&&target!==location.pathname+location.search)history.pushState({},'',target);
   const menuView=['pending','unverified','outdated'].includes(view)?'pendingHub':view==='services'?'assets':view;
-  document.getElementById('crumb')!.textContent=t(labels[menuView]||'资产详情');
+
   document.querySelectorAll<HTMLButtonElement>('#nav button[data-view]').forEach(button=>button.classList.toggle('active',button.dataset.view===menuView));
   root.replaceChildren();
   try{switch(view){

@@ -41,7 +41,7 @@ test('主机和服务拓扑可绘制，访问链可切换，节点可打开详�
    return route.fulfill({status:404,json:{message:'not found'}});
   });
   await installBundle(page);await page.goto('http://rollbook.test/');
-  await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('button',{name:'主机浏览树'}).click();
+  await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('tab',{name:'主机'}).click();await page.getByRole('button',{name:'主机浏览树'}).click();
   await page.getByText('实体主机').first().click();
   await page.locator('.topology-canvas .react-flow').waitFor();
   assert.equal(await page.locator('.react-flow__node').count(),5);

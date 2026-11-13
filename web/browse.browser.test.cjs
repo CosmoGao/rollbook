@@ -33,14 +33,14 @@ test('主机树逐层显示 IP/状态并可折叠；网段显示冲突和空闲�
    return route.fulfill({status:404,json:{message:'not found'}});
   });
   await installBundle(page);await page.goto('http://rollbook.test/');
-  await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('button',{name:'主机浏览树'}).click();
+  await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('tab',{name:'主机'}).click();await page.getByRole('button',{name:'主机浏览树'}).click();
   await page.locator('.tree-node').first().waitFor();
   assert.equal(await page.locator('.tree-node').count(),4);
   assert.match(await page.locator('.tree-node').last().locator('summary').first().textContent(),/192\.0\.2\.4.*在用/);
   assert.match(await page.locator('.tree-node').nth(2).locator('summary').first().textContent(),/192\.0\.2\.4.*停用/);
   await page.locator('.tree-node').first().locator('summary').first().click();
   assert.equal(await page.locator('.tree-node').first().evaluate(el=>el.open),false);
-  await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('button',{name:'网段'}).click();
+  await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('tab',{name:'网段'}).click();
   await page.getByText('文档网段').click();
   await page.getByText('冲突').first().waitFor();
   assert.equal(await page.locator('.tag.conflict').count(),2);
