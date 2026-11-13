@@ -32,7 +32,7 @@ test('390px 搜索、查看详情、复制 IP、退出，页面没有横向溢�
    return route.fulfill({status:404,json:{message:'unexpected '+p}});
   });
   await installBundle(page);await page.goto('http://localhost:8910/');
-  await page.locator('#mobile-user-name').getByText('owner').waitFor();
+  await page.getByRole('button',{name:'打开菜单'}).click();await page.locator('#mobile-user-name').getByText('owner').waitFor();await page.locator('.mobile-drawer button').filter({hasText:'资产'}).click();
   await page.locator('#mobile-search input').fill('126');
   await page.locator('#mobile-search button').click();
   await page.getByText('测试主机').first().waitFor();
@@ -45,7 +45,7 @@ test('390px 搜索、查看详情、复制 IP、退出，页面没有横向溢�
   const manifest=await page.evaluate(async()=>{const r=await fetch('/manifest.webmanifest');return r.json()});
   assert.equal(manifest.display,'standalone');
   assert.equal(manifest.icons.length,2);
-  await page.locator('#mobile-logout').click();
+  await page.getByRole('button',{name:'打开菜单'}).click();await page.locator('#mobile-logout').click();
   await page.locator('#login-form').waitFor({state:'visible'});
   assert.equal(signedOut,true);
  }finally{await browser.close()}

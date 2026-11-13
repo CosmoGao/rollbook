@@ -10,7 +10,7 @@ import { mountTopology, unmountTopology } from './Topology';
 import { openAssetForm } from './AssetForm';
 import { mountDetail, unmountDetail } from './AssetDetail';
 import { openFirstRun } from './FirstRun';
-import { mountBrowse, unmountBrowse } from './Browse';
+import { unmountBrowse } from './Browse';
 import { t, enumLabel, setLanguage, language } from './catalog-i18n';
 
 const root=document.getElementById('content')!;
@@ -31,19 +31,21 @@ export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
 }
 const unmountAll=()=>{unmountOverview();unmountAssets();unmountSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();unmountAudit();unmountTopology();unmountDetail();unmountBrowse()};
 const error=(value:unknown)=>{const element=document.createElement('div');element.className='error';element.textContent=value instanceof Error?value.message:String(value);root.replaceChildren(element)};
-export function openObject(id:string,type?:string){unmountAll();document.getElementById('crumb')!.textContent=t('资产详情');document.querySelectorAll('#nav button').forEach(button=>button.classList.remove('active'));root.replaceChildren();mountDetail(root,{id,type,api,t,enumLabel,types,open:openObject,navigate})}
+export function openObject(id:string,type?:string){unmountAll();document.querySelectorAll('#nav button').forEach(button=>button.classList.remove('active'));root.replaceChildren();mountDetail(root,{id,type,api,t,enumLabel,types,open:openObject,navigate})}
 const assetForm=(type:string)=>openAssetForm(type,null,api,t,enumLabel,types,openObject);
 export async function navigate(view:string,push=true){
   unmountAll();const target=routePaths[view];if(push&&target&&target!==location.pathname+location.search)history.pushState({},'',target);
-  const menuView=['pending','unverified','outdated'].includes(view)?'pendingHub':view==='services'?'assets':view;
-  document.getElementById('crumb')!.textContent=t(labels[menuView]||'资产详情');
+  const menuView=['pending','unverified','outdated'].includes(view)?'pendingHub':['services','sites','hosts','networks'].includes(view)?'assets':view;
+
   document.querySelectorAll<HTMLButtonElement>('#nav button[data-view]').forEach(button=>button.classList.toggle('active',button.dataset.view===menuView));
   root.replaceChildren();
   try{switch(view){
     case 'overview':mountOverview(root,api,navigate);break;
-    case 'assets':mountAssets(root,api,assetForm,openObject,navigate);break;
-    case 'services':mountAssets(root,api,assetForm,openObject,navigate,'service');break;
-    case 'sites':case 'hosts':case 'networks':mountBrowse(root,view,api,openObject,enumLabel);break;
+    case 'assets':mountAssets(root,api,assetForm,openObject,enumLabel);break;
+    case 'services':mountAssets(root,api,assetForm,openObject,enumLabel,'service');break;
+    case 'sites':mountAssets(root,api,assetForm,openObject,enumLabel,'location');break;
+    case 'hosts':mountAssets(root,api,assetForm,openObject,enumLabel,'host','tree');break;
+    case 'networks':mountAssets(root,api,assetForm,openObject,enumLabel,'network');break;
     case 'topology':mountTopology(root,api,openObject);break;
     case 'pendingHub':case 'pending':case 'unverified':case 'outdated':mountPending(root,api,openObject,navigate,view==='pendingHub'?'pending':view);break;
     case 'agent':case 'keys':mountKeys(root,api);break;

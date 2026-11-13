@@ -37,6 +37,7 @@ test('版本在中英文登录页和工作台一致，且窄屏可见',async()=>
    if(process.env.ROLLBOOK_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.ROLLBOOK_SCREENSHOT_DIR,`login-${locale}.png`),fullPage:true});
    await page.unrouteAll();
    await openPage(page,{version,commit,loggedIn:true});
+   if(width<760)await page.getByRole('button',{name:locale.startsWith('en')?'Open menu':'打开菜单'}).click();
    const label=page.locator(width<760?'#mobile-build-version':'#build-version');
    await label.getByText(expected).waitFor();
    assert.equal(await label.isVisible(),true);

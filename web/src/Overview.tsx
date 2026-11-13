@@ -22,7 +22,7 @@ function Overview({api,onNavigate}:{api:API;onNavigate:(view:string)=>void}){
   const changes=useQuery({queryKey:['overview','changes'],queryFn:()=>api<Item[]>('/api/changes')});
   const contexts=useQuery({queryKey:['overview','contexts'],queryFn:()=>api<Item[]>('/api/contexts?archived=false')});
   return <>
-    <div className="hero"><p className="eyebrow">ROLLBOOK / {t('overview')}</p><h1>{t('overview')}</h1><p className="muted">{t('服务与资产清册')}</p></div>
+    <div className="hero"><h1>{t('overview')}</h1><p className="muted">{t('服务与资产清册')}</p></div>
     <div className="grid overview-grid">{counts.map(([label,,view],index)=>{
       const q=queries[index];const items=q.data||[];const count=view==='sites'?items.filter(item=>item.fields?.kind==='站点').length:items.length;
       return <button className="overview-card" key={view} onClick={()=>onNavigate(view)} aria-label={`${t(label)} ${q.isLoading?t('正在加载'):q.isError?t('加载失败'):count}`}><span className="muted">{t(label)}</span><strong>{q.isLoading?'…':q.isError?'!':count}</strong>{q.isError&&<small className="error">{t('加载失败')}，{t('点击重试')}</small>}</button>

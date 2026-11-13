@@ -47,7 +47,7 @@ test('从空库用网页录入、维护并两次确认删除',async()=>{
   await page.locator('#nav button[data-view="assets"]').click();
   async function create(type,name,fields){
    await page.locator('#nav button[data-view="assets"]').click();
-   await page.locator('.asset-type-select').first().selectOption(type);
+   if(({location:1,host:1,network:1,service:1})[type])await page.getByRole('tab',{name:{location:'站点',host:'主机',network:'网段',service:'服务'}[type]}).click();else await page.locator('.asset-type-select').first().selectOption(type);
    await page.getByRole('button',{name:'新建'}).click();
    const form=page.locator('.asset-form');
    await form.locator('label').filter({hasText:'名称'}).locator('input').fill(name);
@@ -64,12 +64,12 @@ test('从空库用网页录入、维护并两次确认删除',async()=>{
   await create('service','应用',{host_id:'host:box'});
   assert.equal(writes.filter(x=>x.action==='create').length,5);
   assert.equal(writes[0].object.source,'自动发现');
-  await page.locator('#nav button[data-view="assets"]').click();await page.locator('.asset-type-select').first().selectOption('host');await page.locator('.card').filter({hasText:'host:box'}).click();
+  await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('tab',{name:'主机'}).click();await page.locator('.card').filter({hasText:'host:box'}).click();
   await page.getByRole('button',{name:'编辑'}).click();const form=page.locator('.asset-form');await form.locator('label').filter({hasText:'名称'}).locator('input').fill('主机改名');await form.locator('label').filter({hasText:'操作原因'}).locator('input').fill('改名');await form.getByRole('button',{name:'保存修改'}).click();await page.locator('.modal').waitFor({state:'detached'});
   page.once('dialog',d=>d.accept('现场确认'));await page.getByRole('button',{name:'标记核实'}).click();await page.waitForTimeout(50);
   await page.getByRole('button',{name:'加笔记'}).click();await page.locator('.modal textarea').fill('检查完成');await page.locator('.modal input').fill('巡检');await page.getByRole('button',{name:'保存笔记'}).click();await page.locator('.modal').waitFor({state:'detached'});
   await page.locator('#nav button[data-view="assets"]').click();await page.locator('.asset-type-select').first().selectOption('note');await page.locator('.card').filter({hasText:'note:one'}).click();await page.getByRole('button',{name:'删除'}).waitFor();assert.equal(await page.getByRole('button',{name:'编辑'}).count(),0);
-  await page.locator('#nav button[data-view="assets"]').click();await page.locator('.asset-type-select').first().selectOption('host');await page.locator('.card').filter({hasText:'host:box'}).click();
+  await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('tab',{name:'主机'}).click();await page.locator('.card').filter({hasText:'host:box'}).click();
   await page.getByRole('button',{name:'停用主机'}).click();assert.match(await page.locator('.modal').innerText(),/应用/);assert.match(await page.locator('.modal').innerText(),/192.0.2.5/);await page.locator('.modal .check-row input').nth(0).check();await page.locator('.modal .check-row input').nth(1).check();await page.locator('.modal input[placeholder="停用原因"]').fill('换机');await page.getByRole('button',{name:'确认停用'}).click();await page.locator('.modal').waitFor({state:'detached'});
   await page.getByRole('button',{name:'恢复主机'}).click();await page.locator('.modal input[placeholder="恢复原因"]').fill('设备恢复');await page.getByRole('button',{name:'恢复',exact:true}).click();await page.locator('.modal').waitFor({state:'detached'});
   await page.locator('#nav button[data-view="assets"]').click();await page.locator('.asset-type-select').first().selectOption('ip');await page.locator('.card').click();await page.getByRole('button',{name:'删除'}).click();await page.locator('.modal input[placeholder="删除原因"]').fill('撤销测试数据');let dialogs=0;page.on('dialog',d=>{dialogs++;d.accept()});await page.getByRole('button',{name:'继续删除'}).click();await page.locator('.modal .error').getByText(/service:app/).waitFor();await page.getByRole('button',{name:'继续删除'}).click();await page.locator('.modal').waitFor({state:'detached'});assert.equal(dialogs,2);
@@ -106,7 +106,7 @@ test('空库引导导入虚构数据并展示可复制的客户端配置',async(
   assert.equal([...objects.values()].find(o=>o.type==='network').fields.cidr,'192.0.2.0/24');
   assert.equal([...objects.values()].find(o=>o.type==='endpoint').fields.url,'https://demo.example.invalid');
   for(const [view,name] of [['sites','【示例】云杉站点'],['hosts','【示例】演示主机'],['networks','【示例】文档网段']]){
-   await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('button',{name:{sites:'站点',hosts:'主机浏览树',networks:'网段'}[view]}).click();
+   await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('tab',{name:{sites:'站点',hosts:'主机',networks:'网段'}[view]}).click();
    await page.locator('#content').getByText(name).waitFor();
   }
   await page.locator('#nav button[data-view="agent"]').click();
