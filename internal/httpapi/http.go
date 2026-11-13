@@ -161,6 +161,8 @@ func route(r *http.Request) (string, Args, bool) {
 			return "search", a, true
 		case path == "api/browse":
 			return "browse", a, true
+		case path == "api/topology/layers":
+			return "topology_layers", a, true
 		case path == "api/versions/outdated":
 			return "list_outdated", a, true
 		case path == "api/assets/unverified":

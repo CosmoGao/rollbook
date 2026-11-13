@@ -62,6 +62,14 @@ func (q Query) TopologyView(ctx context.Context, p auth.Principal, id string, de
 	return (search.Store{DB: q.Service.Store.DB}).TopologyView(ctx, id, depth, view)
 }
 
+// TopologyLayers 一次读取画布需要的资产和关系，避免按服务逐个请求拓扑。
+func (q Query) TopologyLayers(ctx context.Context, p auth.Principal) (search.Layers, error) {
+	if err := auth.Authorize(p, auth.View, ""); err != nil {
+		return search.Layers{}, err
+	}
+	return (search.Store{DB: q.Service.Store.DB}).TopologyLayers(ctx)
+}
+
 type ServiceDetail struct {
 	Object       Object   `json:"service"`
 	Host         Object   `json:"host"`

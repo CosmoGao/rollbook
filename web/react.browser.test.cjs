@@ -104,9 +104,9 @@ test('资产、拓扑、待处理、Key 与设置在新构建中可操作',async
   await page.locator('#nav button[data-view="topology"]').click();
   await page.locator('.flow-container .react-flow__node').first().waitFor({timeout:5000});
   await page.getByRole('combobox',{name:'站点'}).selectOption(site.id);
-  assert.equal(await page.getByRole('combobox',{name:'服务'}).locator('option').count(),2);
-  await page.getByRole('combobox',{name:'服务'}).selectOption(service.id);
-  await page.getByRole('combobox',{name:'拓扑视图'}).selectOption('access');
+  assert.equal(await page.getByRole('combobox',{name:'聚焦对象'}).locator('option').count(),3);
+  await page.getByRole('combobox',{name:'聚焦对象'}).selectOption(service.id);
+  await page.getByRole('tab',{name:'访问链'}).click();
   await page.locator('.flow-container .react-flow__node').first().waitFor();await shot(page,'desktop-topology-light');
   await page.locator('#nav button[data-view="pendingHub"]').click();
   await page.getByRole('heading',{name:'待处理'}).waitFor();await shot(page,'desktop-pending-light');
