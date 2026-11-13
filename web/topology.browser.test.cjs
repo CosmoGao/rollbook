@@ -44,12 +44,15 @@ test('主机和服务拓扑可绘制，访问链可切换，节点可打开详�
   await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('tab',{name:'主机'}).click();await page.getByRole('group',{name:'主机视图'}).getByRole('button',{name:'树'}).click();
   await page.getByText('实体主机').first().click();
   await page.locator('.topology-canvas .react-flow').waitFor();
-  assert.equal(await page.locator('.react-flow__node').count(),5);
+  assert.equal(await page.locator('.react-flow__node').count(),2);
+  await page.locator('.react-flow__node').filter({hasText:'应用虚机'}).click();
+  await page.getByRole('heading',{name:'应用虚机'}).waitFor();
   await page.locator('.react-flow__node').filter({hasText:'Overleaf'}).click();
   await page.getByRole('heading',{name:'Overleaf'}).waitFor();
-  await page.getByRole('button',{name:'访问链'}).click();
-  await page.locator('.react-flow__node').filter({hasText:'外网入口'}).waitFor();
-  assert.equal(await page.locator('.react-flow__edge').count(),4);
+  await page.getByRole('button',{name:'访问链',exact:true}).click();
+  await page.locator('.react-flow__node').filter({hasText:'Proxy'}).waitFor();
+  assert.equal(await page.locator('.react-flow__node').filter({hasText:'外网入口'}).count(),0);
+  assert.equal(await page.locator('.react-flow__edge').count(),2);
   await page.locator('.react-flow__node').filter({hasText:'应用虚机'}).click();
   await page.getByRole('heading',{name:'应用虚机'}).waitFor();
  } finally {await browser.close()}

@@ -18,10 +18,11 @@ type OfflineOptions struct {
 }
 
 type OfflinePreview struct {
-	Host      Object   `json:"host"`
-	Services  []Object `json:"services"`
-	IPs       []Object `json:"ips"`
-	Endpoints []Object `json:"endpoints"`
+	Host      Object       `json:"host"`
+	Services  []Object     `json:"services"`
+	IPs       []Object     `json:"ips"`
+	Endpoints []Object     `json:"endpoints"`
+	Impact    ImpactResult `json:"impact"`
 }
 
 type offlineItem struct {
@@ -50,6 +51,12 @@ func offlinePreview(ctx context.Context, q rowQuerier, hostID string) (OfflinePr
 		return OfflinePreview{}, invalidField("id", "对象不是主机", "主机 ID")
 	}
 	result := OfflinePreview{Host: host, Services: []Object{}, IPs: []Object{}, Endpoints: []Object{}}
+	impactResult, err := impact(ctx, q.(offlineQuerier), "host", hostID, true)
+	if err != nil {
+		return result, err
+	}
+	result.Impact = impactResult
+
 	for _, spec := range []struct {
 		query string
 		dst   *[]Object
