@@ -1,0 +1,23 @@
+export type Proposal = {id:string;name?:string;fields?:Record<string,any>};
+const labels:Record<string,[string,string]>={name:['名称','Name'],kind:['类型','Kind'],status:['状态','Status'],host_id:['宿主','Host'],location_id:['位置','Location'],parent_id:['上级位置','Parent location'],parent_host_id:['上级主机','Parent host'],os_version:['系统版本','OS version'],current_version:['当前版本','Current version'],latest_version:['最新版本','Latest version'],description:['说明','Description'],owner:['负责人','Owner'],url:['访问地址','URL'],mgmt_url:['管理地址','Management URL'],deploy_method:['部署方式','Deployment'],tags:['标签','Tags'],aliases:['别名','Aliases'],source:['来源','Source'],confidence:['可信度','Confidence'],model:['型号','Model'],address:['地址','Address'],city:['城市','City'],region:['区域','Region'],note:['备注','Note'],timezone:['时区','Timezone'],isp:['运营商','ISP'],bandwidth:['带宽','Bandwidth'],public_ipv4:['公网 IPv4 状态','Public IPv4'],public_ipv4_addr:['公网 IPv4','Public IPv4 address'],public_ipv6:['公网 IPv6','Public IPv6'],ddns:['动态域名','DDNS'],edge_device_id:['边缘设备','Edge device'],account_ref:['账户引用','Account reference'],net_role:['网络角色','Network role'],uplink_id:['网络接入','Uplink'],os:['系统','OS'],resources_json:['资源','Resources'],cidr:['网段','CIDR'],router_id:['路由器','Router'],vlan_id:['VLAN','VLAN'],gateway:['网关','Gateway'],dhcp_range:['DHCP 范围','DHCP range'],purpose:['用途','Purpose'],network_id:['网段','Network'],interface:['网卡','Interface'],mac:['MAC 地址','MAC address'],assign:['分配方式','Assignment'],upstream_json:['上游版本源','Upstream'],config_path:['配置路径','Config path'],docs_url:['文档地址','Documentation URL'],service_id:['服务','Service'],bind:['监听地址','Bind address'],port:['端口','Port'],protocol:['协议','Protocol'],via_json:['经由路径','Via'],auth:['认证方式','Authentication'],exposure:['暴露范围','Exposure'],from_id:['来源对象','From'],to_id:['目标对象','To'],current_source:['当前版本来源','Current source'],latest_source:['最新版本来源','Latest source'],latest_url:['最新版地址','Latest URL'],eol_date:['停止维护日期','End of life'],pinned:['锁定版本','Pinned'],pinned_reason:['锁定原因','Pin reason'],checked_at:['检查时间','Checked at'],vault:['凭据库','Vault'],item_ref:['条目引用','Item reference'],body_md:['内容','Content'],author:['作者','Author'],scope:['范围','Scope'],project:['项目','Project'],key:['键','Key'],expires_at:['过期时间','Expires at']};
+const objectLabels:Record<string,[string,string]>={location:['站点','Site'],host:['主机','Host'],service:['服务','Service'],ip:['IP','IP'],port:['端口','Port'],network:['网段','Network'],endpoint:['入口','Endpoint'],version:['版本','Version'],context:['上下文','Context']};
+const parse=(value:unknown):Record<string,any>=>{if(typeof value==='string'){try{return JSON.parse(value)}catch{return {}}}return value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,any>:{};};
+const label=(key:string,en:boolean)=>labels[key]?.[en?1:0]||key.replace(/_json$/,'').replaceAll('_',' ');
+const display=(value:unknown,en:boolean):string=>{
+  if(value===null||value===undefined||value==='')return en?'Empty':'空';
+  if(Array.isArray(value))return value.map(item=>display(item,en)).join('、')|| (en?'Empty':'空');
+  if(typeof value==='object')return Object.entries(value as Record<string,unknown>).slice(0,4).map(([key,item])=>`${label(key,en)}: ${display(item,en)}`).join('；');
+  return String(value);
+};
+export function proposalTitle(item:Proposal,en=false){const fields=item.fields||{},diff=parse(fields.diff_json),type=objectLabels[String(fields.object_type)]?.[en?1:0]||fields.object_type||'',name=diff.name||fields.base_object?.name||fields.object_id||item.name||item.id;const verb=fields.action==='create'?(en?'Add':'新增'):fields.action==='delete'?(en?'Delete':'删除'):(en?'Update':'修改');return `${verb}${type?` ${type}`:''} ${name}`.trim()}
+export function proposalDiff(item:Proposal,en=false):string[]{
+  const fields=item.fields||{},diff=parse(fields.diff_json),base=fields.base_object||{};
+  if(fields.action==='delete')return [en?`Delete ${base.name||fields.object_id||item.id}`:`删除 ${base.name||fields.object_id||item.id}`];
+  const entries:[string,unknown,unknown][]=[];
+  for(const [key,value] of Object.entries(diff)){
+    if(key==='fields'){for(const [field,next] of Object.entries(parse(value)))entries.push([field,base.fields?.[field],next]);}
+    else if(!['id','type','rev','created_at','created_by','updated_at','updated_by','verified_at','verified_by'].includes(key))entries.push([key,base[key],value]);
+  }
+  if(!entries.length)return [en?'No field details':'无字段明细'];
+  return entries.slice(0,12).map(([key,oldValue,next])=>fields.action==='create'?`${label(key,en)}: ${display(next,en)}`:`${label(key,en)}: ${display(oldValue,en)} → ${display(next,en)}`);
+}

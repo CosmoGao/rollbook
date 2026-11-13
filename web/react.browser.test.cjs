@@ -50,7 +50,7 @@ test('React 六项菜单、搜索快捷键及移动布局', async t=>{
       await page.getByRole('heading',{name:'资产维护'}).waitFor();await shot(page,'mobile-assets-light');
       for(const [label,file,selector] of [['拓扑','mobile-topology-light','.flow-container'],['待处理','mobile-pending-light','.controls'],['Agent 接入','mobile-agent-light','#content'],['设置','mobile-settings-light','#content']]){await page.getByRole('button',{name:'打开菜单'}).click();await page.locator('.mobile-drawer button').filter({hasText:label}).click();await page.locator(selector).first().waitFor();await shot(page,file)}
       await page.getByRole('button',{name:'切换主题'}).click();assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');await shot(page,'mobile-settings-dark');
-      if(process.env.ROLLBOOK_SCREENSHOT_DIR){for(const [label,file,selector] of [['总览','mobile-overview-dark','.overview-grid'],['资产','mobile-assets-dark','.asset-toolbar'],['拓扑','mobile-topology-dark','.flow-container'],['待处理','mobile-pending-dark','#content'],['Agent 接入','mobile-agent-dark','#content']]){await page.getByRole('button',{name:'打开菜单'}).click();await page.locator('.mobile-drawer button').filter({hasText:label}).click();await page.locator(selector).first().waitFor();await shot(page,file)}}
+      if(process.env.ROLLBOOK_SCREENSHOT_DIR){for(const [label,file,selector] of [['总览','mobile-overview-dark','.overview-layout'],['资产','mobile-assets-dark','.asset-toolbar'],['拓扑','mobile-topology-dark','.flow-container'],['待处理','mobile-pending-dark','#content'],['Agent 接入','mobile-agent-dark','#content']]){await page.getByRole('button',{name:'打开菜单'}).click();await page.locator('.mobile-drawer button').filter({hasText:label}).click();await page.locator(selector).first().waitFor();await shot(page,file)}}
     }
     assert.deepEqual(errors,[]);
     await page.close();
@@ -94,7 +94,7 @@ test('资产、拓扑、待处理、Key 与设置在新构建中可操作',async
     return route.fulfill({status:200,contentType:mime[path.extname(file)]||'application/octet-stream',body:fs.readFileSync(file)});
   });
   await page.goto('http://rollbook.test/');
-  await page.locator('.overview-grid').waitFor();await shot(page,'desktop-overview-light');
+  await page.locator('.overview-layout').waitFor();await shot(page,'desktop-overview-light');
   await page.locator('#nav button[data-view="assets"]').click();
   await page.getByRole('heading',{name:'资产维护'}).waitFor();await shot(page,'desktop-assets-sites-light');
   await page.getByRole('tab',{name:'主机'}).click();
@@ -122,7 +122,7 @@ test('资产、拓扑、待处理、Key 与设置在新构建中可操作',async
   await page.getByRole('button',{name:'备份与恢复'}).click();
   await page.getByRole('heading',{name:'备份与恢复'}).waitFor();await shot(page,'desktop-backup-light');
   await page.getByRole('button',{name:'切换主题'}).click();assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');await shot(page,'desktop-backup-dark');
-  await page.locator('#nav button[data-view="overview"]').click();await page.locator('.overview-grid').waitFor();await shot(page,'desktop-overview-dark');
+  await page.locator('#nav button[data-view="overview"]').click();await page.locator('.overview-layout').waitFor();await shot(page,'desktop-overview-dark');
   if(process.env.ROLLBOOK_SCREENSHOT_DIR){for(const [view,file,selector] of [['assets','desktop-assets-dark','.asset-toolbar'],['topology','desktop-topology-dark','.flow-container'],['pendingHub','desktop-pending-dark','#content'],['agent','desktop-agent-dark','#content'],['settings','desktop-settings-dark','#content']]){await page.locator(`#nav button[data-view="${view}"]`).click();await page.locator(selector).first().waitFor();await shot(page,file)}}
   await page.close();
 });
@@ -191,7 +191,7 @@ test('待处理页可批准提议、核实资产和检查版本',async t=>{
     return route.fulfill({status:200,contentType:mime[path.extname(file)]||'application/octet-stream',body:fs.readFileSync(file)});
   });
   await page.goto('http://rollbook.test/pending');
-  await page.getByText('host:test').first().waitFor();
+  await page.locator('.proposal-diff').first().waitFor();
   await page.getByRole('button',{name:'批准',exact:true}).click();
   await page.getByRole('tab',{name:'待核实'}).click();
   await page.getByText('待核实主机').waitFor();

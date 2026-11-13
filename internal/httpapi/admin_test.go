@@ -149,11 +149,32 @@ func TestBrowserAdminAndKeyBoundary(t *testing.T) {
 	if _, err := store.Create(ctx, catalog.Object{ID: "location:new", Type: "location", Name: "新站点", Fields: map[string]any{"kind": "站点"}}, "owner"); err != nil {
 		t.Fatal(err)
 	}
+	for _, asset := range []catalog.Object{
+		{ID: "location:rack", Type: "location", Name: "机柜", Fields: map[string]any{"kind": "机柜", "parent_id": "location:old"}},
+		{ID: "network:lan", Type: "network", Name: "LAN", Fields: map[string]any{"cidr": "192.0.2.0/24", "location_id": "location:old"}},
+		{ID: "host:box", Type: "host", Name: "主机", Fields: map[string]any{"kind": "物理机", "location_id": "location:rack"}},
+		{ID: "service:app", Type: "service", Name: "服务", Fields: map[string]any{"host_id": "host:box"}},
+		{ID: "ip:box", Type: "ip", Name: "IP", Fields: map[string]any{"address": "192.0.2.20", "host_id": "host:box", "network_id": "network:lan"}},
+		{ID: "port:app", Type: "port", Name: "端口", Fields: map[string]any{"service_id": "service:app", "port": 8080, "protocol": "tcp"}},
+		{ID: "context:hint", Type: "context", Name: "上下文", Fields: map[string]any{"scope": "全局", "key": "hint", "body_md": "内容", "owner": "tester"}},
+	} {
+		if _, err := store.Create(ctx, asset, "owner"); err != nil {
+			t.Fatal(asset.ID, err)
+		}
+	}
 	if _, err := database.ExecContext(ctx, "UPDATE objects SET verified_at=? WHERE id=?", time.Now().UTC().Format(time.RFC3339Nano), "location:new"); err != nil {
 		t.Fatal(err)
 	}
 	listed := call("GET", "/api/assets/unverified", "", "", cookies, "")
-	if listed.Code != 200 || !strings.Contains(listed.Body.String(), "location:old") || strings.Contains(listed.Body.String(), "location:new") {
+	var unverified []catalog.Object
+	if listed.Code != 200 || json.Unmarshal(listed.Body.Bytes(), &unverified) != nil {
+		t.Fatal(listed.Code, listed.Body)
+	}
+	unverifiedIDs := map[string]bool{}
+	for _, item := range unverified {
+		unverifiedIDs[item.ID] = true
+	}
+	if len(unverifiedIDs) != 3 || !unverifiedIDs["location:old"] || !unverifiedIDs["host:box"] || !unverifiedIDs["service:app"] {
 		t.Fatal(listed.Code, listed.Body)
 	}
 	service := catalog.Service{Store: store}
