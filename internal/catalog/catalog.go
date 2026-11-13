@@ -12,10 +12,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/CosmoGao/rollbook/internal/search"
 	"github.com/CosmoGao/rollbook/internal/versioncheck"
 )
 
 type Object struct {
+	search.Summary
 	ID         string         `json:"id"`
 	Type       string         `json:"type"`
 	Name       string         `json:"name"`

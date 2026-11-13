@@ -12,6 +12,7 @@ import (
 )
 
 type Result struct {
+	Summary
 	ID         string   `json:"id"`
 	Type       string   `json:"type"`
 	Name       string   `json:"name"`
