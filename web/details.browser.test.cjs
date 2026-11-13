@@ -35,7 +35,7 @@ test('四类详情安全显示笔记、凭据与引用；变更筛选和共享�
    if(p==='/api/services/service:app/topology')return reply({nodes:[],edges:[]});
    return route.fulfill({status:404,json:{message:'unexpected '+p}});
   });
-  await installBundle(page);await page.goto('http://rollbook.test/');
+  await installBundle(page);await page.goto('http://rollbook.test/');await page.locator('#nav button[data-view="assets"]').waitFor({state:'visible',timeout:15000});
 
   for(const id of ids){
    await page.locator('#nav button[data-view="assets"]').click();{const type=id.split(':')[0];if(({location:1,host:1,network:1,service:1})[type])await page.getByRole('tab',{name:{location:'站点',host:'主机',network:'网段',service:'服务'}[type]}).click();else await page.locator('.asset-type-select').selectOption(type)};await page.locator('.card').filter({hasText:id}).click();
