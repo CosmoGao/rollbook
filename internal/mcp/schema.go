@@ -16,13 +16,13 @@ func programVersion() string {
 }
 
 var descriptions = map[string]string{
-	"search":          "按名称、IP、域名或别名查找资产；先搜索，再用 ID 获取详情。仅返回可见的清册数据。",
+	"search":          "按名称、ID、别名、标签、型号、设备类别、IP 或域名查找资产；先搜索，再用 ID 获取详情。仅返回可见的清册数据。",
 	"get_asset":       "已知资产 ID 时读取完整对象及 rev；修改前必须先调用。",
 	"get_service":     "查看服务、宿主、入口、依赖及版本；排查服务时使用。",
-	"list_by_host":    "查看主机下的 IP 和服务；已知主机 ID 时使用。",
+	"list_by_host":    "查看设备或实例下的 IP 和服务；已知 host: ID 时使用。",
 	"list_by_network": "查看网段内的 IP、主机、占用冲突、空闲范围及 next_available；已知网段 ID 时使用。",
 	"get_site":        "查看站点、网段、主机和上游；已知站点 ID 时使用。",
-	"topology":        "查看服务或主机拓扑；id 为 service: 或 host:，view=access 查看入口到宿主的访问链，depth 可指定依赖层数。",
+	"topology":        "查看服务或设备/实例拓扑；id 为 service: 或 host:，view=access 查看入口到承载设备的访问链，depth 可指定依赖层数。",
 	"list_outdated":   "列出落后或待人工确认的版本；结果不是自动升级建议。",
 	"get_changes":     "查看审计和待审批变更；用 state 筛选待确认提议。",
 	"get_context":     "读取补充上下文；archived=true 才包含归档记录。",
@@ -45,7 +45,7 @@ var enums = map[string][]string{
 	"status": {"在用", "停用", "计划中"}, "source": {"人工", "agent", "自动发现"}, "confidence": {"低", "中", "高"}, "protocol": {"tcp", "udp"}, "assign": {"静态", "DHCP保留", "动态"}, "net_role": {"光猫", "主路由", "旁路由", "交换机", "AP"}, "public_ipv4": {"无或CGNAT", "动态公网", "固定公网", "待核实"},
 }
 var kindEnums = map[string][]string{
-	"location": {"站点", "房间", "机柜", "桌面"}, "host": {"物理机", "NAS", "虚拟机", "LXC", "容器", "网络设备"}, "endpoint": {"内网直连", "反向代理", "Cloudflare Tunnel", "导航页卡片"}, "note": {"运维笔记", "故障", "决策", "待办"},
+	"location": {"站点", "房间", "机柜", "桌面"}, "host": {"物理机", "NAS", "虚拟机", "LXC", "容器", "网络设备", "智能电视", "游戏机", "机顶盒与播放器", "音箱与音频设备", "摄像头与门铃", "打印与扫描设备", "智能家居中枢与网关", "家电", "传感器与控制器", "其他设备"}, "endpoint": {"内网直连", "反向代理", "Cloudflare Tunnel", "导航页卡片"}, "note": {"运维笔记", "故障", "决策", "待办"},
 }
 var numberFields = map[string]bool{"port": true, "vlan_id": true, "bandwidth": true, "pinned": true, "generated": true}
 var arrayFields = map[string]bool{"via_json": true, "related_ids_json": true, "inbound_ports_json": true}

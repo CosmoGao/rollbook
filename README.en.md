@@ -2,6 +2,16 @@
 
 Rollbook is a self-hosted service and asset catalog for homes and small businesses. Run it on a trusted network. The UI follows the browser language until you select English or Chinese; that choice is saved in the browser. See the [Chinese README](README.md), [changelog](CHANGELOG.md), and [release checklist](docs/releasing.md).
 
+## v0.7.0 Devices & hosts (pending release)
+
+Assets → Devices & hosts supports smart TVs, game consoles, set-top boxes and media players, speakers and audio devices, cameras and doorbells, printers and scanners, smart home hubs and gateways, appliances, sensors and controllers, and other devices. The six existing host kinds keep their values. Pick a kind, name, and location when creating a device. Model can hold manufacturer and model; aliases and tags accept multiple values. A TV or sensor needs no OS, IP address, management URL, or service. “No IP registered” only describes the catalog record.
+
+Example: add a TV in the living room as Smart TV with model “Example 55” and no OS, IP, or URL. Add a game console with model “Example Console 5” and alias “PS5”. Add a door sensor as Sensor and controller with a “Zigbee” tag and no IP. If its gateway dependency is known, record a manual sensor→gateway dependency; the gateway is not its deployment parent. Router DNS, NAS media, and printer services can be added from each device detail. A service still requires a real device or instance as its host. Pure external/SaaS services without a managed host are outside this release; do not create placeholder hosts.
+
+Global search and the device list match name, ID, aliases, tags, model, and kind. The list combines exact kind and site filters with search and tree view. Topology shows physical devices and independent instances by default, then expands deployment instances, services, and endpoints. The physical/virtual/all layer parameters remain and mean default, instance, and full layers.
+
+Keep a complete database volume snapshot before upgrading. v0.7.0 migrates the SQLite hosts.kind constraint and rebuilds the search index without reclassifying old records. YAML remains schema_version: 1; existing CSV columns and REST/MCP/CLI host contracts remain. Backups containing new kinds cannot be imported directly into v0.6.0. Do not open the migrated database with an older image; restore the full pre-upgrade snapshot to roll back. This change prepares a release and does not deploy it.
+
 ## Run locally
 
 Go 1.24 or newer is required. From the repository root:

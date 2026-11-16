@@ -56,6 +56,7 @@ var columns = map[string][]string{
 }
 var tables = map[string]string{"location": "locations", "uplink": "uplinks", "host": "hosts", "network": "networks", "ip": "ips", "service": "services", "port": "ports", "endpoint": "endpoints", "dependency": "dependencies", "version": "versions", "credential": "credentials", "note": "notes", "context": "contexts", "change": "changes"}
 var jsonFields = map[string]bool{"inbound_ports_json": true, "resources_json": true, "upstream_json": true, "via_json": true, "nav_card_json": true, "related_ids_json": true, "diff_json": true}
+var hostKinds = []string{"物理机", "NAS", "虚拟机", "LXC", "容器", "网络设备", "智能电视", "游戏机", "机顶盒与播放器", "音箱与音频设备", "摄像头与门铃", "打印与扫描设备", "智能家居中枢与网关", "家电", "传感器与控制器", "其他设备"}
 
 // ValidHTTPURL 也用于导入直写数据表之前的校验。
 func ValidHTTPURL(value string) bool {
@@ -216,6 +217,19 @@ func str(v any) string {
 }
 
 func validate(ctx context.Context, tx *sql.Tx, o *Object) error {
+	if o.Type == "host" {
+		kind := str(o.Fields["kind"])
+		valid := false
+		for _, candidate := range hostKinds {
+			if kind == candidate {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return invalidField("fields.kind", "设备类别无效", strings.Join(hostKinds, "、"))
+		}
+	}
 	allowed := map[string]bool{}
 	for _, c := range columns[o.Type] {
 		allowed[c] = true
@@ -492,7 +506,7 @@ func generate(ctx context.Context, tx *sql.Tx, o Object, actor string) error {
 }
 
 func index(ctx context.Context, tx *sql.Tx, o Object) error {
-	description := str(o.Fields["description"])
+	description := strings.TrimSpace(strings.Join([]string{o.ID, str(o.Fields["description"]), str(o.Fields["model"]), str(o.Fields["kind"])}, " "))
 	url := str(o.Fields["url"])
 	_, err := tx.ExecContext(ctx, `INSERT INTO search_documents(object_id,name,aliases,tags,description,url) VALUES(?,?,?,?,?,?)`, o.ID, o.Name, strings.Join(o.Aliases, " "), strings.Join(o.Tags, " "), description, url)
 	return err

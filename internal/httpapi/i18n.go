@@ -3,6 +3,7 @@ package httpapi
 import (
 	"encoding/json"
 	"net/http"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -16,7 +17,7 @@ var enumAliases = map[string]map[string]string{
 	"source":        {"manual": "人工", "auto_discovery": "自动发现"},
 	"confidence":    {"low": "低", "medium": "中", "high": "高"},
 	"kind:location": {"site": "站点", "room": "房间", "rack": "机柜", "desk": "桌面"},
-	"kind:host":     {"physical": "物理机", "nas": "NAS", "virtual": "虚拟机", "vm": "虚拟机", "lxc": "LXC", "container": "容器", "network_device": "网络设备"},
+	"kind:host":     {"physical": "物理机", "nas": "NAS", "virtual": "虚拟机", "vm": "虚拟机", "lxc": "LXC", "container": "容器", "network_device": "网络设备", "smart_tv": "智能电视", "game_console": "游戏机", "media_player": "机顶盒与播放器", "audio_device": "音箱与音频设备", "camera_doorbell": "摄像头与门铃", "printer_scanner": "打印与扫描设备", "smart_home_hub": "智能家居中枢与网关", "appliance": "家电", "sensor_controller": "传感器与控制器", "other_device": "其他设备"},
 	"kind:endpoint": {"direct": "内网直连", "reverse_proxy": "反向代理", "cloudflare_tunnel": "Cloudflare Tunnel", "navigation_card": "导航页卡片"},
 	"kind:note":     {"operations": "运维笔记", "incident": "故障", "decision": "决策", "todo": "待办"},
 	"assign":        {"static": "静态", "dhcp_reservation": "DHCP保留", "dynamic": "动态"},
@@ -95,6 +96,7 @@ var reasonMessages = map[string]string{
 	"必填字段缺失": "Required field is missing", "关联对象不存在": "Referenced object does not exist",
 	"关联对象不存在或仍被引用": "Referenced object does not exist or is still in use",
 	"字段值不符合模型约束":   "Value is outside the allowed range", "仅接受绝对 HTTP 或 HTTPS 地址": "Only absolute HTTP or HTTPS URLs are accepted",
+	"设备类别无效": "Invalid device kind",
 	"疑似包含秘密": "Content appears to contain a secret", "创建时必须提供整数版本": "An integer base revision is required for creation",
 	"对象必填且必须是有效 JSON": "Object is required and must be valid JSON", "当前密码不正确": "Current password is incorrect",
 	"密码至少 8 个字符": "Password must have at least 8 characters", "密码不能超过 72 字节": "Password must not exceed 72 bytes",
@@ -144,12 +146,20 @@ func localizeError(v any, language string) any {
 	if language == "en" {
 		fields := append([]catalog.FieldError(nil), e.Fields...)
 		for i := range fields {
+			deviceKind := fields[i].Reason == "设备类别无效"
 			if translated, ok := reasonMessages[fields[i].Reason]; ok {
 				fields[i].Reason = translated
 			} else if hasHan(fields[i].Reason) {
 				fields[i].Reason = "Invalid value"
 			}
-			if hasHan(fields[i].Expected) {
+			if deviceKind {
+				values := make([]string, 0, len(enumAliases["kind:host"]))
+				for alias := range enumAliases["kind:host"] {
+					values = append(values, alias)
+				}
+				sort.Strings(values)
+				fields[i].Expected = strings.Join(values, ", ")
+			} else if hasHan(fields[i].Expected) {
 				fields[i].Expected = "Valid value"
 			}
 		}

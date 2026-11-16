@@ -39,10 +39,11 @@ test('双站点位置和主机树、自动 ID 与宿主预填',async()=>{
   const form=page.locator('.asset-form');await form.getByRole('textbox',{name:'名称'}).fill('新主机');
   assert.equal(await form.getByRole('textbox',{name:'ID（可修改）'}).inputValue(),'host:新主机');
   assert.equal(await form.getByRole('combobox',{name:'位置 *'}).inputValue(),'location:bj');
+  assert.equal(await form.getByRole('combobox',{name:'类别 *'}).inputValue(),'');await form.getByRole('combobox',{name:'类别 *'}).selectOption('物理机');
   await form.getByRole('textbox',{name:'操作原因 *'}).fill('登记');await form.getByRole('button',{name:'创建'}).click();
   assert.equal(created.id,'host:新主机');assert.equal(created.fields.kind,'物理机');assert.equal(created.status,'在用');
   await page.locator('#nav button[data-view="assets"]').click();await page.getByRole('tab',{name:'主机'}).click();await page.getByText('Proxmox').first().click();
   await page.getByRole('button',{name:'加服务'}).click();
-  assert.equal(await page.locator('.asset-form').getByRole('combobox',{name:'宿主 *'}).inputValue(),'host:pve');
+  assert.equal(await page.locator('.asset-form').getByRole('combobox',{name:'承载设备/实例 *'}).inputValue(),'host:pve');
  }finally{await browser.close()}
 });

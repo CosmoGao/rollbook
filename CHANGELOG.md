@@ -2,6 +2,12 @@
 
 按 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 分类，依据各 Release、tag 区间和已合并 PR 编写。公开 Release 从 v0.3.0 开始；另有 `v0.0.1` tag，但无对应 Release。未发现 v0.1.0、v0.2.0 的发布证据，不为其编造条目。
 
+## v0.7.0（待发布）
+
+- 新增十类设备、名称/型号/别名/标签检索、设备列表筛选与分层拓扑覆盖。服务可由任意真实设备承载。
+- 新增 SQLite 向前迁移并重建搜索索引；保留 host API、CSV 列名和 YAML schema_version=1。升级前须保存完整卷快照，降级须恢复快照。
+- 纯外部/SaaS 无宿主服务仍不支持；本版不部署。
+
 ## [v0.6.0](https://github.com/CosmoGao/rollbook/releases/tag/v0.6.0)
 
 ### 新增
