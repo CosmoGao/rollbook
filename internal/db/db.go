@@ -88,20 +88,60 @@ func Migrate(ctx context.Context, database *sql.DB) error {
 		if err != nil {
 			return err
 		}
-		tx, err := database.BeginTx(ctx, nil)
+		// hosts 的 CHECK 扩容需要重建表。借用专用连接在事务外关闭外键，
+		// 提交前仍执行 foreign_key_check；连接归还前恢复外键约束。
+		conn, err := database.Conn(ctx)
 		if err != nil {
 			return err
 		}
+		if version == 15 {
+			if _, err = conn.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+				conn.Close()
+				return err
+			}
+		}
+		tx, err := conn.BeginTx(ctx, nil)
+		if err != nil {
+			conn.Close()
+			return err
+		}
 		if _, err = tx.ExecContext(ctx, string(source)); err == nil {
+			if version == 15 {
+				var rows *sql.Rows
+				rows, err = tx.QueryContext(ctx, "PRAGMA foreign_key_check")
+				if err == nil {
+					if rows.Next() {
+						err = fmt.Errorf("foreign key check failed")
+					}
+					rows.Close()
+				}
+			}
+		}
+		if err == nil {
 			_, err = tx.ExecContext(ctx, "INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)", version, time.Now().UTC().Format(time.RFC3339))
 		}
 		if err != nil {
 			tx.Rollback()
+			if version == 15 {
+				conn.ExecContext(context.Background(), "PRAGMA foreign_keys=ON")
+			}
+			conn.Close()
 			return fmt.Errorf("migration %s: %w", name, err)
 		}
 		if err := tx.Commit(); err != nil {
+			if version == 15 {
+				conn.ExecContext(context.Background(), "PRAGMA foreign_keys=ON")
+			}
+			conn.Close()
 			return fmt.Errorf("migration %s: %w", name, err)
 		}
+		if version == 15 {
+			if _, err = conn.ExecContext(ctx, "PRAGMA foreign_keys=ON"); err != nil {
+				conn.Close()
+				return err
+			}
+		}
+		conn.Close()
 	}
 	return nil
 }

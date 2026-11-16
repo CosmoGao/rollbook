@@ -31,7 +31,8 @@ func TestCSVImportApproval(t *testing.T) {
 	actor := auth.Principal{KeyID: "key", KeyName: "agent", IssuerID: "owner", IssuerName: "owner", Level: auth.Propose}
 	for _, tc := range []struct{ kind, row, id string }{
 		{"host", "host:a,主机,物理机,location:a", "host:a"},
-		{"service", "service:a,服务,host:a", "service:a"},
+		{"host", "host:printer,打印机,打印与扫描设备,location:a", "host:printer"},
+		{"service", "service:a,打印服务,host:printer", "service:a"},
 	} {
 		header := "id,name,kind,location_id\n"
 		if tc.kind == "service" {

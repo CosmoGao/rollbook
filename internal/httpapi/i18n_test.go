@@ -72,6 +72,28 @@ func TestEnglishAliasesAndLocalizedErrors(t *testing.T) {
 	if changed.Status != "停用" || changed.Fields["kind"] != "虚拟机" {
 		t.Fatalf("non-canonical update: %+v", changed)
 	}
+	device := call("POST", "/api/assets", `{"object":{"id":"host:tv","type":"host","name":"Living room TV","fields":{"kind":"smart_tv","location_id":"location:en","model":"Example 55"}},"base_rev":0,"reason":"register device"}`, "en")
+	if device.Code != 200 {
+		t.Fatalf("device: %d %s", device.Code, device.Body.String())
+	}
+	var tv catalog.Object
+	if err := json.Unmarshal(device.Body.Bytes(), &tv); err != nil {
+		t.Fatal(err)
+	}
+	if tv.Fields["kind"] != "智能电视" {
+		t.Fatal(tv.Fields)
+	}
+	badKind := call("POST", "/api/assets", `{"object":{"id":"host:unknown","type":"host","name":"Unknown","fields":{"kind":"unknown_kind","location_id":"location:en"}},"base_rev":0,"reason":"test validation"}`, "en")
+	if badKind.Code != 422 {
+		t.Fatalf("bad kind: %d %s", badKind.Code, badKind.Body.String())
+	}
+	var kindError httpapi.APIError
+	if err := json.Unmarshal(badKind.Body.Bytes(), &kindError); err != nil {
+		t.Fatal(err)
+	}
+	if len(kindError.Fields) == 0 || kindError.Fields[0].Field != "fields.kind" || !strings.Contains(kindError.Fields[0].Expected, "smart_tv") {
+		t.Fatal(kindError)
+	}
 	for _, lang := range []string{"en", "zh-CN"} {
 		bad := call("POST", "/api/assets", `{"object":{"id":"location:bad","type":"location","name":"bad","fields":{"kind":"site","unsupported":"x"}},"base_rev":0,"reason":"bad input"}`, lang)
 		if bad.Code != 422 {

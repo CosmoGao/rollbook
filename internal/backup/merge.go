@@ -414,7 +414,7 @@ func (s Service) merge(ctx context.Context, id string, f File, actor auth.Princi
 			return err
 		}
 		if _, err = tx.ExecContext(ctx, `INSERT INTO search_documents(object_id,name,aliases,tags,description,url)
- SELECT o.id,o.name,coalesce((SELECT group_concat(value,' ') FROM json_each(o.aliases_json)),''),coalesce((SELECT group_concat(value,' ') FROM json_each(o.tags_json)),''),coalesce(l.description,''),coalesce(e.url,'') FROM objects o LEFT JOIN locations l ON l.id=o.id LEFT JOIN endpoints e ON e.id=o.id WHERE o.id=?`, item.ID); err != nil {
+ SELECT o.id,o.name,coalesce((SELECT group_concat(value,' ') FROM json_each(o.aliases_json)),''),coalesce((SELECT group_concat(value,' ') FROM json_each(o.tags_json)),''),trim(o.id||' '||coalesce(l.description,'')||' '||coalesce(h.model,'')||' '||coalesce(h.kind,'')),coalesce(e.url,'') FROM objects o LEFT JOIN locations l ON l.id=o.id LEFT JOIN hosts h ON h.id=o.id LEFT JOIN endpoints e ON e.id=o.id WHERE o.id=?`, item.ID); err != nil {
 			return err
 		}
 		var obj map[string]any

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/CosmoGao/rollbook/internal/catalog"
 	"github.com/CosmoGao/rollbook/internal/db"
 	"gopkg.in/yaml.v3"
 )
@@ -94,6 +95,58 @@ func TestRoundTripAndRollback(t *testing.T) {
 	f.SchemaVersion = 99
 	if _, _, err := Parse(mustYAML(t, f)); err == nil {
 		t.Fatal("future version accepted")
+	}
+}
+func TestDeviceBackupRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	d, err := db.Open(ctx, filepath.Join(t.TempDir(), "devices.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	store := catalog.Store{DB: d}
+	for _, item := range []catalog.Object{
+		{ID: "location:home", Type: "location", Name: "家", Fields: map[string]any{"kind": "站点"}},
+		{ID: "host:hub", Type: "host", Name: "网关", Fields: map[string]any{"kind": "智能家居中枢与网关", "location_id": "location:home"}},
+		{ID: "host:sensor", Type: "host", Name: "门磁", Aliases: []string{"入口传感器"}, Tags: []string{"Zigbee"}, Fields: map[string]any{"kind": "传感器与控制器", "location_id": "location:home", "model": "Example Sensor"}},
+		{ID: "service:hub", Type: "service", Name: "网关服务", Fields: map[string]any{"host_id": "host:hub"}},
+		{ID: "dependency:sensor", Type: "dependency", Name: "依赖网关", Fields: map[string]any{"from_id": "host:sensor", "to_id": "host:hub", "kind": "依赖", "note": "Zigbee"}},
+	} {
+		if _, err = store.Create(ctx, item, "tester"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s := Service{DB: d}
+	data, err := s.Export(ctx, "catalog")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, _, err := Parse(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.SchemaVersion != 1 {
+		t.Fatal(f.SchemaVersion)
+	}
+	if err = s.Restore(ctx, f); err != nil {
+		t.Fatal(err)
+	}
+	obj, err := store.Get(ctx, "host:sensor")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if obj.Fields["kind"] != "传感器与控制器" || len(obj.Aliases) != 1 || obj.Aliases[0] != "入口传感器" || len(obj.Tags) != 1 || obj.Tags[0] != "Zigbee" {
+		t.Fatal(obj)
+	}
+	var count int
+	if err = d.QueryRow("SELECT count(*) FROM services WHERE host_id='host:hub'").Scan(&count); err != nil || count != 1 {
+		t.Fatal(count, err)
+	}
+	if err = d.QueryRow("SELECT count(*) FROM dependencies WHERE from_id='host:sensor' AND to_id='host:hub'").Scan(&count); err != nil || count != 1 {
+		t.Fatal(count, err)
+	}
+	if err = d.QueryRow("SELECT count(*) FROM ips WHERE host_id='host:sensor'").Scan(&count); err != nil || count != 0 {
+		t.Fatal(count, err)
 	}
 }
 func mustYAML(t *testing.T, f File) []byte {

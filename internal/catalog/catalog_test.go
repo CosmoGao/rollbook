@@ -31,6 +31,41 @@ func add(t *testing.T, ctx context.Context, s catalog.Store, id, typ, name strin
 	return o
 }
 
+func TestDeviceKindsSearchAndRealServiceHost(t *testing.T) {
+	ctx, d, s := setup(t)
+	add(t, ctx, s, "location:home", "location", "家", map[string]any{"kind": "站点"})
+	for _, item := range []struct{ kind, model, alias string }{
+		{"智能电视", "Example TV 55", "客厅屏幕"}, {"游戏机", "Microsoft Xbox Series X", "Xbox"}, {"机顶盒与播放器", "Example Box", "盒子"}, {"音箱与音频设备", "Example Speaker", "音箱"}, {"摄像头与门铃", "Example Doorbell", "门铃"}, {"打印与扫描设备", "Example Printer", "打印机"}, {"智能家居中枢与网关", "Example Hub", "网关"}, {"家电", "Example Vacuum", "扫地机"}, {"传感器与控制器", "Example Sensor", "门磁"}, {"其他设备", "Example Other", "其他"},
+	} {
+		id := "host:" + item.alias
+		_, err := s.Create(ctx, catalog.Object{ID: id, Type: "host", Name: "设备 " + item.alias, Aliases: []string{item.alias}, Tags: []string{"测试"}, Fields: map[string]any{"kind": item.kind, "model": item.model, "location_id": "location:home"}}, "tester")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, term := range []string{item.alias, item.model, item.kind, id} {
+			results, err := (search.Store{DB: d}).Search(ctx, term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			found := false
+			for _, result := range results {
+				if result.ID == id {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("%q did not find %s", term, id)
+			}
+		}
+	}
+	add(t, ctx, s, "service:print", "service", "打印服务", map[string]any{"host_id": "host:打印机"})
+	if _, err := s.Create(ctx, catalog.Object{ID: "host:bad", Type: "host", Name: "未知", Fields: map[string]any{"kind": "游戏电脑", "location_id": "location:home"}}, "tester"); err == nil {
+		t.Fatal("unknown kind accepted")
+	} else if v, ok := err.(*catalog.ValidationError); !ok || len(v.Fields) == 0 || v.Fields[0].Field != "fields.kind" {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestCatalogRelationsSearchAndArchive(t *testing.T) {
 	ctx, d, s := setup(t)
 	add(t, ctx, s, "location:beijing", "location", "北京", map[string]any{"kind": "站点"})
