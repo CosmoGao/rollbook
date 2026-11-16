@@ -2,7 +2,7 @@
 
 Rollbook is a self-hosted service and asset catalog for homes and small businesses. Run it on a trusted network. The UI follows the browser language until you select English or Chinese; that choice is saved in the browser. See the [Chinese README](README.md), [changelog](CHANGELOG.md), and [release checklist](docs/releasing.md).
 
-## v0.7.0 Devices & hosts (pending release)
+## v0.7.0 Devices & hosts
 
 Assets → Devices & hosts supports smart TVs, game consoles, set-top boxes and media players, speakers and audio devices, cameras and doorbells, printers and scanners, smart home hubs and gateways, appliances, sensors and controllers, and other devices. The six existing host kinds keep their values. Pick a kind, name, and location when creating a device. Model can hold manufacturer and model; aliases and tags accept multiple values. A TV or sensor needs no OS, IP address, management URL, or service. “No IP registered” only describes the catalog record.
 
@@ -10,7 +10,7 @@ Example: add a TV in the living room as Smart TV with model “Example 55” and
 
 Global search and the device list match name, ID, aliases, tags, model, and kind. The list combines exact kind and site filters with search and tree view. Topology shows physical devices and independent instances by default, then expands deployment instances, services, and endpoints. The physical/virtual/all layer parameters remain and mean default, instance, and full layers.
 
-Keep a complete database volume snapshot before upgrading. v0.7.0 migrates the SQLite hosts.kind constraint and rebuilds the search index without reclassifying old records. YAML remains schema_version: 1; existing CSV columns and REST/MCP/CLI host contracts remain. Backups containing new kinds cannot be imported directly into v0.6.0. Do not open the migrated database with an older image; restore the full pre-upgrade snapshot to roll back. This change prepares a release and does not deploy it.
+Keep a complete database volume snapshot before upgrading. v0.7.0 migrates the SQLite hosts.kind constraint and rebuilds the search index without reclassifying old records. YAML remains schema_version: 1; existing CSV columns and REST/MCP/CLI host contracts remain. Backups containing new kinds cannot be imported directly into v0.6.0. Do not open the migrated database with an older image; restore the full pre-upgrade snapshot to roll back.
 
 ## Run locally
 
@@ -30,7 +30,7 @@ New and reset passwords need at least eight characters and at least three of upp
 
 REST is under `/api/`, Streamable HTTP MCP under `/mcp`; both use `Authorization: Bearer <key>`. The UI uses a session cookie that is `Secure` by default. Key values are displayed only once. A `read` key queries; `propose` submits changes for web approval; `write` applies changes directly. Never store passwords or tokens in catalog notes or reasons. Credential objects should refer to a separate vault. Pending imports are limited to ten per submitter and 100 globally and expire after seven days; startup and hourly cleanup remove the source file while retaining audit metadata.
 
-## Web UI (v0.6.0)
+## Web UI (v0.7.0)
 
 The six main menu items are **Overview, Assets, Topology, To do, Agent access, Settings**. Global search sits in the top bar; mobile navigation uses a drawer. Overview surfaces proposals, new upstream versions, and assets needing verification, then shows hosts, services, and access points by site. Search accepts IPs, domains, ports, and service names, and shows related hosts, services, endpoints, and access paths. Only safe HTTP(S) URLs become links.
 
@@ -38,7 +38,7 @@ Assets lets you create and browse sites, hosts, networks, services, and other re
 
 ## Install and version
 
-Tagged releases provide a multi-architecture GHCR image, Linux/macOS/Windows amd64 and arm64 CLI archives, `SHA256SUMS`, and `install.sh`. Linux/macOS users can download and run the release's `install.sh` to install under `~/.local/bin`; set `ROLLBOOK_VERSION=v0.6.0` to pin or `ROLLBOOK_INSTALL_DIR` to choose a destination. Windows users should choose an archive and verify its checksum. The installer only replaces the local CLI. `rollbook version`, the sign-in screen, footer, `GET /api/version`, and MCP `initialize.serverInfo` report the same build version.
+Tagged releases provide a multi-architecture GHCR image, Linux/macOS/Windows amd64 and arm64 CLI archives, `SHA256SUMS`, and `install.sh`. Linux/macOS users can download and run the release's `install.sh` to install under `~/.local/bin`; set `ROLLBOOK_VERSION=v0.7.0` to pin or `ROLLBOOK_INSTALL_DIR` to choose a destination. Windows users should choose an archive and verify its checksum. The installer only replaces the local CLI. `rollbook version`, the sign-in screen, footer, `GET /api/version`, and MCP `initialize.serverInfo` report the same build version.
 
 YAML backups use `schema_version: 1`; unsupported versions are rejected. Newer databases may not be readable by older binaries. Make a full file-level snapshot before upgrading. The CLI uses REST. Run `rollbook login` to enter a server URL and key without echoing the key; the profile is stored in the user config directory with mode `0600`. `rollbook --profile home login` creates another profile. `ROLLBOOK_URL` and `ROLLBOOK_KEY` override the chosen profile for a process. With no configured URL, it defaults to `http://127.0.0.1:8080`. `--output json|yaml|table` controls REST output; `export` always writes YAML. `rollbook completion bash|zsh|fish` generates shell completion.
 
@@ -69,7 +69,7 @@ Set a service's `upstream_json` to a supported public provider, for example `{"p
 
 ## Docker Compose deployment
 
-Requires Docker Engine and Compose. In the repository root, pin `ROLLBOOK_VERSION=v0.6.0` in `.env` for production; the example defaults to `latest` for a trial. Run:
+Requires Docker Engine and Compose. In the repository root, pin `ROLLBOOK_VERSION=v0.7.0` in `.env` for production; the example defaults to `latest` for a trial. Run:
 
 ```sh
 cp .env.example .env
