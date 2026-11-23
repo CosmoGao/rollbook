@@ -4,6 +4,12 @@ Rollbook is a self-hosted service and asset catalog for homes and small business
 
 An empty catalog opens a first-run dialog. Press Escape to close it and return keyboard focus to the current navigation entry. The asset list shows “Permission denied” with a retry action when reading is forbidden. Offline reads show a load error; offline editing is unavailable.
 
+## v0.8.0 Frontend standard
+
+Existing business pages use the pinned frontend and visual standard `v1.0.0`: light and dark themes share semantic colors and control outlines, and long content scrolls within the main area. Invalid JSON in an asset form is linked to its field while entered values are preserved; the bulk rejection dialog manages keyboard focus. Topology names, sidebar account actions, and narrow-screen navigation use more legible text and touch targets. Closing first-run guidance returns focus to navigation, and asset read permission failures show a clear message. Business behavior, APIs, and authorization remain unchanged. See the [frontend implementation record](docs/frontend-implementation.md) for implementation and screenshots. Human screen-reader and system soft-keyboard checks remain unverified.
+
+Upgrading from `v0.7.0` to `v0.8.0` adds no database migration, but migrations only run forward. Before upgrading, save `.env`, the authentication pepper, and a complete `/data` snapshot; also save `/backups` if used separately. To roll back, stop the service, restore the complete pre-upgrade snapshot, then start `v0.7.0`. Do not let the old version read the new database directly. See **Upgrade and rollback** below.
+
 ## v0.7.0 Devices & hosts
 
 Assets → Devices & hosts supports smart TVs, game consoles, set-top boxes and media players, speakers and audio devices, cameras and doorbells, printers and scanners, smart home hubs and gateways, appliances, sensors and controllers, and other devices. The six existing host kinds keep their values. Pick a kind, name, and location when creating a device. Model can hold manufacturer and model; aliases and tags accept multiple values. A TV or sensor needs no OS, IP address, management URL, or service. “No IP registered” only describes the catalog record.
@@ -32,7 +38,7 @@ New and reset passwords need at least eight characters and at least three of upp
 
 REST is under `/api/`, Streamable HTTP MCP under `/mcp`; both use `Authorization: Bearer <key>`. The UI uses a session cookie that is `Secure` by default. Key values are displayed only once. A `read` key queries; `propose` submits changes for web approval; `write` applies changes directly. Never store passwords or tokens in catalog notes or reasons. Credential objects should refer to a separate vault. Pending imports are limited to ten per submitter and 100 globally and expire after seven days; startup and hourly cleanup remove the source file while retaining audit metadata.
 
-## Web UI (v0.7.0)
+## Web UI (v0.8.0)
 
 The six main menu items are **Overview, Assets, Topology, To do, Agent access, Settings**. Global search sits in the top bar; mobile navigation uses a drawer. Overview surfaces proposals, new upstream versions, and assets needing verification, then shows hosts, services, and access points by site. Search accepts IPs, domains, ports, and service names, and shows related hosts, services, endpoints, and access paths. Only safe HTTP(S) URLs become links.
 
@@ -40,7 +46,7 @@ Assets lets you create and browse sites, hosts, networks, services, and other re
 
 ## Install and version
 
-Tagged releases provide a multi-architecture GHCR image, Linux/macOS/Windows amd64 and arm64 CLI archives, `SHA256SUMS`, and `install.sh`. Linux/macOS users can download and run the release's `install.sh` to install under `~/.local/bin`; set `ROLLBOOK_VERSION=v0.7.0` to pin or `ROLLBOOK_INSTALL_DIR` to choose a destination. Windows users should choose an archive and verify its checksum. The installer only replaces the local CLI. `rollbook version`, the sign-in screen, footer, `GET /api/version`, and MCP `initialize.serverInfo` report the same build version.
+Tagged releases provide a multi-architecture GHCR image, Linux/macOS/Windows amd64 and arm64 CLI archives, `SHA256SUMS`, and `install.sh`. Linux/macOS users can download and run the release's `install.sh` to install under `~/.local/bin`; set `ROLLBOOK_VERSION=v0.8.0` to pin or `ROLLBOOK_INSTALL_DIR` to choose a destination. Windows users should choose an archive and verify its checksum. The installer only replaces the local CLI. `rollbook version`, the sign-in screen, footer, `GET /api/version`, and MCP `initialize.serverInfo` report the same build version.
 
 YAML backups use `schema_version: 1`; unsupported versions are rejected. Newer databases may not be readable by older binaries. Make a full file-level snapshot before upgrading. The CLI uses REST. Run `rollbook login` to enter a server URL and key without echoing the key; the profile is stored in the user config directory with mode `0600`. `rollbook --profile home login` creates another profile. `ROLLBOOK_URL` and `ROLLBOOK_KEY` override the chosen profile for a process. With no configured URL, it defaults to `http://127.0.0.1:8080`. `--output json|yaml|table` controls REST output; `export` always writes YAML. `rollbook completion bash|zsh|fish` generates shell completion.
 
@@ -71,7 +77,7 @@ Set a service's `upstream_json` to a supported public provider, for example `{"p
 
 ## Docker Compose deployment
 
-Requires Docker Engine and Compose. In the repository root, pin `ROLLBOOK_VERSION=v0.7.0` in `.env` for production; the example defaults to `latest` for a trial. Run:
+Requires Docker Engine and Compose. In the repository root, pin `ROLLBOOK_VERSION=v0.8.0` in `.env` for production after the official Release and image are verified; the example defaults to `latest` for a trial. Run:
 
 ```sh
 cp .env.example .env
@@ -113,7 +119,7 @@ docker compose cp rollbook:/backups/. ./snapshot-backups/
 docker compose start rollbook
 ```
 
-Check that the snapshot is readable. Change `ROLLBOOK_VERSION` in `.env` to the intended tag, run `docker compose pull && docker compose up -d`, then check `docker compose ps`, `/healthz`, and web sign-in. Do not run two versions against one database. Migrations are forward-only; for rollback, stop the service, restore the complete pre-upgrade `/data` snapshot, set the old image tag, then start it. Merely switching tags against a migrated database is unsafe. If using YAML instead, first verify that the old binary supports its `schema_version` and preserve the original credentials and pepper. A full volume snapshot is preferred. GitHub Actions tests PRs and publishes images and archives on tags; the workflow does not deploy your instance.
+Check that the snapshot is readable. Change `ROLLBOOK_VERSION` in `.env` to the intended verified tag (`v0.8.0` for this upgrade), run `docker compose pull && docker compose up -d`, then check `docker compose ps`, `/healthz`, and web sign-in. Do not run two versions against one database. Migrations are forward-only; for rollback, stop the service, restore the complete pre-upgrade `/data` snapshot, set the old image tag, then start it. Merely switching tags against a migrated database is unsafe. If using YAML instead, first verify that the old binary supports its `schema_version` and preserve the original credentials and pepper. A full volume snapshot is preferred. GitHub Actions tests PRs and publishes images and archives on tags; the workflow does not deploy your instance.
 
 ## Backup and restore
 
