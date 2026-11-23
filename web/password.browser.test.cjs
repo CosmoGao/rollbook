@@ -23,7 +23,8 @@ for(const [locale,expectedHint,expectedError] of [
   });
   await installBundle(page);await page.goto('http://rollbook.test/');
   await page.getByRole('button',{name:locale==='zh-CN'?'稍后再说':'Maybe later'}).click();
-  await page.locator('#change-password').click();
+  await page.locator('.account-avatar').click();
+  await page.getByRole('menuitem',{name:locale==='zh-CN'?'改密码':'Change password'}).click();
   const modal=page.locator('.modal');
   await modal.getByText(expectedHint,{exact:false}).waitFor();
   assert.equal(await modal.locator('input[autocomplete="new-password"]').getAttribute('minlength'),'8');

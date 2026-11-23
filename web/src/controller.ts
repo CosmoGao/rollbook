@@ -1,6 +1,6 @@
 import { mountOverview, unmountOverview } from './Overview';
 import { mountAssets, unmountAssets } from './Assets';
-import { mountSettings, unmountSettings } from './Settings';
+import { mountSettings, mountPersonalSettings, unmountSettings } from './Settings';
 import { mountSearch, unmountSearch } from './Search';
 import { mountPending, unmountPending } from './Pending';
 import { mountKeys, unmountKeys } from './Keys';
@@ -16,7 +16,7 @@ import { t, enumLabel, setLanguage, language } from './catalog-i18n';
 const root=document.getElementById('content')!;
 const labels:Record<string,string>={overview:'总览',topology:'拓扑',pendingHub:'待处理',agent:'Agent 接入',settings:'设置',search:'全局搜索',assets:'资产维护',sites:'站点',hosts:'设备与主机',networks:'网段',outdated:'有新版本',pending:'待确认',changes:'最近变更',contexts:'共享上下文',unverified:'待核实',keys:'Key 管理',backup:'备份与恢复'};
 const types:Record<string,string>={location:'站点',uplink:'网络接入',host:'设备与主机',network:'网段',ip:'IP 地址',service:'服务',port:'端口',endpoint:'访问入口',version:'版本',credential:'凭据引用',note:'笔记',change:'变更',dependency:'依赖'};
-const routePaths:Record<string,string>={overview:'/',assets:'/assets',services:'/assets/services',sites:'/assets/sites',hosts:'/assets/hosts',networks:'/assets/networks',topology:'/topology',pendingHub:'/pending',pending:'/pending',unverified:'/pending?tab=unverified',outdated:'/pending?tab=outdated',agent:'/agent',keys:'/agent',settings:'/settings',backup:'/settings/backup',changes:'/changes',contexts:'/contexts',search:'/search'};
+const routePaths:Record<string,string>={overview:'/',assets:'/assets',services:'/assets/services',sites:'/assets/sites',hosts:'/assets/hosts',networks:'/assets/networks',topology:'/topology',pendingHub:'/pending',pending:'/pending',unverified:'/pending?tab=unverified',outdated:'/pending?tab=outdated',agent:'/agent',keys:'/agent',settings:'/settings',personal:'/settings/personal',backup:'/settings/backup',changes:'/changes',contexts:'/contexts',search:'/search'};
 let pendingSearchTerm='',firstRunOpen=false;
 const cookie=(name:string)=>document.cookie.split('; ').find(value=>value.startsWith(name+'='))?.slice(name.length+1)||'';
 export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
@@ -49,7 +49,8 @@ export async function navigate(view:string,push=true){
     case 'topology':mountTopology(root,api,openObject);break;
     case 'pendingHub':case 'pending':case 'unverified':case 'outdated':mountPending(root,api,openObject,navigate,view==='pendingHub'?'pending':view);break;
     case 'agent':case 'keys':mountKeys(root,api);break;
-    case 'settings':mountSettings(root,()=>navigate('backup'),()=>document.getElementById('change-password')?.click(),()=>document.getElementById('logout-all')?.click(),setLanguage);break;
+    case 'settings':mountSettings(root,()=>navigate('backup'));break;
+    case 'personal':mountPersonalSettings(root);break;
     case 'backup':mountBackup(root,api,()=>window.dispatchEvent(new Event('rollbook:unauthorized')));break;
     case 'search':mountSearch(root,api,openObject,pendingSearchTerm);pendingSearchTerm='';break;
     case 'changes':case 'contexts':mountAudit(root,view,api,openObject);break;

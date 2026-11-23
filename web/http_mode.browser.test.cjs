@@ -61,7 +61,7 @@ test('真实浏览器经 TLS 终结反代与直连 HTTP 的提示和 Cookie', {t
    await page.locator('input[name=login]').fill('owner');
    await page.locator('input[name=password]').fill('strong password 12345');
    await page.locator('#login-form button[type=submit]').click();
-   await page.locator('#logout').waitFor({state:'visible'});
+   await page.locator('.account-avatar').waitFor({state:'visible'});
    const cookies=await context.cookies();
    for(const name of ['rollbook_session','rollbook_csrf']){
     const cookie=cookies.find(item=>item.name===name);
