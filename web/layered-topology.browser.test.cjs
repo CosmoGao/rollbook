@@ -46,8 +46,35 @@ test('分层画布在真实规模下筛选、展开、访问与影响',async()=>
   await page.waitForFunction(()=>document.querySelector('.content').scrollTop>0);
   assert.ok(await page.locator('.content').evaluate(el=>el.scrollTop)>0);
   assert.equal(await viewport.getAttribute('style'),zoomBefore);
-  await cardScroll.focus();await page.keyboard.press('Home');await page.keyboard.press('PageDown');
-  assert.ok(await cardScroll.evaluate(el=>el.scrollTop)>0);
+  await cardScroll.evaluate(el=>el.scrollTop=0);
+  await cardScroll.press('ArrowDown');
+  assert.ok(await cardScroll.evaluate(el=>el.scrollTop)>=30);
+  await cardScroll.evaluate(el=>el.scrollTop=0);
+  await cardScroll.press('PageDown');
+  assert.ok(await cardScroll.evaluate(el=>el.scrollTop>=el.clientHeight*.8));
+  await cardScroll.press('PageUp');
+  assert.equal(await cardScroll.evaluate(el=>el.scrollTop),0);
+  await cardScroll.press('End');
+  assert.ok(await cardScroll.evaluate(el=>el.scrollTop>=el.scrollHeight-el.clientHeight-1));
+  await cardScroll.press('Home');
+  assert.equal(await cardScroll.evaluate(el=>el.scrollTop),0);
+  const dragBefore=await viewport.getAttribute('style');
+  const box=await cardScroll.boundingBox();
+  await page.mouse.move(box.x+box.width/2,box.y+100);await page.mouse.down();
+  await page.mouse.move(box.x+box.width/2,box.y+30,{steps:10});await page.mouse.up();
+  assert.equal(await viewport.getAttribute('style'),dragBefore);
+  const cdp=await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1});
+  const x=box.x+box.width/2,startY=box.y+Math.min(240,box.height-30);
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y:startY}]});
+  for(let step=1;step<=8;step++){
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:startY-step*15}]});
+   await page.waitForTimeout(16);
+  }
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await page.waitForFunction(()=>document.querySelector('.topology-site-card').scrollTop>0);
+  assert.equal(await viewport.getAttribute('style'),dragBefore);
+  await cdp.detach();
   assert.ok(await page.locator('.content').evaluate(el=>Math.abs(el.getBoundingClientRect().right-innerWidth)<2));
   await page.locator('.topology-flow .react-flow__controls-zoomin').click();
   assert.notEqual(await viewport.getAttribute('style'),zoomBefore);

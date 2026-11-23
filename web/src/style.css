@@ -195,7 +195,7 @@ button.primary:active,.search-box button:active,.mobile-search button:active,.ui
 .topology-host-card>.ghost,.topology-host-children .ghost,.row button,.detail-breadcrumb button{font-size:var(--font-size-body);min-height:var(--control-h)}
 .topology-host-card>.ghost,.topology-host-children .ghost{border-color:var(--color-control-border)!important}
 .topology-site-card>header small{color:var(--color-selected-fg)}
-.topology-site-card{min-height:0;overflow-y:auto;overflow-x:hidden}
+.topology-site-card{min-height:0;overflow-y:auto;overflow-x:hidden;touch-action:pan-y}
 .topology-site-card>header{position:sticky;top:0;z-index:1;min-width:0;flex-wrap:wrap}
 .topology-site-card>header strong,.topology-site-card>header small{min-width:0;white-space:normal;overflow-wrap:anywhere}
 .topology-site-scroll{height:auto;overflow:visible}
