@@ -13,7 +13,7 @@ let root:Root|undefined;
 export function unmountKeys(){if(root){root.unmount();root=undefined}}
 export function mountKeys(target:Element,api:API){unmountKeys();root=createRoot(target);root.render(<QueryClientProvider client={client}><Keys api={api}/></QueryClientProvider>)}
 function Modal({title,children,onClose}:{title:string;children:React.ReactNode;onClose:()=>void}){
-  return <Dialog.Root open onOpenChange={open=>{if(!open)onClose()}}><Dialog.Portal><Dialog.Overlay className="modal-backdrop"/><Dialog.Content className="modal radix-modal"><Dialog.Title asChild><h2>{title}</h2></Dialog.Title>{children}</Dialog.Content></Dialog.Portal></Dialog.Root>
+  return <Dialog.Root open onOpenChange={open=>{if(!open)onClose()}}><Dialog.Portal><Dialog.Overlay className="modal-backdrop"/><Dialog.Content className="modal radix-modal"><Dialog.Close className="modal-close" aria-label={document.documentElement.lang.startsWith('en')?'Close':'关闭'}>×</Dialog.Close><Dialog.Title asChild><h2>{title}</h2></Dialog.Title>{children}</Dialog.Content></Dialog.Portal></Dialog.Root>
 }
 function Keys({api}:{api:API}){
   const {i18n}=useTranslation(),en=i18n.language.startsWith('en');
