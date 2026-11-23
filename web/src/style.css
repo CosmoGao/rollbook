@@ -162,6 +162,17 @@ button.primary:active,.search-box button:active,.mobile-search button:active,.ui
 .detail-breadcrumb button{min-height:var(--control-h);font-size:var(--font-size-body)}
 .search-box{border-color:var(--color-control-border)!important;box-shadow:none}
 .search-box input{min-height:var(--control-h);font-size:var(--font-size-body)}
+/* 搜索组合框由外层统一绘制边界与焦点，内部控件不再叠加描边。 */
+.search-box{min-width:0;max-width:100%;overflow:visible}
+.search-box:focus-within{outline:var(--focus-width) solid var(--color-focus);outline-offset:var(--focus-offset)}
+.search-box input[type="search"]{width:0;min-width:0;flex:1 1 auto;border:0!important;border-radius:0!important;outline:0!important;box-shadow:none!important;background:transparent!important}
+.search-box input::-webkit-search-cancel-button{display:none}
+.search-box button{flex:none;border:0!important;border-radius:0!important;outline:0!important;box-shadow:none!important}
+.search-box button[type="submit"]{border-radius:0 7px 7px 0!important}
+.search-box button:focus-visible{text-decoration:underline;text-underline-offset:3px}
+.search-box .search-clear{min-width:var(--control-h);padding:0 8px;background:transparent!important;color:var(--color-text-muted)!important;font-size:22px;line-height:1}
+.search-box .search-clear:hover,.search-box .search-clear:focus-visible{background:var(--color-surface-hover)!important;color:var(--color-text)!important}
+@media(pointer:coarse){.search-box .search-clear,.search-box button[type="submit"]{min-height:var(--control-h-touch)}}
 .search-answer{cursor:pointer}
 .search-answer:focus-visible,.tree-node summary:focus-visible{outline:var(--focus-width) solid var(--color-focus)!important;outline-offset:var(--focus-offset)!important}
 .row button,.copy-button{font-size:var(--font-size-body)}
