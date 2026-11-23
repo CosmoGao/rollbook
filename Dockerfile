@@ -3,6 +3,7 @@ WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
+COPY docs/frontend-standard/tokens.css /src/docs/frontend-standard/tokens.css
 RUN npm run build
 
 FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS build

@@ -1,0 +1,2934 @@
+{
+  "standardVersion": "1.0",
+  "method": "WCAG 2.x sRGB 相对亮度，线性化阈值0.04045；(L亮+0.05)/(L暗+0.05)；不透明组合；未四舍五入值用于判定",
+  "scope": "计划中合法 token 组合，不检查 DOM、真实背景叠加、焦点几何、屏幕阅读器或整站合规",
+  "contrastTests": 166,
+  "contrastPass": 166,
+  "structuralChecks": 272,
+  "structuralPass": 272,
+  "results": [
+    {
+      "theme": "light",
+      "foreground": "text",
+      "background": "bg",
+      "fg": "#0F172A",
+      "bg": "#F8FAFC",
+      "ratio": 17.0629,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "text-muted",
+      "background": "bg",
+      "fg": "#475569",
+      "bg": "#F8FAFC",
+      "ratio": 7.2425,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "link",
+      "background": "bg",
+      "fg": "#2563EB",
+      "bg": "#F8FAFC",
+      "ratio": 4.94,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "link-hover",
+      "background": "bg",
+      "fg": "#1D4ED8",
+      "bg": "#F8FAFC",
+      "ratio": 6.4052,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "link-active",
+      "background": "bg",
+      "fg": "#1E40AF",
+      "bg": "#F8FAFC",
+      "ratio": 8.3366,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "success-text",
+      "background": "bg",
+      "fg": "#157A3B",
+      "bg": "#F8FAFC",
+      "ratio": 5.1745,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "warning-text",
+      "background": "bg",
+      "fg": "#9A4A00",
+      "bg": "#F8FAFC",
+      "ratio": 5.9851,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "danger-text",
+      "background": "bg",
+      "fg": "#C01515",
+      "bg": "#F8FAFC",
+      "ratio": 5.9747,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "info-text",
+      "background": "bg",
+      "fg": "#0369A1",
+      "bg": "#F8FAFC",
+      "ratio": 5.6712,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "control-border",
+      "background": "bg",
+      "fg": "#64748B",
+      "bg": "#F8FAFC",
+      "ratio": 4.5484,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "control-border-hover",
+      "background": "bg",
+      "fg": "#475569",
+      "bg": "#F8FAFC",
+      "ratio": 7.2425,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "control-border-active",
+      "background": "bg",
+      "fg": "#334155",
+      "bg": "#F8FAFC",
+      "ratio": 9.8968,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "focus",
+      "background": "bg",
+      "fg": "#2563EB",
+      "bg": "#F8FAFC",
+      "ratio": 4.94,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "danger-text",
+      "background": "bg",
+      "fg": "#C01515",
+      "bg": "#F8FAFC",
+      "ratio": 5.9747,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "text",
+      "background": "surface",
+      "fg": "#0F172A",
+      "bg": "#FFFFFF",
+      "ratio": 17.8525,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "text-muted",
+      "background": "surface",
+      "fg": "#475569",
+      "bg": "#FFFFFF",
+      "ratio": 7.5777,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "link",
+      "background": "surface",
+      "fg": "#2563EB",
+      "bg": "#FFFFFF",
+      "ratio": 5.1686,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "link-hover",
+      "background": "surface",
+      "fg": "#1D4ED8",
+      "bg": "#FFFFFF",
+      "ratio": 6.7016,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "link-active",
+      "background": "surface",
+      "fg": "#1E40AF",
+      "bg": "#FFFFFF",
+      "ratio": 8.7224,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "success-text",
+      "background": "surface",
+      "fg": "#157A3B",
+      "bg": "#FFFFFF",
+      "ratio": 5.414,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "warning-text",
+      "background": "surface",
+      "fg": "#9A4A00",
+      "bg": "#FFFFFF",
+      "ratio": 6.2621,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "danger-text",
+      "background": "surface",
+      "fg": "#C01515",
+      "bg": "#FFFFFF",
+      "ratio": 6.2511,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "info-text",
+      "background": "surface",
+      "fg": "#0369A1",
+      "bg": "#FFFFFF",
+      "ratio": 5.9336,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "control-border",
+      "background": "surface",
+      "fg": "#64748B",
+      "bg": "#FFFFFF",
+      "ratio": 4.7588,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "control-border-hover",
+      "background": "surface",
+      "fg": "#475569",
+      "bg": "#FFFFFF",
+      "ratio": 7.5777,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "control-border-active",
+      "background": "surface",
+      "fg": "#334155",
+      "bg": "#FFFFFF",
+      "ratio": 10.3547,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "focus",
+      "background": "surface",
+      "fg": "#2563EB",
+      "bg": "#FFFFFF",
+      "ratio": 5.1686,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "danger-text",
+      "background": "surface",
+      "fg": "#C01515",
+      "bg": "#FFFFFF",
+      "ratio": 6.2511,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "text",
+      "background": "surface-hover",
+      "fg": "#0F172A",
+      "bg": "#F1F5F9",
+      "ratio": 16.296,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "text-muted",
+      "background": "surface-hover",
+      "fg": "#475569",
+      "bg": "#F1F5F9",
+      "ratio": 6.917,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "link",
+      "background": "surface-hover",
+      "fg": "#2563EB",
+      "bg": "#F1F5F9",
+      "ratio": 4.7179,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "link-hover",
+      "background": "surface-hover",
+      "fg": "#1D4ED8",
+      "bg": "#F1F5F9",
+      "ratio": 6.1173,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "link-active",
+      "background": "surface-hover",
+      "fg": "#1E40AF",
+      "bg": "#F1F5F9",
+      "ratio": 7.9619,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "success-text",
+      "background": "surface-hover",
+      "fg": "#157A3B",
+      "bg": "#F1F5F9",
+      "ratio": 4.9419,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "warning-text",
+      "background": "surface-hover",
+      "fg": "#9A4A00",
+      "bg": "#F1F5F9",
+      "ratio": 5.7161,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "danger-text",
+      "background": "surface-hover",
+      "fg": "#C01515",
+      "bg": "#F1F5F9",
+      "ratio": 5.7061,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "info-text",
+      "background": "surface-hover",
+      "fg": "#0369A1",
+      "bg": "#F1F5F9",
+      "ratio": 5.4163,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "control-border",
+      "background": "surface-hover",
+      "fg": "#64748B",
+      "bg": "#F1F5F9",
+      "ratio": 4.3439,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "control-border-hover",
+      "background": "surface-hover",
+      "fg": "#475569",
+      "bg": "#F1F5F9",
+      "ratio": 6.917,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "control-border-active",
+      "background": "surface-hover",
+      "fg": "#334155",
+      "bg": "#F1F5F9",
+      "ratio": 9.4519,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "focus",
+      "background": "surface-hover",
+      "fg": "#2563EB",
+      "bg": "#F1F5F9",
+      "ratio": 4.7179,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "danger-text",
+      "background": "surface-hover",
+      "fg": "#C01515",
+      "bg": "#F1F5F9",
+      "ratio": 5.7061,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "text",
+      "background": "surface-active",
+      "fg": "#0F172A",
+      "bg": "#EDF2F7",
+      "ratio": 15.8504,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "text-muted",
+      "background": "surface-active",
+      "fg": "#475569",
+      "bg": "#EDF2F7",
+      "ratio": 6.7278,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "link",
+      "background": "surface-active",
+      "fg": "#2563EB",
+      "bg": "#EDF2F7",
+      "ratio": 4.5889,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "link-hover",
+      "background": "surface-active",
+      "fg": "#1D4ED8",
+      "bg": "#EDF2F7",
+      "ratio": 5.95,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "link-active",
+      "background": "surface-active",
+      "fg": "#1E40AF",
+      "bg": "#EDF2F7",
+      "ratio": 7.7442,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "success-text",
+      "background": "surface-active",
+      "fg": "#157A3B",
+      "bg": "#EDF2F7",
+      "ratio": 4.8068,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "warning-text",
+      "background": "surface-active",
+      "fg": "#9A4A00",
+      "bg": "#EDF2F7",
+      "ratio": 5.5598,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "danger-text",
+      "background": "surface-active",
+      "fg": "#C01515",
+      "bg": "#EDF2F7",
+      "ratio": 5.5501,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "info-text",
+      "background": "surface-active",
+      "fg": "#0369A1",
+      "bg": "#EDF2F7",
+      "ratio": 5.2682,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "control-border",
+      "background": "surface-active",
+      "fg": "#64748B",
+      "bg": "#EDF2F7",
+      "ratio": 4.2251,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "control-border-hover",
+      "background": "surface-active",
+      "fg": "#475569",
+      "bg": "#EDF2F7",
+      "ratio": 6.7278,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "control-border-active",
+      "background": "surface-active",
+      "fg": "#334155",
+      "bg": "#EDF2F7",
+      "ratio": 9.1935,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "focus",
+      "background": "surface-active",
+      "fg": "#2563EB",
+      "bg": "#EDF2F7",
+      "ratio": 4.5889,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "danger-text",
+      "background": "surface-active",
+      "fg": "#C01515",
+      "bg": "#EDF2F7",
+      "ratio": 5.5501,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "selected-fg",
+      "background": "selected-bg",
+      "fg": "#1D4ED8",
+      "bg": "#EFF6FF",
+      "ratio": 6.158,
+      "required": 4.5,
+      "purpose": "当前项文字/图标",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "primary-fg",
+      "background": "primary",
+      "fg": "#FFFFFF",
+      "bg": "#2563EB",
+      "ratio": 5.1686,
+      "required": 4.5,
+      "purpose": "主按钮标签",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "primary-fg",
+      "background": "primary-hover",
+      "fg": "#FFFFFF",
+      "bg": "#1D4ED8",
+      "ratio": 6.7016,
+      "required": 4.5,
+      "purpose": "主按钮标签",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "primary-fg",
+      "background": "primary-active",
+      "fg": "#FFFFFF",
+      "bg": "#1E40AF",
+      "ratio": 8.7224,
+      "required": 4.5,
+      "purpose": "主按钮标签",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "danger-fg",
+      "background": "danger",
+      "fg": "#FFFFFF",
+      "bg": "#C01515",
+      "ratio": 6.2511,
+      "required": 4.5,
+      "purpose": "危险按钮标签",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "danger-fg",
+      "background": "danger-hover",
+      "fg": "#FFFFFF",
+      "bg": "#A51212",
+      "ratio": 7.7919,
+      "required": 4.5,
+      "purpose": "危险按钮标签",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "danger-fg",
+      "background": "danger-active",
+      "fg": "#FFFFFF",
+      "bg": "#8F1212",
+      "ratio": 9.279,
+      "required": 4.5,
+      "purpose": "危险按钮标签",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "success-fg",
+      "background": "success",
+      "fg": "#FFFFFF",
+      "bg": "#157A3B",
+      "ratio": 5.414,
+      "required": 4.5,
+      "purpose": "实心状态标签",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "success-on-subtle",
+      "background": "success-subtle",
+      "fg": "#14532D",
+      "bg": "#E8F6ED",
+      "ratio": 8.1722,
+      "required": 4.5,
+      "purpose": "浅底状态标签",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "warning-fg",
+      "background": "warning",
+      "fg": "#FFFFFF",
+      "bg": "#9A4A00",
+      "ratio": 6.2621,
+      "required": 4.5,
+      "purpose": "实心状态标签",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "warning-on-subtle",
+      "background": "warning-subtle",
+      "fg": "#7A3B00",
+      "bg": "#FFF6E8",
+      "ratio": 7.9897,
+      "required": 4.5,
+      "purpose": "浅底状态标签",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "danger-fg",
+      "background": "danger",
+      "fg": "#FFFFFF",
+      "bg": "#C01515",
+      "ratio": 6.2511,
+      "required": 4.5,
+      "purpose": "实心状态标签",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "danger-on-subtle",
+      "background": "danger-subtle",
+      "fg": "#8F1212",
+      "bg": "#FDECEC",
+      "ratio": 8.1239,
+      "required": 4.5,
+      "purpose": "浅底状态标签",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "info-fg",
+      "background": "info",
+      "fg": "#FFFFFF",
+      "bg": "#0369A1",
+      "ratio": 5.9336,
+      "required": 4.5,
+      "purpose": "实心状态标签",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "info-on-subtle",
+      "background": "info-subtle",
+      "fg": "#0C4A6E",
+      "bg": "#E8F4FB",
+      "ratio": 8.4513,
+      "required": 4.5,
+      "purpose": "浅底状态标签",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "chart-1",
+      "background": "bg",
+      "fg": "#2563EB",
+      "bg": "#F8FAFC",
+      "ratio": 4.94,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "chart-1",
+      "background": "surface",
+      "fg": "#2563EB",
+      "bg": "#FFFFFF",
+      "ratio": 5.1686,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "chart-2",
+      "background": "bg",
+      "fg": "#0F766E",
+      "bg": "#F8FAFC",
+      "ratio": 5.2312,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "chart-2",
+      "background": "surface",
+      "fg": "#0F766E",
+      "bg": "#FFFFFF",
+      "ratio": 5.4733,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "chart-3",
+      "background": "bg",
+      "fg": "#7E22CE",
+      "bg": "#F8FAFC",
+      "ratio": 6.6744,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "chart-3",
+      "background": "surface",
+      "fg": "#7E22CE",
+      "bg": "#FFFFFF",
+      "ratio": 6.9833,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "chart-4",
+      "background": "bg",
+      "fg": "#9A4A00",
+      "bg": "#F8FAFC",
+      "ratio": 5.9851,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "chart-4",
+      "background": "surface",
+      "fg": "#9A4A00",
+      "bg": "#FFFFFF",
+      "ratio": 6.2621,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "chart-5",
+      "background": "bg",
+      "fg": "#BE185D",
+      "bg": "#F8FAFC",
+      "ratio": 5.7707,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "chart-5",
+      "background": "surface",
+      "fg": "#BE185D",
+      "bg": "#FFFFFF",
+      "ratio": 6.0377,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "chart-6",
+      "background": "bg",
+      "fg": "#475569",
+      "bg": "#F8FAFC",
+      "ratio": 7.2425,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "foreground": "chart-6",
+      "background": "surface",
+      "fg": "#475569",
+      "bg": "#FFFFFF",
+      "ratio": 7.5777,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "text",
+      "background": "bg",
+      "fg": "#F1F5F9",
+      "bg": "#0F172A",
+      "ratio": 16.296,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "text-muted",
+      "background": "bg",
+      "fg": "#94A3B8",
+      "bg": "#0F172A",
+      "ratio": 6.9627,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "link",
+      "background": "bg",
+      "fg": "#60A5FA",
+      "bg": "#0F172A",
+      "ratio": 7.0219,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "link-hover",
+      "background": "bg",
+      "fg": "#93C5FD",
+      "bg": "#0F172A",
+      "ratio": 9.9001,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "link-active",
+      "background": "bg",
+      "fg": "#BFDBFE",
+      "bg": "#0F172A",
+      "ratio": 12.564,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "success-text",
+      "background": "bg",
+      "fg": "#A7E3BD",
+      "bg": "#0F172A",
+      "ratio": 12.2125,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "warning-text",
+      "background": "bg",
+      "fg": "#F3D19A",
+      "bg": "#0F172A",
+      "ratio": 12.2398,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "danger-text",
+      "background": "bg",
+      "fg": "#F5B4B4",
+      "bg": "#0F172A",
+      "ratio": 10.261,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "info-text",
+      "background": "bg",
+      "fg": "#B9DDF0",
+      "bg": "#0F172A",
+      "ratio": 12.4659,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "control-border",
+      "background": "bg",
+      "fg": "#94A3B8",
+      "bg": "#0F172A",
+      "ratio": 6.9627,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "control-border-hover",
+      "background": "bg",
+      "fg": "#CBD5E1",
+      "bg": "#0F172A",
+      "ratio": 12.0243,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "control-border-active",
+      "background": "bg",
+      "fg": "#F1F5F9",
+      "bg": "#0F172A",
+      "ratio": 16.296,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "focus",
+      "background": "bg",
+      "fg": "#60A5FA",
+      "bg": "#0F172A",
+      "ratio": 7.0219,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "danger-text",
+      "background": "bg",
+      "fg": "#F5B4B4",
+      "bg": "#0F172A",
+      "ratio": 10.261,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "text",
+      "background": "surface",
+      "fg": "#F1F5F9",
+      "bg": "#1E293B",
+      "ratio": 13.3533,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "text-muted",
+      "background": "surface",
+      "fg": "#94A3B8",
+      "bg": "#1E293B",
+      "ratio": 5.7053,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "link",
+      "background": "surface",
+      "fg": "#60A5FA",
+      "bg": "#1E293B",
+      "ratio": 5.7538,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "link-hover",
+      "background": "surface",
+      "fg": "#93C5FD",
+      "bg": "#1E293B",
+      "ratio": 8.1123,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "link-active",
+      "background": "surface",
+      "fg": "#BFDBFE",
+      "bg": "#1E293B",
+      "ratio": 10.2952,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "success-text",
+      "background": "surface",
+      "fg": "#A7E3BD",
+      "bg": "#1E293B",
+      "ratio": 10.0071,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "warning-text",
+      "background": "surface",
+      "fg": "#F3D19A",
+      "bg": "#1E293B",
+      "ratio": 10.0295,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "danger-text",
+      "background": "surface",
+      "fg": "#F5B4B4",
+      "bg": "#1E293B",
+      "ratio": 8.4081,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "info-text",
+      "background": "surface",
+      "fg": "#B9DDF0",
+      "bg": "#1E293B",
+      "ratio": 10.2148,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "control-border",
+      "background": "surface",
+      "fg": "#94A3B8",
+      "bg": "#1E293B",
+      "ratio": 5.7053,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "control-border-hover",
+      "background": "surface",
+      "fg": "#CBD5E1",
+      "bg": "#1E293B",
+      "ratio": 9.853,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "control-border-active",
+      "background": "surface",
+      "fg": "#F1F5F9",
+      "bg": "#1E293B",
+      "ratio": 13.3533,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "focus",
+      "background": "surface",
+      "fg": "#60A5FA",
+      "bg": "#1E293B",
+      "ratio": 5.7538,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "danger-text",
+      "background": "surface",
+      "fg": "#F5B4B4",
+      "bg": "#1E293B",
+      "ratio": 8.4081,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "text",
+      "background": "surface-hover",
+      "fg": "#F1F5F9",
+      "bg": "#253247",
+      "ratio": 11.7899,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "text-muted",
+      "background": "surface-hover",
+      "fg": "#94A3B8",
+      "bg": "#253247",
+      "ratio": 5.0374,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "link",
+      "background": "surface-hover",
+      "fg": "#60A5FA",
+      "bg": "#253247",
+      "ratio": 5.0802,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "link-hover",
+      "background": "surface-hover",
+      "fg": "#93C5FD",
+      "bg": "#253247",
+      "ratio": 7.1625,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "link-active",
+      "background": "surface-hover",
+      "fg": "#BFDBFE",
+      "bg": "#253247",
+      "ratio": 9.0898,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "success-text",
+      "background": "surface-hover",
+      "fg": "#A7E3BD",
+      "bg": "#253247",
+      "ratio": 8.8355,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "warning-text",
+      "background": "surface-hover",
+      "fg": "#F3D19A",
+      "bg": "#253247",
+      "ratio": 8.8553,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "danger-text",
+      "background": "surface-hover",
+      "fg": "#F5B4B4",
+      "bg": "#253247",
+      "ratio": 7.4237,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "info-text",
+      "background": "surface-hover",
+      "fg": "#B9DDF0",
+      "bg": "#253247",
+      "ratio": 9.0189,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "control-border",
+      "background": "surface-hover",
+      "fg": "#94A3B8",
+      "bg": "#253247",
+      "ratio": 5.0374,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "control-border-hover",
+      "background": "surface-hover",
+      "fg": "#CBD5E1",
+      "bg": "#253247",
+      "ratio": 8.6994,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "control-border-active",
+      "background": "surface-hover",
+      "fg": "#F1F5F9",
+      "bg": "#253247",
+      "ratio": 11.7899,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "focus",
+      "background": "surface-hover",
+      "fg": "#60A5FA",
+      "bg": "#253247",
+      "ratio": 5.0802,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "danger-text",
+      "background": "surface-hover",
+      "fg": "#F5B4B4",
+      "bg": "#253247",
+      "ratio": 7.4237,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "text",
+      "background": "surface-active",
+      "fg": "#F1F5F9",
+      "bg": "#29364B",
+      "ratio": 11.1218,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "text-muted",
+      "background": "surface-active",
+      "fg": "#94A3B8",
+      "bg": "#29364B",
+      "ratio": 4.7519,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "link",
+      "background": "surface-active",
+      "fg": "#60A5FA",
+      "bg": "#29364B",
+      "ratio": 4.7923,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "link-hover",
+      "background": "surface-active",
+      "fg": "#93C5FD",
+      "bg": "#29364B",
+      "ratio": 6.7567,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "link-active",
+      "background": "surface-active",
+      "fg": "#BFDBFE",
+      "bg": "#29364B",
+      "ratio": 8.5748,
+      "required": 4.5,
+      "purpose": "正文/次要文字/链接",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "success-text",
+      "background": "surface-active",
+      "fg": "#A7E3BD",
+      "bg": "#29364B",
+      "ratio": 8.3349,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "warning-text",
+      "background": "surface-active",
+      "fg": "#F3D19A",
+      "bg": "#29364B",
+      "ratio": 8.3535,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "danger-text",
+      "background": "surface-active",
+      "fg": "#F5B4B4",
+      "bg": "#29364B",
+      "ratio": 7.003,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "info-text",
+      "background": "surface-active",
+      "fg": "#B9DDF0",
+      "bg": "#29364B",
+      "ratio": 8.5078,
+      "required": 4.5,
+      "purpose": "状态说明/错误文字",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "control-border",
+      "background": "surface-active",
+      "fg": "#94A3B8",
+      "bg": "#29364B",
+      "ratio": 4.7519,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "control-border-hover",
+      "background": "surface-active",
+      "fg": "#CBD5E1",
+      "bg": "#29364B",
+      "ratio": 8.2065,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "control-border-active",
+      "background": "surface-active",
+      "fg": "#F1F5F9",
+      "bg": "#29364B",
+      "ratio": 11.1218,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "focus",
+      "background": "surface-active",
+      "fg": "#60A5FA",
+      "bg": "#29364B",
+      "ratio": 4.7923,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "danger-text",
+      "background": "surface-active",
+      "fg": "#F5B4B4",
+      "bg": "#29364B",
+      "ratio": 7.003,
+      "required": 3,
+      "purpose": "必要轮廓/焦点/错误轮廓",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "selected-fg",
+      "background": "selected-bg",
+      "fg": "#BFDBFE",
+      "bg": "#1E3A8A",
+      "ratio": 7.2896,
+      "required": 4.5,
+      "purpose": "当前项文字/图标",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "primary-fg",
+      "background": "primary",
+      "fg": "#FFFFFF",
+      "bg": "#2563EB",
+      "ratio": 5.1686,
+      "required": 4.5,
+      "purpose": "主按钮标签",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "primary-fg",
+      "background": "primary-hover",
+      "fg": "#FFFFFF",
+      "bg": "#1D4ED8",
+      "ratio": 6.7016,
+      "required": 4.5,
+      "purpose": "主按钮标签",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "primary-fg",
+      "background": "primary-active",
+      "fg": "#FFFFFF",
+      "bg": "#1E40AF",
+      "ratio": 8.7224,
+      "required": 4.5,
+      "purpose": "主按钮标签",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "danger-fg",
+      "background": "danger",
+      "fg": "#1A0B0B",
+      "bg": "#E06A6A",
+      "ratio": 5.8718,
+      "required": 4.5,
+      "purpose": "危险按钮标签",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "danger-fg",
+      "background": "danger-hover",
+      "fg": "#1A0B0B",
+      "bg": "#E98383",
+      "ratio": 7.3307,
+      "required": 4.5,
+      "purpose": "危险按钮标签",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "danger-fg",
+      "background": "danger-active",
+      "fg": "#1A0B0B",
+      "bg": "#F0A0A0",
+      "ratio": 9.3387,
+      "required": 4.5,
+      "purpose": "危险按钮标签",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "success-fg",
+      "background": "success",
+      "fg": "#08150D",
+      "bg": "#3D9B63",
+      "ratio": 5.4007,
+      "required": 4.5,
+      "purpose": "实心状态标签",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "success-on-subtle",
+      "background": "success-subtle",
+      "fg": "#A7E3BD",
+      "bg": "#143021",
+      "ratio": 9.7428,
+      "required": 4.5,
+      "purpose": "浅底状态标签",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "warning-fg",
+      "background": "warning",
+      "fg": "#1A1206",
+      "bg": "#E0A14A",
+      "ratio": 8.2663,
+      "required": 4.5,
+      "purpose": "实心状态标签",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "warning-on-subtle",
+      "background": "warning-subtle",
+      "fg": "#F3D19A",
+      "bg": "#3A2A12",
+      "ratio": 9.4733,
+      "required": 4.5,
+      "purpose": "浅底状态标签",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "danger-fg",
+      "background": "danger",
+      "fg": "#1A0B0B",
+      "bg": "#E06A6A",
+      "ratio": 5.8718,
+      "required": 4.5,
+      "purpose": "实心状态标签",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "danger-on-subtle",
+      "background": "danger-subtle",
+      "fg": "#F5B4B4",
+      "bg": "#3A1818",
+      "ratio": 9.1181,
+      "required": 4.5,
+      "purpose": "浅底状态标签",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "info-fg",
+      "background": "info",
+      "fg": "#071218",
+      "bg": "#5BA3C9",
+      "ratio": 6.7889,
+      "required": 4.5,
+      "purpose": "实心状态标签",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "info-on-subtle",
+      "background": "info-subtle",
+      "fg": "#B9DDF0",
+      "bg": "#163042",
+      "ratio": 9.5494,
+      "required": 4.5,
+      "purpose": "浅底状态标签",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "chart-1",
+      "background": "bg",
+      "fg": "#60A5FA",
+      "bg": "#0F172A",
+      "ratio": 7.0219,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "chart-1",
+      "background": "surface",
+      "fg": "#60A5FA",
+      "bg": "#1E293B",
+      "ratio": 5.7538,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "chart-2",
+      "background": "bg",
+      "fg": "#2DD4BF",
+      "bg": "#0F172A",
+      "ratio": 9.5905,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "chart-2",
+      "background": "surface",
+      "fg": "#2DD4BF",
+      "bg": "#1E293B",
+      "ratio": 7.8586,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "chart-3",
+      "background": "bg",
+      "fg": "#C084FC",
+      "bg": "#0F172A",
+      "ratio": 6.7563,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "chart-3",
+      "background": "surface",
+      "fg": "#C084FC",
+      "bg": "#1E293B",
+      "ratio": 5.5362,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "chart-4",
+      "background": "bg",
+      "fg": "#E0A14A",
+      "bg": "#0F172A",
+      "ratio": 7.9625,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "chart-4",
+      "background": "surface",
+      "fg": "#E0A14A",
+      "bg": "#1E293B",
+      "ratio": 6.5246,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "chart-5",
+      "background": "bg",
+      "fg": "#F472B6",
+      "bg": "#0F172A",
+      "ratio": 6.7406,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "chart-5",
+      "background": "surface",
+      "fg": "#F472B6",
+      "bg": "#1E293B",
+      "ratio": 5.5234,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "chart-6",
+      "background": "bg",
+      "fg": "#CBD5E1",
+      "bg": "#0F172A",
+      "ratio": 12.0243,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "chart-6",
+      "background": "surface",
+      "fg": "#CBD5E1",
+      "bg": "#1E293B",
+      "ratio": 9.853,
+      "required": 3,
+      "purpose": "图表必要图形；不代表类别间对比",
+      "pass": true
+    }
+  ],
+  "checks": [
+    {
+      "check": "主题 token 键一一对应",
+      "pass": true
+    },
+    {
+      "check": "light: CSS 颜色与 JSON 完全一致",
+      "pass": true
+    },
+    {
+      "check": "light.bg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "bg 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.surface 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "surface 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.border 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "border 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.text 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "text 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.text-muted 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "text-muted 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.primary 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "primary 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.primary-fg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "primary-fg 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.selected-bg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "selected-bg 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.selected-fg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "selected-fg 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.focus 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "focus 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.link 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "link 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.link-hover 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "link-hover 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.link-active 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "link-active 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.control-border 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "control-border 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.control-border-hover 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "control-border-hover 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.control-border-active 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "control-border-active 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.surface-hover 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "surface-hover 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.surface-active 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "surface-active 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.primary-hover 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "primary-hover 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.primary-active 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "primary-active 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.disabled-bg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "disabled-bg 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.disabled-fg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "disabled-fg 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.disabled-border 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "disabled-border 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.overlay 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "overlay 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.success 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "success 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.success-fg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "success-fg 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.success-subtle 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "success-subtle 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.success-on-subtle 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "success-on-subtle 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.success-text 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "success-text 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.warning 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "warning 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.warning-fg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "warning-fg 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.warning-subtle 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "warning-subtle 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.warning-on-subtle 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "warning-on-subtle 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.warning-text 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "warning-text 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.danger 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "danger 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.danger-fg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "danger-fg 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.danger-subtle 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "danger-subtle 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.danger-on-subtle 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "danger-on-subtle 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.danger-text 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "danger-text 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.danger-hover 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "danger-hover 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.danger-active 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "danger-active 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.info 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "info 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.info-fg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "info-fg 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.info-subtle 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "info-subtle 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.info-on-subtle 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "info-on-subtle 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.info-text 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "info-text 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.chart-1 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "chart-1 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.chart-2 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "chart-2 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.chart-3 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "chart-3 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.chart-4 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "chart-4 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.chart-5 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "chart-5 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "light.chart-6 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "chart-6 主规范颜色表一致",
+      "pass": true
+    },
+    {
+      "check": "dark: CSS 颜色与 JSON 完全一致",
+      "pass": true
+    },
+    {
+      "check": "dark.bg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.surface 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.border 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.text 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.text-muted 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.primary 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.primary-fg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.selected-bg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.selected-fg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.focus 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.link 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.link-hover 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.link-active 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.control-border 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.control-border-hover 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.control-border-active 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.surface-hover 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.surface-active 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.primary-hover 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.primary-active 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.disabled-bg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.disabled-fg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.disabled-border 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.overlay 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.success 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.success-fg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.success-subtle 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.success-on-subtle 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.success-text 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.warning 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.warning-fg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.warning-subtle 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.warning-on-subtle 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.warning-text 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.danger 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.danger-fg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.danger-subtle 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.danger-on-subtle 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.danger-text 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.danger-hover 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.danger-active 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.info 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.info-fg 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.info-subtle 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.info-on-subtle 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.info-text 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.chart-1 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.chart-2 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.chart-3 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.chart-4 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.chart-5 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "dark.chart-6 为 HEX/HEX8",
+      "pass": true
+    },
+    {
+      "check": "共享 font-sans CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-sans 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-mono CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-mono 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-size-body CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-size-body 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 line-height-body CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 line-height-body 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-size-mobile CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-size-mobile 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 line-height-mobile CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 line-height-mobile 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-size-small CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-size-small 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 line-height-small CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 line-height-small 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-size-title-sm CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-size-title-sm 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 line-height-title-sm CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 line-height-title-sm 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-size-title-md CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-size-title-md 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 line-height-title-md CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 line-height-title-md 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-size-title-lg CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-size-title-lg 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 line-height-title-lg CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 line-height-title-lg 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-weight-body CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-weight-body 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-weight-label CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-weight-label 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-weight-heading CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 font-weight-heading 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 space-1 CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 space-1 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 space-2 CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 space-2 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 space-3 CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 space-3 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 space-4 CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 space-4 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 space-5 CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 space-5 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 space-6 CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 space-6 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 space-7 CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 space-7 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 radius-control CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 radius-control 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 radius-card CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 radius-card 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 radius-badge CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 radius-badge 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 border-width CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 border-width 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 control-h CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 control-h 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 control-h-compact CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 control-h-compact 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 control-h-touch CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 control-h-touch 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 table-row-h CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 table-row-h 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 sidebar-w CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 sidebar-w 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 header-h CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 header-h 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 content-max CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 content-max 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 form-max CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 form-max 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 dialog-max CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 dialog-max 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 drawer-w CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 drawer-w 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 focus-width CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 focus-width 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 focus-offset CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 focus-offset 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 icon-sm CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 icon-sm 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 icon-md CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 icon-md 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 icon-lg CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 icon-lg 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 icon-stroke CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 icon-stroke 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 duration-fast CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 duration-fast 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 duration-normal CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 duration-normal 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 shadow-card CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 shadow-card 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 shadow-overlay CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 shadow-overlay 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 z-header CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 z-header 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 z-popover CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 z-popover 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 z-overlay CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 z-overlay 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 z-toast CSS/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "共享 z-toast 文档/JSON一致",
+      "pass": true
+    },
+    {
+      "check": "基线尺寸 control-h",
+      "pass": true
+    },
+    {
+      "check": "基线尺寸 control-h-compact",
+      "pass": true
+    },
+    {
+      "check": "基线尺寸 control-h-touch",
+      "pass": true
+    },
+    {
+      "check": "基线尺寸 table-row-h",
+      "pass": true
+    },
+    {
+      "check": "基线尺寸 radius-control",
+      "pass": true
+    },
+    {
+      "check": "基线尺寸 radius-card",
+      "pass": true
+    },
+    {
+      "check": "基线尺寸 font-size-body",
+      "pass": true
+    },
+    {
+      "check": "基线尺寸 line-height-body",
+      "pass": true
+    },
+    {
+      "check": "基线尺寸 font-size-mobile",
+      "pass": true
+    }
+  ],
+  "exclusions": [
+    "真正禁用控件 disabled-*",
+    "仅装饰 border",
+    "遮罩 overlay 与其下方任意图片",
+    "图表任意两类颜色之间",
+    "产品后续自定义品牌资源/覆盖"
+  ]
+}

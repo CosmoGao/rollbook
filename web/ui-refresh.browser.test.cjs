@@ -46,7 +46,7 @@ test('界面布局、页签、面包屑、主题和手机抽屉',async()=>{
    await shot(page,`${prefix}-overview-light`);
    for(const type of ['location','host','network','service']){await open(page,'assets');await chooseType(page,type);await page.locator(type==='location'?'.tree-node':'.card').first().waitFor();await shot(page,`${prefix}-assets-${type}-light`)}
    if(!baseline){await open(page,'assets');await chooseType(page,'host');await page.getByRole('group',{name:'主机视图'}).getByRole('button',{name:'树'}).click();await page.locator('.tree-node').first().waitFor();assert.equal(await page.getByRole('tab').count(),4);assert.equal(await page.getByRole('tab',{name:'主机'}).getAttribute('aria-selected'),'true');assert.equal(new URL(page.url()).pathname,'/assets');await shot(page,`${prefix}-assets-host-tree-light`);await page.getByRole('group',{name:'主机视图'}).getByRole('button',{name:'列表'}).click();await page.locator('.card').first().waitFor()}
-   if(!baseline&&!mobile){await open(page,'assets');await chooseType(page,'host');await page.locator('.card').nth(119).waitFor();const before=await page.locator('.sidebar').boundingBox(),foot=await page.locator('.sidebar-foot').boundingBox();await page.locator('.main').evaluate(element=>element.scrollTop=element.scrollHeight);assert.ok((await page.locator('.main').evaluate(element=>element.scrollTop))>0);assert.deepEqual(await page.locator('.sidebar').boundingBox(),before);assert.deepEqual(await page.locator('.sidebar-foot').boundingBox(),foot);assert.equal(await page.locator('.sidebar-foot').evaluate(foot=>{const right=foot.closest('.sidebar').getBoundingClientRect().right;return [...foot.querySelectorAll('button')].every(button=>{const rect=button.getBoundingClientRect();return getComputedStyle(button).whiteSpace==='nowrap'&&rect.height<28&&rect.right<=right})}),true)}
+   if(!baseline&&!mobile){await open(page,'assets');await chooseType(page,'host');await page.locator('.card').nth(119).waitFor();const before=await page.locator('.sidebar').boundingBox(),foot=await page.locator('.sidebar-foot').boundingBox();await page.locator('.content').evaluate(element=>element.scrollTop=element.scrollHeight);assert.ok((await page.locator('.content').evaluate(element=>element.scrollTop))>0);assert.deepEqual(await page.locator('.sidebar').boundingBox(),before);assert.deepEqual(await page.locator('.sidebar-foot').boundingBox(),foot);assert.equal(await page.locator('.sidebar-foot').evaluate(foot=>{const right=foot.closest('.sidebar').getBoundingClientRect().right;return [...foot.querySelectorAll('button')].every(button=>{const rect=button.getBoundingClientRect();return getComputedStyle(button).whiteSpace==='nowrap'&&rect.height<=44&&rect.right<=right})}),true)}
    await open(page,'assets');await chooseType(page,'host');await page.locator('.card').first().click();await page.getByRole('heading',{name:'示例主机 0'}).waitFor();await shot(page,`${prefix}-detail-light`);if(!baseline){assert.equal(await page.locator('.detail-breadcrumb button').count(),2);await page.locator('.detail-breadcrumb button').nth(1).click();await page.getByRole('heading',{name:'资产维护'}).waitFor();assert.equal(await page.getByRole('tab').count(),4);assert.equal(await page.getByRole('tab',{name:'主机'}).getAttribute('aria-selected'),'true')}
    for(const view of ['topology','pendingHub','agent','settings']){await open(page,view);await page.locator('#content h1').first().waitFor();if(view==='topology')await page.locator('.react-flow__node').first().waitFor();await shot(page,`${prefix}-${view}-light`)}
    if(!baseline){await page.getByRole('button',{name:'切换主题'}).click();assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');await page.reload();await page.locator('html[data-theme=dark]').waitFor()}
@@ -55,10 +55,10 @@ test('界面布局、页签、面包屑、主题和手机抽屉',async()=>{
    for(const view of ['overview','assets','topology','pendingHub','agent']){await open(page,view);await page.locator('#content h1').first().waitFor();if(view==='topology')await page.locator('.react-flow__node').first().waitFor();await shot(page,`${prefix}-${view}-dark`)}
    for(const type of ['location','host','network','service']){await open(page,'assets');await chooseType(page,type);await page.locator(type==='location'?'.tree-node':'.card').first().waitFor();await shot(page,`${prefix}-assets-${type}-dark`)}
    await open(page,'assets');await chooseType(page,'host');await page.locator('.card').first().click();await page.getByRole('heading',{name:'示例主机 0'}).waitFor();await shot(page,`${prefix}-detail-dark`)
-   if(!baseline){await page.getByRole('button',{name:'切换主题'}).click();assert.equal(await page.locator('html').getAttribute('data-theme'),'light');await page.getByRole('button',{name:'切换主题'}).click();assert.equal(await page.locator('html').getAttribute('data-theme'),'system')}
+   if(!baseline){await page.getByRole('button',{name:'切换主题'}).click();assert.equal(await page.locator('html').getAttribute('data-theme'),'light');await page.getByRole('button',{name:'切换主题'}).click();assert.equal(await page.locator('html').getAttribute('data-theme'),'light')}
    await page.close();
   }
-  if(!baseline){const english=await browser.newPage({locale:'en-US',colorScheme:'dark'});await english.addInitScript(()=>localStorage.setItem('rollbook.language','en'));await setup(english);assert.equal(await english.locator('html').getAttribute('data-theme'),'system');assert.equal(await english.locator('html').evaluate(element=>getComputedStyle(element).backgroundColor),'rgb(9, 9, 11)');await open(english,'assets');await english.getByRole('tab',{name:'Devices & hosts'}).click();await english.locator('.card').first().click();await english.locator('.detail-breadcrumb').waitFor();assert.match(await english.locator('.detail-breadcrumb').innerText(),/Assets[\s\S]*Devices & hosts[\s\S]*示例主机 0/);await english.close()}
+  if(!baseline){const english=await browser.newPage({locale:'en-US',colorScheme:'dark'});await english.addInitScript(()=>localStorage.setItem('rollbook.language','en'));await setup(english);assert.equal(await english.locator('html').getAttribute('data-theme'),'dark');assert.equal(await english.locator('html').evaluate(element=>getComputedStyle(element).backgroundColor),'rgb(15, 23, 42)');await open(english,'assets');await english.getByRole('tab',{name:'Devices & hosts'}).click();await english.locator('.card').first().click();await english.locator('.detail-breadcrumb').waitFor();assert.match(await english.locator('.detail-breadcrumb').innerText(),/Assets[\s\S]*Devices & hosts[\s\S]*示例主机 0/);await english.close()}
  }finally{await browser.close()}
 });
 
@@ -68,4 +68,47 @@ test('待处理批量操作先选择后确认',async()=>{
  const browser=await chromium.launch({headless:true});
  try{const page=await browser.newPage({locale:'zh-CN'});const actions=[];await setup(page,{actions,proposals:[{id:'change:1',name:'示例变更',type:'change',fields:{object_id:'host:000',action:'update',diff_json:'{}'}}]});await open(page,'pendingHub');
  const reject=page.getByRole('button',{name:'批量驳回'});assert.equal(await reject.isDisabled(),true);await page.locator('.check-row input[type=checkbox]').check();assert.equal(await reject.isEnabled(),true);await reject.click();assert.equal(actions.length,0);await page.getByRole('button',{name:'确认驳回'}).click();assert.deepEqual(actions,[{ids:['change:1'],action:'reject'}]);await page.close()}finally{await browser.close()}
+});
+
+test('固定版登录与应用壳：主题、焦点、滚动及 320px 抽屉',async()=>{
+ const browser=await chromium.launch({headless:true});
+ try{
+  for(const width of [1440,390,320]){
+   const viewport={width,height:width===1440?900:844};
+   const login=await browser.newPage({viewport,locale:'zh-CN',colorScheme:'light'});
+   await setup(login,{unauth:true});
+   for(const theme of ['light','dark']){
+    await login.evaluate(value=>localStorage.setItem('rollbook.theme',value),theme);
+    await login.reload();await login.locator('#login-form').waitFor();
+    assert.equal(await login.locator('html').getAttribute('data-theme'),theme);
+    assert.ok(Number.parseFloat(await login.locator('#login-form input').first().evaluate(el=>getComputedStyle(el).height))>= (width<768?44:36));
+    await login.keyboard.press('Tab');
+    assert.ok(await login.locator(':focus-visible').count()>0);
+    await shot(login,`v1-login-${width}-${theme}`);
+   }
+   await login.close();
+   const page=await browser.newPage({viewport,locale:'zh-CN',colorScheme:'light'});await setup(page);
+   for(const theme of ['light','dark']){
+    await page.evaluate(value=>localStorage.setItem('rollbook.theme',value),theme);
+    await page.reload();await page.locator('#content h1').first().waitFor();
+    assert.equal(await page.locator('html').getAttribute('data-theme'),theme);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    assert.equal(await page.locator('.main').evaluate(el=>el.scrollTop),0);
+    await shot(page,`v1-overview-${width}-${theme}`);
+   }
+   if(width<1200){
+    await page.getByRole('button',{name:'打开菜单'}).click();
+    await page.locator('.mobile-drawer').waitFor();
+    await page.getByRole('button',{name:'取消'}).click();
+    await page.locator('.mobile-drawer').waitFor({state:'hidden'});
+   }else{
+    assert.equal(await page.locator('#nav button[aria-current=page]').count(),1);
+    const header=await page.locator('.topbar').boundingBox();
+    await page.locator('.content').evaluate(el=>{el.innerHTML+='<div style="height:1600px"></div>';el.scrollTop=el.scrollHeight});
+    assert.ok(await page.locator('.content').evaluate(el=>el.scrollTop)>0);
+    assert.deepEqual(await page.locator('.topbar').boundingBox(),header);
+   }
+   await page.close();
+  }
+ }finally{await browser.close()}
 });

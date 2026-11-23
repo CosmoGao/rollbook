@@ -31,13 +31,13 @@ export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
 }
 const unmountAll=()=>{unmountOverview();unmountAssets();unmountSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();unmountAudit();unmountTopology();unmountDetail();unmountBrowse()};
 const error=(value:unknown)=>{const element=document.createElement('div');element.className='error';element.textContent=value instanceof Error?value.message:String(value);root.replaceChildren(element)};
-export function openObject(id:string,type?:string){unmountAll();document.querySelectorAll('#nav button').forEach(button=>button.classList.remove('active'));root.replaceChildren();mountDetail(root,{id,type,api,t,enumLabel,types,open:openObject,navigate})}
+export function openObject(id:string,type?:string){unmountAll();document.querySelectorAll('#nav button').forEach(button=>button.classList.remove('active'));document.querySelectorAll('#nav button').forEach(button=>button.removeAttribute('aria-current'));root.replaceChildren();mountDetail(root,{id,type,api,t,enumLabel,types,open:openObject,navigate})}
 const assetForm=(type:string)=>openAssetForm(type,null,api,t,enumLabel,types,openObject);
 export async function navigate(view:string,push=true){
   unmountAll();const target=routePaths[view];if(push&&target&&target!==location.pathname+location.search)history.pushState({},'',target);
   const menuView=['pending','unverified','outdated'].includes(view)?'pendingHub':['services','sites','hosts','networks'].includes(view)?'assets':view;
 
-  document.querySelectorAll<HTMLButtonElement>('#nav button[data-view]').forEach(button=>button.classList.toggle('active',button.dataset.view===menuView));
+  document.querySelectorAll<HTMLButtonElement>('#nav button[data-view]').forEach(button=>{const active=button.dataset.view===menuView;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')});window.dispatchEvent(new CustomEvent('rollbook:view',{detail:menuView}));
   root.replaceChildren();
   try{switch(view){
     case 'overview':mountOverview(root,api,navigate,(term)=>{setSearchQuery(term);navigate('search')},()=>assetForm('location'),(siteID)=>{history.pushState({},'',routePaths.topology+'?site='+encodeURIComponent(siteID));navigate('topology',false)});break;
