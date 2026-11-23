@@ -97,8 +97,16 @@ test('固定版登录与应用壳：主题、焦点、滚动及 320px 抽屉',as
     await shot(page,`v1-overview-${width}-${theme}`);
    }
    if(width<1200){
+    if(width<768){
+     const menuSize=await page.getByRole('button',{name:'打开菜单'}).evaluate(el=>{const rect=el.getBoundingClientRect();return {width:rect.width,height:rect.height}});
+     assert.ok(menuSize.width>=44&&menuSize.height>=44,`menu target at ${width}: ${JSON.stringify(menuSize)}`);
+    }
     await page.getByRole('button',{name:'打开菜单'}).click();
     await page.locator('.mobile-drawer').waitFor();
+    if(width<768){
+     const closeSize=await page.getByRole('button',{name:'取消'}).evaluate(el=>{const rect=el.getBoundingClientRect();return {width:rect.width,height:rect.height}});
+     assert.ok(closeSize.width>=44&&closeSize.height>=44,`drawer close target at ${width}: ${JSON.stringify(closeSize)}`);
+    }
     await page.getByRole('button',{name:'取消'}).click();
     await page.locator('.mobile-drawer').waitFor({state:'hidden'});
    }else{
@@ -141,6 +149,8 @@ test('业务页面同数据浅深矩阵及窄屏布局',async()=>{
      await page.goto('http://rollbook.test/assets/hosts');
      await page.getByRole('button',{name:'新建'}).click();
      const form=page.locator('.asset-form');
+     const firstInputHeight=await form.locator('input:visible').first().evaluate(el=>el.getBoundingClientRect().height);
+     assert.equal(firstInputHeight,width<768?44:36,`asset form input height at ${width}`);
      await form.getByRole('textbox',{name:'名称'}).fill('同数据表单示例');
      await form.getByRole('combobox',{name:'类别 *'}).selectOption('物理机');
      await form.getByRole('textbox',{name:'操作原因 *'}).fill('验证字段错误');
