@@ -26,6 +26,8 @@ test('分层画布在真实规模下筛选、展开、访问与影响',async()=>
    return route.fulfill({status:404,json:{message:p}});
   });
   await installBundle(page);await page.goto('http://rollbook.test/topology');await page.getByRole('tab',{name:'资产分层'}).waitFor();await page.locator('.topology-flow .react-flow__node').first().waitFor();
+  assert.equal(await page.locator('.topology-toolbar label').count(),3);
+  for(const label of await page.locator('.topology-toolbar label').all())assert.ok(Number.parseFloat(await label.evaluate(el=>getComputedStyle(el).fontSize))>=14);
   assert.equal(layersCalls,1);assert.equal(serviceTopologyCalls,0);assert.equal(await page.locator('.topology-flow .react-flow__node').count(),2);assert.equal(await page.locator('.topology-flow .react-flow__edge').count(),1);assert.match(await page.locator('.topology-flow .react-flow__edge-text').textContent(),/站点互通.*[0-9]+/);
   fs.mkdirSync(path.join(__dirname,'screenshots'),{recursive:true});await page.screenshot({path:path.join(__dirname,'screenshots','v2ri-60-default.png')});
   await page.getByLabel('站点',{exact:true}).selectOption('location:beijing');await page.locator('.topology-flow .react-flow__node').filter({hasText:'Proxmox VE'}).waitFor();assert.equal(await page.getByText('该站点暂无资产').count(),0);await page.screenshot({path:path.join(__dirname,'screenshots','v2ri-60-beijing.png')});
@@ -39,6 +41,7 @@ test('分层画布在真实规模下筛选、展开、访问与影响',async()=>
   assert.ok(Number.parseFloat(await child.evaluate(el=>getComputedStyle(el).fontSize))>=14);
   await child.focus();assert.equal(await child.evaluate(el=>el===document.activeElement),true);
   await page.setViewportSize({width:390,height:844});
+  for(const label of await page.locator('.topology-toolbar label').all())assert.ok(Number.parseFloat(await label.evaluate(el=>getComputedStyle(el).fontSize))>=16);
   assert.ok(Number.parseFloat(await hostName.evaluate(el=>getComputedStyle(el).fontSize))>=16);
   assert.ok(Number.parseFloat(await child.evaluate(el=>getComputedStyle(el).fontSize))>=16);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
