@@ -9,15 +9,15 @@ test('external methods, failed SSO return and local fallback in a browser',async
  const browser=await chromium.launch({headless:true});
  try {
   const page=await browser.newPage({locale:'zh-CN'});
-  let localLogins=0,ldapLogins=0;
+  let localLogins=0,ldapLogins=0,signedIn=false;
   await page.route('http://rollbook.test/**',route=>{
    const p=new URL(route.request().url()).pathname;
    if(p==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(__dirname,'dist','index.html'))});
    if(p==='/api/config')return route.fulfill({json:{allow_insecure_http:false,http_risk:false,login_methods:{local:true,ldap:true,oidc:true,feishu:true}}});
    if(p==='/api/version')return route.fulfill({json:{version:'test',commit:'test'}});
-   if(p==='/api/auth/session')return route.fulfill({status:401,json:{code:'unauthorized'}});
+   if(p==='/api/auth/session')return route.fulfill(signedIn?{json:{login:'owner',can_change_password:true}}:{status:401,json:{code:'unauthorized'}});
    if(p==='/api/auth/ldap/login'){ldapLogins++;return route.fulfill({status:401,json:{code:'unauthorized',message:'Unauthorized'}})}
-   if(p==='/api/auth/login'){localLogins++;return route.fulfill({json:{login:'owner'}})}
+   if(p==='/api/auth/login'){localLogins++;signedIn=true;return route.fulfill({json:{login:'owner'}})}
    return route.fulfill({json:[]});
   });
   await installBundle(page);await page.goto('http://rollbook.test/');
@@ -47,7 +47,8 @@ test('external methods, failed SSO return and local fallback in a browser',async
   await page.locator('#login-form input[name="login"]').fill('owner');
   await page.locator('#login-form input[name="password"]').fill('password');
   await page.locator('#login-form button[type="submit"]').click();
-  await page.waitForFunction(()=>document.querySelector('.account-avatar')?.title==='owner');
+  await page.locator('#app').waitFor({state:'visible'});
+  assert.equal(await page.locator('.account-avatar').getAttribute('title'),'owner');
   assert.equal(ldapLogins,1);assert.equal(localLogins,1);
  } finally {await browser.close()}
 });
