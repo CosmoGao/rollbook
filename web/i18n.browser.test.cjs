@@ -74,8 +74,8 @@ test('English interface preserves asset names and IDs while translating kind lab
   await installBundle(page);await page.goto('http://rollbook.test/');
   await page.locator('#user-name').getByText('站点').waitFor();
   await page.locator('#nav button[data-view="assets"]').click();
-  await page.locator('.tree-title').first().waitFor();
-  assert.deepEqual(await page.locator('.tree-title').allTextContents(),['中文站点','站点']);
+  await page.locator('.asset-location-open strong').first().waitFor();
+  assert.deepEqual(await page.locator('.asset-location-open strong').allTextContents(),['中文站点','站点']);
   await page.getByRole('tab',{name:'Hosts'}).click();
   await page.locator('.table-name').first().waitFor();
   assert.deepEqual(await page.locator('.table-name').allTextContents(),['【示例】演示主机']);

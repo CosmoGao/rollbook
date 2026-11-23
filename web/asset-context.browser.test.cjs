@@ -30,7 +30,7 @@ test('双站点位置和主机树、自动 ID 与宿主预填',async()=>{
   });
   await installBundle(page);await page.goto('http://rollbook.test/');
   await page.locator('#nav button[data-view="assets"]').click();
-  assert.match(await page.locator('.tree-node').filter({hasText:'主卧机柜'}).first().innerText(),/机柜/);
+  assert.match(await page.locator('.asset-location-node').filter({hasText:'主卧机柜'}).last().innerText(),/机柜/);
   await page.getByRole('tab',{name:'主机'}).click();await page.getByRole('group',{name:'主机视图'}).getByRole('button',{name:'树'}).click();
   assert.deepEqual(await page.locator('.host-site h2').allTextContents(),['北京家','香河']);
   assert.match(await page.locator('.host-site').first().innerText(),/Proxmox.*192\.0\.2\.2/s);
