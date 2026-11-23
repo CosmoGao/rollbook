@@ -136,7 +136,7 @@ button.primary:active,.search-box button:active,.mobile-search button:active,.ui
 .top-search{height:var(--control-h);padding:0 12px}.top-search input{min-height:0!important;height:100%;border:0!important;box-shadow:none!important;background:transparent!important}.top-search input:focus-visible{outline:none!important}
 
 /* 业务视图共用的列表、详情、表单与状态外观。 */
-.content{max-width:var(--content-max);margin-inline:auto;min-width:0}
+.content{width:100%;max-width:none;margin-inline:0;min-width:0}
 .content>*,.hero,.section,.card,.detail-grid,.overview-layout,.overview-main,.overview-aside{min-width:0}
 .content h1{font-size:var(--font-size-title-lg);line-height:var(--line-height-title-lg);overflow-wrap:anywhere}
 .content h2{font-size:var(--font-size-title-sm);line-height:var(--line-height-title-sm);overflow-wrap:anywhere}
@@ -195,6 +195,11 @@ button.primary:active,.search-box button:active,.mobile-search button:active,.ui
 .topology-host-card>.ghost,.topology-host-children .ghost,.row button,.detail-breadcrumb button{font-size:var(--font-size-body);min-height:var(--control-h)}
 .topology-host-card>.ghost,.topology-host-children .ghost{border-color:var(--color-control-border)!important}
 .topology-site-card>header small{color:var(--color-selected-fg)}
+.topology-site-card{min-height:0;overflow-y:auto;overflow-x:hidden}
+.topology-site-card>header{position:sticky;top:0;z-index:1;min-width:0;flex-wrap:wrap}
+.topology-site-card>header strong,.topology-site-card>header small{min-width:0;white-space:normal;overflow-wrap:anywhere}
+.topology-site-scroll{height:auto;overflow:visible}
+.topology-site-card:focus-visible{outline:2px solid var(--color-focus);outline-offset:-2px}
 .top-controls button,.top-controls select{border-color:var(--color-control-border);min-height:var(--control-h);font-size:var(--font-size-body)}
 @media(max-width:767px){.topology-host-card>button strong,.topology-host-children button,.topology-host-card>.ghost,.topology-host-children .ghost,.row button,.detail-breadcrumb button,.top-controls button,.top-controls select{font-size:var(--font-size-mobile)}}
 @media(pointer:coarse){.topology-host-card>.ghost,.topology-host-children .ghost,.sidebar-foot button,.mobile-drawer-foot button,.top-controls button{min-height:var(--control-h-touch)}}
