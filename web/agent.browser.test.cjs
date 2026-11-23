@@ -54,8 +54,7 @@ test('Agent 接入：配置复制、Key 一次性明文、下载、中英文与�
   assert.match(await page.locator('.modal .setup-block').first().innerText(),/rb_once_secret/);
   await page.getByRole('button',{name:en?'Done':'完成'}).click();
   assert.equal(await page.getByText('rb_once_secret').count(),0);
-  if(scenario.width<760){await page.evaluate(()=>localStorage.setItem('rollbook.theme','dark'));await page.reload();await page.getByRole('heading',{name:en?'MCP setup':'MCP 接入配置'}).waitFor()}
-  else await page.locator('.top-controls button[aria-label]').first().click();
+  await page.locator('.top-controls .theme-control select').selectOption('dark');
   assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
   if(process.env.ROLLBOOK_SCREENSHOT_DIR){fs.mkdirSync(process.env.ROLLBOOK_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.ROLLBOOK_SCREENSHOT_DIR,`agent-${scenario.width}-${en?'en':'zh'}-dark.png`),fullPage:true})}
   await page.close();

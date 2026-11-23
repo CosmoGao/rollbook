@@ -49,7 +49,7 @@ test('React 六项菜单、搜索快捷键及移动布局', async t=>{
       await page.locator('.mobile-drawer button').filter({hasText:'资产'}).click();
       await page.getByRole('heading',{name:'资产维护'}).waitFor();await shot(page,'mobile-assets-light');
       for(const [label,file,selector] of [['拓扑','mobile-topology-light','.flow-container'],['待处理','mobile-pending-light','.controls'],['Agent 接入','mobile-agent-light','#content'],['设置','mobile-settings-light','#content']]){await page.getByRole('button',{name:'打开菜单'}).click();await page.locator('.mobile-drawer button').filter({hasText:label}).click();await page.locator(selector).first().waitFor();await shot(page,file)}
-      await page.getByRole('button',{name:'切换主题'}).click();assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');await shot(page,'mobile-settings-dark');
+      await page.locator('.top-controls .theme-control select').selectOption('dark');assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');await shot(page,'mobile-settings-dark');
       if(process.env.ROLLBOOK_SCREENSHOT_DIR){for(const [label,file,selector] of [['总览','mobile-overview-dark','.overview-layout'],['资产','mobile-assets-dark','.asset-toolbar'],['拓扑','mobile-topology-dark','.flow-container'],['待处理','mobile-pending-dark','#content'],['Agent 接入','mobile-agent-dark','#content']]){await page.getByRole('button',{name:'打开菜单'}).click();await page.locator('.mobile-drawer button').filter({hasText:label}).click();await page.locator(selector).first().waitFor();await shot(page,file)}}
     }
     assert.deepEqual(errors,[]);
@@ -121,7 +121,7 @@ test('资产、拓扑、待处理、Key 与设置在新构建中可操作',async
   await page.getByRole('heading',{name:'设置'}).waitFor();await shot(page,'desktop-settings-light');
   await page.getByRole('button',{name:'备份与恢复'}).click();
   await page.getByRole('heading',{name:'备份与恢复'}).waitFor();await shot(page,'desktop-backup-light');
-  await page.getByRole('button',{name:'切换主题'}).click();assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');await shot(page,'desktop-backup-dark');
+  await page.locator('.top-controls .theme-control select').selectOption('dark');assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');await shot(page,'desktop-backup-dark');
   await page.locator('#nav button[data-view="overview"]').click();await page.locator('.overview-layout').waitFor();await shot(page,'desktop-overview-dark');
   if(process.env.ROLLBOOK_SCREENSHOT_DIR){for(const [view,file,selector] of [['assets','desktop-assets-dark','.asset-toolbar'],['topology','desktop-topology-dark','.flow-container'],['pendingHub','desktop-pending-dark','#content'],['agent','desktop-agent-dark','#content'],['settings','desktop-settings-dark','#content']]){await page.locator(`#nav button[data-view="${view}"]`).click();await page.locator(selector).first().waitFor();await shot(page,file)}}
   await page.close();
