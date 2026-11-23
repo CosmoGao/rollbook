@@ -32,7 +32,7 @@
 
 ## 品牌参数与验收界限
 
-产品名称沿用 Rollbook / 清册，侧栏 `R` 和 `web/public/icon.svg` 保留。正式浅/深 logo、清晰区比例、最小尺寸、完整 favicon/PWA 尺寸及品牌覆盖批准记录尚未提供，记为可配置缺口，不伪造资产。业务视图的页面布局、创建/编辑/筛选/详情、待处理、拓扑、Key 与备份路径由现有和新增浏览器用例回归。实际浏览器 200%/400% 缩放、读屏专项、软键盘、离线、权限不足等状态仍为**未验证**；这些项目须由测试审查补验，不以 320 CSS px 截图等同于 400% 缩放。
+产品名称沿用 Rollbook / 清册，侧栏 `R` 和 `web/public/icon.svg` 保留。正式浅/深 logo、清晰区比例、最小尺寸、完整 favicon/PWA 尺寸及品牌覆盖批准记录尚未提供，记为可配置缺口，不伪造资产。业务视图的页面布局、创建/编辑/筛选/详情、待处理、拓扑、Key 与备份路径由现有和新增浏览器用例回归。以下第一、第二阶段记录保留各阶段当时的验证状态；当前补验见文末。
 
 ## 第一阶段验证记录
 
@@ -67,3 +67,11 @@
 - `python3 docs/frontend-standard/validate.py`、`npm run typecheck --prefix web`、`npm run build --prefix web`、`go test ./...`：通过。
 - Chromium Playwright：`node --test --test-concurrency=1` 执行除 HTTP/TLS 外 31 个浏览器用例，31/31 通过；HTTP/TLS 用例在 `rollbook-playwright-go:latest` 配合 `GOFLAGS=-buildvcs=false` 单独执行通过。截图矩阵用例使用 `ROLLBOOK_SCREENSHOT_DIR` 指向 `web/screenshots/v2ri-71`。
 - 未发布新 tag；本变更为待合并 PR 的前端改造，不涉及数据库迁移、API 和部署。发布前按 `docs/releasing.md` 核对合并提交、Release 正文及备份/回退说明。
+
+## 第三阶段补验与证据索引
+
+- `web/frontend-gap.browser.test.cjs` 使用空库和固定虚构账号 `owner`，在真实 Chromium 的 1440×900、390×844、320×844 视口分别生成浅深配对截图：`web/screenshots/v2ri-73/v1-first-run-{宽度}-{light|dark}.png`，共 6 张。逐张检查主题、弹层可访问名称、导入动作名称、无页面横向溢出、初始焦点和 Tab 留在弹层；Escape 关闭后，桌面焦点回当前导航、窄屏焦点回菜单按钮。该测试还用请求中断及 403 模拟离线读取和权限不足，核对错误文本以 `role=alert` 显示、390px 无页面横向溢出。产品没有离线缓存或离线编辑功能，因此离线状态的适用要求是可读的请求失败反馈，不能承诺离线操作。
+- 同一批固定示例资产在 `/topology` 的 1440、390、320 CSS px 浅深配对截图为 `web/screenshots/v2ri-73/v1-business-{宽度}-{light|dark}-topology.png`；桌面侧栏账号区域另见 `v1-business-1440-{light|dark}-overview.png`。这些截图由 `web/ui-refresh.browser.test.cjs` 的真页面矩阵生成，与第一、第二阶段的截图区分保存。
+- `web/layered-topology.browser.test.cjs` 在真实 Chromium 对站点卡片主机名、子资产按钮和侧栏账号操作使用 `getComputedStyle` 检查桌面字号至少 14px、窄屏主机名及子资产按钮至少 16px；长主机名检查换行且不省略，子资产按钮检查键盘聚焦，390px 检查无页面横向溢出。原有拓扑展开、选中、访问和影响回归仍在同一用例。必要控件轮廓的拓扑筛选及顶栏控件使用 `control-border`；装饰分隔线仍使用 `border`。当前 `web/src/style.css` 与 `web/src/base.css` 无写死 HEX 或 `color-mix`，固定色值仅在 vendor token 中。
+- 可访问性核对工具为 Playwright 的角色/名称定位器、DOM 属性、键盘操作和浏览器计算样式。已核对首次引导弹层名称及焦点、表单 JSON 字段 `aria-invalid` 与 `aria-describedby`（`web/maintenance.browser.test.cjs`）、当前导航 `aria-current=page`（`web/ui-refresh.browser.test.cjs`）、错误 `role=alert`（上述补验）。真人 NVDA/VoiceOver 读屏专项仍为**未验证**，不得宣称读屏通过。
+- 软键盘专项仍为**未验证**：无可触发系统软键盘的真机或模拟器，Chromium 视口缩小不能替代软键盘。底栏与末字段在 390px 的 `web/ui-refresh.browser.test.cjs` 继续核对；测试审查应在真机上确认弹出软键盘时当前字段和提交按钮可达。200%/400% 浏览器缩放由上一阶段测试审查补验，本阶段的 390/320 CSS px 用例不能单独充当缩放证据。父任务在上述 MUST 项验收前保持进行中。

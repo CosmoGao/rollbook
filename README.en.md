@@ -2,6 +2,8 @@
 
 Rollbook is a self-hosted service and asset catalog for homes and small businesses. Run it on a trusted network. The UI follows the browser language until you select English or Chinese; that choice is saved in the browser. See the [Chinese README](README.md), [changelog](CHANGELOG.md), and [release checklist](docs/releasing.md).
 
+An empty catalog opens a first-run dialog. Press Escape to close it and return keyboard focus to the current navigation entry. The asset list shows “Permission denied” with a retry action when reading is forbidden. Offline reads show a load error; offline editing is unavailable.
+
 ## v0.7.0 Devices & hosts
 
 Assets → Devices & hosts supports smart TVs, game consoles, set-top boxes and media players, speakers and audio devices, cameras and doorbells, printers and scanners, smart home hubs and gateways, appliances, sensors and controllers, and other devices. The six existing host kinds keep their values. Pick a kind, name, and location when creating a device. Model can hold manufacturer and model; aliases and tags accept multiple values. A TV or sensor needs no OS, IP address, management URL, or service. “No IP registered” only describes the catalog record.
