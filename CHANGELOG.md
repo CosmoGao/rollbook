@@ -2,6 +2,17 @@
 
 按 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 分类，依据各 Release、tag 区间和已合并 PR 编写。公开 Release 从 v0.3.0 开始；另有 `v0.0.1` tag，但无对应 Release。未发现 v0.1.0、v0.2.0 的发布证据，不为其编造条目。
 
+## 未发布
+
+### 变更
+
+- 全站现有业务视图按固定版前端与 VI 规范 v1.0.0 统一语义颜色、控件轮廓、长内容排版与浅深主题；保留原有业务、API 与授权行为。
+- 资产表单的 JSON 字段错误与输入关联并保留内容；待处理批量驳回弹层采用可管理焦点的 Dialog。
+
+### 验证
+
+- Playwright 对现有路由在五种 CSS 视口宽度、浅深两主题下生成同数据截图；发布前仍须完成独立验收和 Release 核对。
+
 ## [v0.7.0](https://github.com/CosmoGao/rollbook/releases/tag/v0.7.0)
 
 ### 新增

@@ -190,6 +190,8 @@ CSV 合并导入支持 `host`、`network`、`ip`、`service` 四类对象。网�
 
 CSV 使用 UTF-8 编码（可带 BOM），首行是模板列名，列名区分大小写；未知、重复、缺少必填列会返回行列错误。每行 `id` 必须带类型前缀（如 `host:`），文件内重复 ID 会被拒绝。新增对象不填 `rev`；更新现有对象必须填写当前正整数 `rev`，不一致会在预览中标为冲突。空单元格表示不提供该字段，不会把现有值清空；必填列不能留空。JSON 列填写合法 JSON；URL 列只接受绝对 HTTP/HTTPS 地址。关联列填对象 ID，可引用库中已有对象或同批文件中的对象；不存在的引用会显示定位错误。CSV 会映射到原合并模型，原 YAML 导入格式与行为不变。
 
+网页业务页使用固定版前端与 VI 规范 v1.0.0 的同名浅深语义颜色、统一控件轮廓与列表/详情/表单/总览布局；资产表单的 JSON 输入错误会在字段旁说明，修正时保留已填内容。各路由与验收截图见 [前端实施记录](docs/frontend-implementation.md)。
+
 ## 前端开发
 
 网页源码位于 `web/src/`，使用 React、TypeScript 和 Vite。首次开发运行 `npm ci --prefix web`，修改后运行 `npm run typecheck --prefix web` 与 `npm run build --prefix web`。构建产物 `web/dist/` 随仓库提交，并由 Go 内嵌，因此直接执行 `go build ./cmd/rollbook` 无需 Node。提交前确认重新构建后的 `web/dist/` 与源码一致。

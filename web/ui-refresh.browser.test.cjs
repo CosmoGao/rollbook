@@ -112,3 +112,63 @@ test('固定版登录与应用壳：主题、焦点、滚动及 320px 抽屉',as
   }
  }finally{await browser.close()}
 });
+
+test('业务页面同数据浅深矩阵及窄屏布局',async()=>{
+ const browser=await chromium.launch({headless:true});
+ try{
+  for(const width of [1440,1024,768,390,320]){
+   const viewport={width,height:width>=768?900:844};
+   for(const theme of ['light','dark']){
+    const page=await browser.newPage({viewport,locale:'zh-CN',colorScheme:theme});
+    page.setDefaultTimeout(10000);
+    await page.addInitScript(value=>localStorage.setItem('rollbook.theme',value),theme);
+    await setup(page);
+    for(const [route,name] of [['/','overview'],['/assets','assets'],['/assets/services','assets-services'],['/assets/sites','assets-sites'],['/assets/hosts','assets-hosts'],['/assets/networks','assets-networks'],['/topology','topology'],['/pending','pending'],['/pending?tab=unverified','pending-unverified'],['/pending?tab=outdated','pending-outdated'],['/agent','agent'],['/settings','settings'],['/settings/backup','backup'],['/changes','changes'],['/contexts','contexts'],['/search','search']]){
+     await page.goto('http://rollbook.test'+route);
+     await page.locator('#content h1').first().waitFor();
+     assert.equal(await page.locator('html').getAttribute('data-theme'),theme);
+     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`${route} ${width} ${theme} page overflow`);
+     assert.equal(await page.locator('#content h1').count(),1,`${route} heading`);
+     await shot(page,`v1-business-${width}-${theme}-${name}`);
+    }
+    await page.goto('http://rollbook.test/assets');
+    await page.getByRole('tab',{name:'主机'}).click();
+    await page.locator('.catalog-table tbody tr').first().click();
+    await page.getByRole('heading',{name:'示例主机 0'}).waitFor();
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    await shot(page,`v1-business-${width}-${theme}-detail`);
+    if(width===1440||width===390){
+     await page.goto('http://rollbook.test/assets/hosts');
+     await page.getByRole('button',{name:'新建'}).click();
+     const form=page.locator('.asset-form');
+     await form.getByRole('textbox',{name:'名称'}).fill('同数据表单示例');
+     await form.getByRole('combobox',{name:'类别 *'}).selectOption('物理机');
+     await form.getByRole('textbox',{name:'操作原因 *'}).fill('验证字段错误');
+     await form.locator('.form-advanced summary').click();
+     await form.locator('#asset-field-resources_json').fill('{invalid');
+     await form.getByRole('button',{name:'创建'}).click();
+     assert.equal(await form.locator('#asset-field-resources_json').getAttribute('aria-invalid'),'true');
+     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+     await shot(page,`v1-business-${width}-${theme}-form-error`);
+     await form.locator('.asset-form-fields').evaluate(element=>element.scrollTop=element.scrollHeight);
+     const lastField=await form.getByRole('textbox',{name:'操作原因 *'}).boundingBox();
+     const actions=await form.locator('.modal-actions').boundingBox();
+     assert.ok(lastField&&actions&&lastField.y+lastField.height<=actions.y,`form footer obscures last field at ${width}`);
+     const failure=route=>route.fulfill({status:500,json:{message:'测试读取失败'}});
+     await page.route('**/api/browse?*',failure);
+     await page.goto('http://rollbook.test/assets');
+     await page.locator('#content [role=alert]').first().waitFor();
+     await shot(page,`v1-business-${width}-${theme}-assets-error`);
+     await page.unroute('**/api/browse?*',failure);
+     const slow=async route=>{await new Promise(resolve=>setTimeout(resolve,1000));await route.fulfill({json:[]})};
+     await page.route('**/api/browse?*',slow);
+     await page.goto('http://rollbook.test/assets');
+     await page.locator('.table-skeleton').waitFor();
+     await shot(page,`v1-business-${width}-${theme}-assets-loading`);
+     await page.unroute('**/api/browse?*',slow);
+    }
+    await page.close();
+   }
+  }
+ }finally{await browser.close()}
+});

@@ -121,6 +121,8 @@ A catalog export is for asset migration. CLI examples: `rollbook export > catalo
 
 CSV merge import supports `host`, `network`, `ip`, and `service`. Download a UI template or run `rollbook template csv host > hosts.csv`, fill it, then run `rollbook import csv host hosts.csv`; substitute another supported type as needed. Submission creates a preview and approval item. Files are limited to 16 MiB and follow the same pending/expiry limits as YAML. CSV is UTF-8 (optional BOM) with exact, case-sensitive template headers. IDs require type prefixes such as `host:`. For updates supply the current positive `rev`; leave it empty for new objects. An empty cell leaves an existing field unchanged, except required fields cannot be empty. JSON cells must be valid JSON; URL fields must be absolute HTTP(S) URLs; references may name existing objects or objects in the same import. Duplicate IDs and invalid columns or references produce located errors.
 
+Business pages use the pinned frontend and visual standard v1.0.0 with matching light and dark semantic colors, consistent control outlines, and list, detail, form, and overview layouts. Invalid JSON in an asset form is explained next to its field while preserving entered values. See the [frontend implementation record](docs/frontend-implementation.md) for routes and screenshots.
+
 ## Web development
 
 The UI lives in `web/src/` and uses React, TypeScript, and Vite. Run `npm ci --prefix web`, then `npm run typecheck --prefix web` and `npm run build --prefix web` after changes. Commit generated `web/dist/` assets with UI changes; Go embeds them, so `go build ./cmd/rollbook` does not need Node.

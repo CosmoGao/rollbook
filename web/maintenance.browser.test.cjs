@@ -54,6 +54,17 @@ test('从空库用网页录入、维护并两次确认删除',async()=>{
    await form.locator('label').filter({hasText:'ID（可修改）'}).locator('input').fill(type+':'+({location:'site',network:'net',host:'box',ip:'one',service:'app'}[type]));
    for(const [field,value] of Object.entries(fields)){if(field==='source')await form.locator('.form-advanced summary').click();const label=({kind:'类别',source:'来源',cidr:'CIDR',location_id:'位置',address:'地址',host_id:'承载设备/实例',network_id:'网段'})[field]||field;const input=form.locator('label').filter({hasText:label}).first().locator('input, select');if(await input.evaluate(el=>el.tagName)==='SELECT')await input.selectOption(value);else await input.fill(value)}
    await form.locator('label').filter({hasText:'操作原因'}).locator('input').fill('录入测试');
+   if(type==='service'){
+    const json=form.locator('#asset-field-upstream_json');
+    await json.fill('{invalid');
+    await form.getByRole('button',{name:'创建'}).click();
+    assert.equal(await json.getAttribute('aria-invalid'),'true');
+    assert.equal(await json.getAttribute('aria-describedby'),'asset-error-upstream_json');
+    assert.equal(await json.inputValue(),'{invalid');
+    assert.match(await form.locator('#asset-error-upstream_json').innerText(),/JSON/);
+    await json.fill('{"services":[]}');
+    assert.equal(await json.getAttribute('aria-invalid'),'false');
+   }
    await form.getByRole('button',{name:'创建'}).click();
    await page.locator('.modal').waitFor({state:'detached'});
   }
