@@ -40,6 +40,8 @@ func main() {
 		err = bootstrapUser(os.Args[2:])
 	} else if os.Args[1] == "reset-password" {
 		err = resetPassword(os.Args[2:])
+	} else if os.Args[1] == "auth" {
+		err = authCommand(os.Args[2:])
 	} else {
 		err = runCLI(os.Args[1:])
 	}
@@ -173,6 +175,10 @@ func serve() error {
 		return err
 	}
 	engine := httpapi.Engine{Auth: auth.Service{DB: database, Pepper: pepper, LoginPolicy: loginPolicy()}, Catalog: catalog.Service{Store: catalog.Store{DB: database}}, AllowInsecureHTTP: allowInsecureHTTP, TrustedProxyCIDRs: trustedProxies}
+	engine.Providers, err = providerConfig()
+	if err != nil {
+		return err
+	}
 	if allowInsecureHTTP {
 		log.Print("警告：已允许通过 HTTP 登录；实际为 HTTP 的请求会显示风险提示，口令和 API Key 可能在网络中明文传输，仅可用于可信内网。")
 	}

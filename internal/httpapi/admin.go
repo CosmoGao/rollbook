@@ -198,7 +198,12 @@ func (e Engine) admin(w http.ResponseWriter, r *http.Request, p auth.Principal) 
 		WriteJSON(w, 200, map[string]bool{"ok": true})
 		return
 	case path == "/api/auth/session" && r.Method == http.MethodGet:
-		WriteJSON(w, 200, map[string]string{"login": p.Login})
+		kind, canChange, err := e.Auth.Identity(r.Context(), p)
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+		WriteJSON(w, 200, map[string]any{"login": p.Login, "identity_type": kind, "can_change_password": canChange, "auth_provider": p.Provider})
 		return
 	case path == "/api/auth/change-password" && r.Method == http.MethodPost:
 		var input struct {

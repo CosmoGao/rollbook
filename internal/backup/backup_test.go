@@ -22,6 +22,7 @@ func TestRoundTripAndRollback(t *testing.T) {
 	for _, q := range []string{
 		`INSERT INTO users(id,login,password_hash,created_at) VALUES('u','admin','bcrypt-hash','now')`,
 		`INSERT INTO api_keys(id,name,token_hash,level,issuer_user_id,created_at) VALUES('k','agent',x'001122','read','u','now')`,
+		`INSERT INTO identity_bindings(provider,instance,subject,user_id,allowed) VALUES('oidc','https://issuer.example','sub','u',1)`,
 		`INSERT INTO sessions(id_hash,user_id,expires_at,csrf_hash) VALUES(x'01','u','later',x'02')`,
 		`INSERT INTO objects(id,type,name,created_at,created_by,updated_at,updated_by) VALUES('location:a','location','北京','now','u','now','u')`,
 		`INSERT INTO locations(id,kind) VALUES('location:a','站点')`,
@@ -55,7 +56,7 @@ func TestRoundTripAndRollback(t *testing.T) {
 	for _, tc := range []struct {
 		q    string
 		want int
-	}{{"SELECT count(*) FROM objects", 2}, {"SELECT count(*) FROM hosts", 1}, {"SELECT count(*) FROM sessions", 0}, {"SELECT count(*) FROM search_documents WHERE search_documents MATCH '机器'", 1}} {
+	}{{"SELECT count(*) FROM objects", 2}, {"SELECT count(*) FROM hosts", 1}, {"SELECT count(*) FROM sessions", 0}, {"SELECT count(*) FROM identity_bindings", 1}, {"SELECT count(*) FROM search_documents WHERE search_documents MATCH '机器'", 1}} {
 		if err = d.QueryRowContext(ctx, tc.q).Scan(&n); err != nil || n != tc.want {
 			t.Fatalf("%s: %d %v", tc.q, n, err)
 		}
@@ -95,6 +96,57 @@ func TestRoundTripAndRollback(t *testing.T) {
 	f.SchemaVersion = 99
 	if _, _, err := Parse(mustYAML(t, f)); err == nil {
 		t.Fatal("future version accepted")
+	}
+}
+
+func TestLegacyFullBackupRestoresUsersAndKeys(t *testing.T) {
+	ctx := context.Background()
+	d, err := db.Open(ctx, filepath.Join(t.TempDir(), "legacy.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	for _, q := range []string{
+		`INSERT INTO users(id,login,password_hash,created_at) VALUES('u','owner','old-hash','now')`,
+		`INSERT INTO api_keys(id,name,token_hash,level,issuer_user_id,created_at) VALUES('k','agent',x'001122','read','u','now')`,
+	} {
+		if _, err = d.ExecContext(ctx, q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s := Service{DB: d}
+	data, err := s.Export(ctx, "full")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var f File
+	if err = yaml.Unmarshal(data, &f); err != nil {
+		t.Fatal(err)
+	}
+	delete(f.Tables, "identity_bindings")
+	delete(f.Tables, "auth_settings")
+	legacy, err := yaml.Marshal(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, _, err = Parse(legacy)
+	if err != nil {
+		t.Fatal("legacy parse", err)
+	}
+	if err = s.Restore(ctx, f); err != nil {
+		t.Fatal("legacy restore", err)
+	}
+	var hash string
+	var level string
+	if err = d.QueryRowContext(ctx, "SELECT password_hash FROM users WHERE id='u'").Scan(&hash); err != nil || hash != "old-hash" {
+		t.Fatal(hash, err)
+	}
+	if err = d.QueryRowContext(ctx, "SELECT level FROM api_keys WHERE id='k' AND issuer_user_id='u'").Scan(&level); err != nil || level != "read" {
+		t.Fatal(level, err)
+	}
+	var enabled string
+	if err = d.QueryRowContext(ctx, "SELECT value FROM auth_settings WHERE name='local_login_enabled'").Scan(&enabled); err != nil || enabled != "1" {
+		t.Fatal(enabled, err)
 	}
 }
 func TestDeviceBackupRoundTrip(t *testing.T) {

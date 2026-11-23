@@ -1,5 +1,9 @@
 # Rollbook
 
+## Unreleased: external sign-in
+
+LDAP/LDAPS, generic OIDC, and Feishu OAuth sign-in can be enabled independently and are off by default. Local sign-in stays on until a verified external test sign-in and an explicit local command disable it. Each external subject must be explicitly bound to a pre-existing Rollbook user; email and display name never bind accounts. See [external sign-in setup](docs/external-auth.md) for server-only configuration, allowlist, recovery commands, session revocation timing, and rollback. This feature has not been released or connected to a real identity provider.
+
 Rollbook is a self-hosted service and asset catalog for homes and small businesses. Run it on a trusted network. The UI follows the browser language until you select English or Chinese; that choice is saved in the browser. See the [Chinese README](README.md), [changelog](CHANGELOG.md), and [release checklist](docs/releasing.md).
 
 Unreleased: global search now has a single control border and focus ring, with keyboard-accessible input, clear, and submit actions. Search results and API behavior are unchanged.

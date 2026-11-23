@@ -237,3 +237,12 @@ button.primary:active,.search-box button:active,.mobile-search button:active,.ui
   .topology-toolbar label{font-size:var(--font-size-mobile)}
   .asset-form input:not([type=checkbox]),.asset-form select{height:var(--control-h-touch)}
 }
+
+.login-methods { display:flex; gap:8px; margin:12px 0; }
+.login-methods button, .external-login { min-height:44px; border:1px solid var(--color-control-border); border-radius:8px; background:var(--color-surface); color:var(--color-text); padding:10px 14px; text-align:center; }
+.login-methods button[aria-pressed="true"] { background:var(--color-selected-bg); color:var(--color-selected-fg); }
+.login-methods button:hover, .external-login:hover { border-color:var(--color-control-border-hover); background:var(--color-surface-hover); }
+.login-methods button:active, .external-login:active { border-color:var(--color-control-border-active); background:var(--color-surface-active); }
+.login-methods button[aria-pressed="true"]:hover, .login-methods button[aria-pressed="true"]:active { background:var(--color-selected-bg); color:var(--color-selected-fg); }
+.external-login { display:block; margin-top:10px; text-decoration:none; }
+.login-methods button:focus-visible, .external-login:focus-visible { outline:2px solid var(--color-focus); outline-offset:2px; }
