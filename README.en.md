@@ -6,6 +6,8 @@ LDAP/LDAPS, generic OIDC, and Feishu OAuth sign-in can be enabled independently 
 
 Rollbook is a self-hosted service and asset catalog for homes and small businesses. Run it on a trusted network. The UI follows the browser language until you select English or Chinese; that choice is saved in the browser. See the [Chinese README](README.md), [changelog](CHANGELOG.md), and [release checklist](docs/releasing.md).
 
+Unreleased: the top-right avatar is the account entry on desktop and narrow screens. Personal settings shows account details, local password change when available, and Rollbook session controls. System settings keeps backup and restore. Sign out ends only the current Rollbook browser session; sign out everywhere ends all Rollbook browser sessions, without signing out of upstream SSO or revoking API Keys.
+
 Unreleased: global search now has a single control border and focus ring, with keyboard-accessible input, clear, and submit actions. Search results and API behavior are unchanged.
 
 An empty catalog opens a first-run dialog. Press Escape to close it and return keyboard focus to the current navigation entry. The asset list shows “Permission denied” with a retry action when reading is forbidden. Offline reads show a load error; offline editing is unavailable.

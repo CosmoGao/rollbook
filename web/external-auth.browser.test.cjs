@@ -47,7 +47,7 @@ test('external methods, failed SSO return and local fallback in a browser',async
   await page.locator('#login-form input[name="login"]').fill('owner');
   await page.locator('#login-form input[name="password"]').fill('password');
   await page.locator('#login-form button[type="submit"]').click();
-  await page.waitForFunction(()=>document.querySelector('#user-name')?.textContent==='owner');
+  await page.waitForFunction(()=>document.querySelector('.account-avatar')?.title==='owner');
   assert.equal(ldapLogins,1);assert.equal(localLogins,1);
  } finally {await browser.close()}
 });

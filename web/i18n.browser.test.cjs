@@ -72,7 +72,7 @@ test('English interface preserves asset names and IDs while translating kind lab
    return route.fulfill({json:[]});
   });
   await installBundle(page);await page.goto('http://rollbook.test/');
-  await page.locator('#user-name').getByText('站点').waitFor();
+  await page.locator('.account-avatar[title=站点]').waitFor();
   await page.locator('#nav button[data-view="assets"]').click();
   await page.locator('.asset-location-open strong').first().waitFor();
   assert.deepEqual(await page.locator('.asset-location-open strong').allTextContents(),['中文站点','站点']);
