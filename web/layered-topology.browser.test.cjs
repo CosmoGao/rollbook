@@ -10,7 +10,7 @@ test('分层画布在真实规模下筛选、展开、访问与影响',async()=>
  try{
   const page=await browser.newPage({viewport:{width:1280,height:720},locale:'zh-CN'});page.setDefaultTimeout(8000);
   const nodes=[{id:'location:beijing',name:'北京家',type:'location',kind:'站点'},{id:'location:xianghe',name:'香河',type:'location',kind:'站点'},{id:'location:rack',name:'主卧机柜',type:'location',kind:'机柜',parent_id:'location:beijing'}];
-  for(let i=0;i<29;i++)nodes.push({id:'host:h'+i,name:i===0?'Proxmox VE':'主机 '+i,type:'host',kind:i===0?'物理机':i===1?'虚拟机':'NAS',location_id:i<15?'location:rack':'location:xianghe',...(i===1?{parent_id:'host:h0'}:{})});
+  for(let i=0;i<29;i++)nodes.push({id:'host:h'+i,name:i===0?'Proxmox VE '+'long-name-'.repeat(12):'主机 '+i,type:'host',kind:i===0?'物理机':i===1?'虚拟机':'NAS',location_id:i<15?'location:rack':'location:xianghe',...(i===1?{parent_id:'host:h0'}:{})});
   for(let i=0;i<41;i++)nodes.push({id:'service:s'+i,name:i===0?'Immich':'服务 '+i,type:'service',host_id:i===0?'host:h1':'host:h'+(i%29)});
   for(let i=0;i<24;i++)nodes.push({id:'endpoint:e'+i,name:'入口 '+i,type:'endpoint',host_id:'service:s'+i,url:i===0?'https://photos.invalid':'https://example.invalid/'+i});
   const edges=Array.from({length:97},(_,i)=>({from:'service:s'+(i%41),to:'service:s'+((i+1)%41),kind:'依赖'}));
@@ -29,7 +29,20 @@ test('分层画布在真实规模下筛选、展开、访问与影响',async()=>
   assert.equal(layersCalls,1);assert.equal(serviceTopologyCalls,0);assert.equal(await page.locator('.topology-flow .react-flow__node').count(),2);assert.equal(await page.locator('.topology-flow .react-flow__edge').count(),1);assert.match(await page.locator('.topology-flow .react-flow__edge-text').textContent(),/站点互通.*[0-9]+/);
   fs.mkdirSync(path.join(__dirname,'screenshots'),{recursive:true});await page.screenshot({path:path.join(__dirname,'screenshots','v2ri-60-default.png')});
   await page.getByLabel('站点',{exact:true}).selectOption('location:beijing');await page.locator('.topology-flow .react-flow__node').filter({hasText:'Proxmox VE'}).waitFor();assert.equal(await page.getByText('该站点暂无资产').count(),0);await page.screenshot({path:path.join(__dirname,'screenshots','v2ri-60-beijing.png')});
+  const hostName=page.locator('.topology-host-card>button strong').first();
+  assert.ok(Number.parseFloat(await hostName.evaluate(el=>getComputedStyle(el).fontSize))>=14);
+  assert.equal(await hostName.evaluate(el=>getComputedStyle(el).textOverflow),'clip');
+  assert.ok(await hostName.evaluate(el=>el.getBoundingClientRect().height>Number.parseFloat(getComputedStyle(el).lineHeight)));
+  for(const button of await page.locator('.sidebar-foot button').all())assert.ok(Number.parseFloat(await button.evaluate(el=>getComputedStyle(el).fontSize))>=14);
   await page.locator('.topology-host-card > button').filter({hasText:'Proxmox VE'}).click();await page.locator('.topology-host-children').filter({hasText:'主机 1'}).waitFor();await page.screenshot({path:path.join(__dirname,'screenshots','v2ri-60-expanded.png')});
+  const child=page.locator('.topology-host-children button').filter({hasText:'主机 1'}).first();
+  assert.ok(Number.parseFloat(await child.evaluate(el=>getComputedStyle(el).fontSize))>=14);
+  await child.focus();assert.equal(await child.evaluate(el=>el===document.activeElement),true);
+  await page.setViewportSize({width:390,height:844});
+  assert.ok(Number.parseFloat(await hostName.evaluate(el=>getComputedStyle(el).fontSize))>=16);
+  assert.ok(Number.parseFloat(await child.evaluate(el=>getComputedStyle(el).fontSize))>=16);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  await page.setViewportSize({width:1280,height:720});
   await page.getByLabel('聚焦对象').selectOption('service:s0');await page.getByRole('tab',{name:'访问链'}).click();await page.locator('.topology-flow .react-flow__node').filter({hasText:'https://photos.invalid'}).waitFor();assert.equal(serviceTopologyCalls,1);await page.screenshot({path:path.join(__dirname,'screenshots','v2ri-60-access.png')});
   await page.getByLabel('聚焦对象').selectOption('host:h0');await page.getByRole('tab',{name:'影响面'}).click();await page.locator('.topology-flow .react-flow__node').filter({hasText:'Immich'}).waitFor();await page.screenshot({path:path.join(__dirname,'screenshots','v2ri-60-impact.png')});await page.goto('http://rollbook.test/topology?focus=host%3Ah0&view=impact');await page.getByRole('tab',{name:'影响面'}).waitFor();await page.locator('.topology-flow .react-flow__node').filter({hasText:'Immich'}).waitFor();
  }finally{await browser.close()}

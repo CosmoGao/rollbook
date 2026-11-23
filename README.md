@@ -2,6 +2,8 @@
 
 Rollbook 是面向家庭与小企业的自建服务和资产清册。请只在可信内网运行。英文说明见 [README.en.md](README.en.md)，版本变化见 [CHANGELOG.md](CHANGELOG.md)，发版检查见 [docs/releasing.md](docs/releasing.md)。
 
+网页首次进入空库会显示引导弹层；按 Escape 关闭后可继续使用当前导航。资产列表读取权限不足时显示「权限不足」及重试入口；离线读取会显示加载失败，清册不提供离线编辑。
+
 
 ## v0.7.0 设备与主机
 
