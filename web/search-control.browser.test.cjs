@@ -38,7 +38,8 @@ test('全局搜索在浅深与宽窄视口只有一层描边和焦点环，键�
    assert.equal(styles.buttonBorder,'0px');assert.equal(styles.buttonOutline,'0px');
    assert.ok(styles.overflow<=0,JSON.stringify({width,theme,styles}));
    await clear.focus();await page.keyboard.press('Enter');assert.equal(await input.inputValue(),'');
-   await input.fill('test');await page.getByRole('button',{name:'搜索',exact:true}).last().focus();
+   assert.equal(await input.evaluate(el=>document.activeElement===el),true);
+   await input.fill('test');await page.locator('.search-box button[type="submit"]').focus();
    await page.keyboard.press('Enter');await page.locator('.empty').waitFor();assert.ok(requests>0);
    if(process.env.ROLLBOOK_SCREENSHOT_DIR){fs.mkdirSync(process.env.ROLLBOOK_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.ROLLBOOK_SCREENSHOT_DIR,`search-control-${width}-${theme}.png`)})}
    await page.close();

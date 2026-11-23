@@ -165,7 +165,7 @@ button.primary:active,.search-box button:active,.mobile-search button:active,.ui
 /* 搜索组合框由外层统一绘制边界与焦点，内部控件不再叠加描边。 */
 .search-box{min-width:0;max-width:100%;overflow:visible}
 .search-box:focus-within{outline:var(--focus-width) solid var(--color-focus);outline-offset:var(--focus-offset)}
-.search-box input{width:0;min-width:0;flex:1 1 auto;border:0!important;border-radius:0!important;outline:0!important;box-shadow:none!important;background:transparent!important}
+.search-box input[type="search"]{width:0;min-width:0;flex:1 1 auto;border:0!important;border-radius:0!important;outline:0!important;box-shadow:none!important;background:transparent!important}
 .search-box input::-webkit-search-cancel-button{display:none}
 .search-box button{flex:none;border:0!important;border-radius:0!important;outline:0!important;box-shadow:none!important}
 .search-box button[type="submit"]{border-radius:0 7px 7px 0!important}
