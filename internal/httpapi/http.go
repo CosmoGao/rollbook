@@ -36,7 +36,16 @@ func (e Engine) Principal(r *http.Request) (auth.Principal, error) {
 	if err != nil {
 		return auth.Principal{}, auth.ErrUnauthorized
 	}
-	return e.Auth.Session(r.Context(), cookie.Value, r.Header.Get("X-CSRF-Token"), r.Method != "GET" && r.Method != "HEAD")
+	p, err := e.Auth.Session(r.Context(), cookie.Value, r.Header.Get("X-CSRF-Token"), r.Method != "GET" && r.Method != "HEAD")
+	if err != nil {
+		return p, err
+	}
+	active := p.Provider == "local" || (e.Providers.Enabled(p.Provider) && ((p.Provider == "oidc" && p.Instance == e.Providers.OIDC.Issuer) || (p.Provider == "feishu" && p.Instance == e.Providers.Feishu.ClientID) || (p.Provider == "ldap" && p.Instance == e.Providers.LDAP.Instance)))
+	if !active {
+		_ = e.Auth.Logout(r.Context(), cookie.Value)
+		return auth.Principal{}, auth.ErrUnauthorized
+	}
+	return p, nil
 }
 
 func (e Engine) Handler() http.Handler {
@@ -48,8 +57,23 @@ func (e Engine) Handler() http.Handler {
 			return
 		}
 		if r.URL.Path == "/api/config" && r.Method == http.MethodGet {
-			WriteJSON(w, 200, map[string]bool{"allow_insecure_http": e.AllowInsecureHTTP, "http_risk": !e.secureRequest(r)})
+			local, _ := e.Auth.LocalEnabled(r.Context())
+			WriteJSON(w, 200, map[string]any{"allow_insecure_http": e.AllowInsecureHTTP, "http_risk": !e.secureRequest(r), "login_methods": map[string]bool{"local": local, "ldap": e.Providers.Enabled("ldap"), "oidc": e.Providers.Enabled("oidc"), "feishu": e.Providers.Enabled("feishu")}})
 			return
+		}
+		if r.URL.Path == "/api/auth/ldap/login" {
+			e.ldapLogin(w, r)
+			return
+		}
+		for _, kind := range []string{"oidc", "feishu"} {
+			if r.URL.Path == "/api/auth/"+kind+"/start" {
+				e.providerStart(w, r, kind)
+				return
+			}
+			if r.URL.Path == "/api/auth/"+kind+"/callback" {
+				e.providerCallback(w, r, kind)
+				return
+			}
 		}
 		if r.URL.Path == "/api/auth/login" {
 			e.login(w, r)

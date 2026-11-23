@@ -20,7 +20,7 @@ func TestMigrationAndSQLiteFeatures(t *testing.T) {
 		if err := database.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&count); err != nil {
 			t.Fatal(err)
 		}
-		if count != 15 {
+		if count != 16 {
 			t.Fatalf("migration count = %d", count)
 		}
 		var mode string
@@ -138,4 +138,50 @@ func TestUpgradePreservesReferencedHostsAndSearch(t *testing.T) {
 		t.Fatal("foreign key check failed")
 	}
 	rows.Close()
+}
+
+func TestUpgradeV15PreservesUserKeyAndSession(t *testing.T) {
+	ctx := context.Background()
+	d, err := sql.Open("sqlite", filepath.Join(t.TempDir(), "old.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	d.SetMaxOpenConns(1)
+	for _, q := range []string{
+		"PRAGMA foreign_keys=ON",
+		"CREATE TABLE schema_migrations(version INTEGER PRIMARY KEY,applied_at TEXT)",
+		"CREATE TABLE users(id TEXT PRIMARY KEY,login TEXT NOT NULL UNIQUE,password_hash TEXT NOT NULL,enabled INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,password_reset_at TEXT)",
+		"CREATE TABLE api_keys(id TEXT PRIMARY KEY,name TEXT,token_hash BLOB,level TEXT,issuer_user_id TEXT REFERENCES users(id),created_at TEXT)",
+		"CREATE TABLE sessions(id_hash BLOB PRIMARY KEY,user_id TEXT REFERENCES users(id),expires_at TEXT,csrf_hash BLOB)",
+		"INSERT INTO users(id,login,password_hash,created_at) VALUES('u','owner','old-hash','now')",
+		"INSERT INTO api_keys(id,name,token_hash,level,issuer_user_id,created_at) VALUES('k','agent',x'01','read','u','now')",
+		"INSERT INTO sessions(id_hash,user_id,expires_at,csrf_hash) VALUES(x'02','u','later',x'03')",
+	} {
+		if _, err = d.ExecContext(ctx, q); err != nil {
+			t.Fatal(q, err)
+		}
+	}
+	for version := 1; version <= 15; version++ {
+		if _, err = d.ExecContext(ctx, "INSERT INTO schema_migrations(version,applied_at) VALUES(?,?)", version, "now"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err = Migrate(ctx, d); err != nil {
+		t.Fatal(err)
+	}
+	var count int
+	for _, q := range []string{"SELECT count(*) FROM users WHERE id='u' AND password_hash='old-hash'", "SELECT count(*) FROM api_keys WHERE id='k' AND issuer_user_id='u'", "SELECT count(*) FROM sessions WHERE user_id='u' AND provider='local'"} {
+		if err = d.QueryRowContext(ctx, q).Scan(&count); err != nil || count != 1 {
+			t.Fatal(q, count, err)
+		}
+	}
+	rows, err := d.QueryContext(ctx, "PRAGMA foreign_key_check")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	if rows.Next() {
+		t.Fatal("foreign key broken")
+	}
 }

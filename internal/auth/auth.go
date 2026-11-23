@@ -32,6 +32,7 @@ const (
 type Principal struct {
 	UserID, Login, KeyID, KeyName, IssuerID, IssuerName string
 	Level                                               Level
+	Provider, Instance, Subject                         string
 }
 
 func (p Principal) IsUser() bool { return p.UserID != "" && p.KeyID == "" }
@@ -118,10 +119,18 @@ func (s Service) Session(ctx context.Context, session, csrf string, mutating boo
 	var expires string
 	var stored []byte
 	var enabled int
-	e := s.DB.QueryRowContext(ctx, `SELECT u.id,u.login,u.enabled,s.expires_at,s.csrf_hash FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id_hash=?`, s.digest("session", session)).Scan(&p.UserID, &p.Login, &enabled, &expires, &stored)
+	e := s.DB.QueryRowContext(ctx, `SELECT u.id,u.login,u.enabled,s.expires_at,s.csrf_hash,s.provider,coalesce(s.instance,''),coalesce(s.subject,'') FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id_hash=?`, s.digest("session", session)).Scan(&p.UserID, &p.Login, &enabled, &expires, &stored, &p.Provider, &p.Instance, &p.Subject)
 	deadline, parseErr := time.Parse(time.RFC3339Nano, expires)
 	if e != nil || enabled != 1 || parseErr != nil || !deadline.After(time.Now()) {
 		return Principal{}, ErrUnauthorized
+	}
+	if p.Provider != "local" {
+		var allowed int
+		e = s.DB.QueryRowContext(ctx, "SELECT allowed FROM identity_bindings WHERE provider=? AND instance=? AND subject=? AND user_id=?", p.Provider, p.Instance, p.Subject, p.UserID).Scan(&allowed)
+		if e != nil || allowed != 1 {
+			_ = s.Logout(ctx, session)
+			return Principal{}, ErrUnauthorized
+		}
 	}
 	if mutating && (csrf == "" || !hmac.Equal(stored, s.digest("csrf", csrf))) {
 		return Principal{}, ErrForbidden

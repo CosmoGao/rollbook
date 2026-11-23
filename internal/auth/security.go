@@ -36,6 +36,12 @@ func (s Service) LoginWithIP(ctx context.Context, login, password, ip string) (s
 	if err = s.valid(); err != nil {
 		return
 	}
+	var localEnabled bool
+	localEnabled, err = s.LocalEnabled(ctx)
+	if err != nil || !localEnabled {
+		err = ErrUnauthorized
+		return
+	}
 	login = strings.ToLower(strings.TrimSpace(login))
 	policy := s.LoginPolicy.defaults()
 	now := time.Now().UTC()
@@ -65,7 +71,8 @@ func (s Service) LoginWithIP(ctx context.Context, login, password, ip string) (s
 			ipUpdated, _ = time.Parse(time.RFC3339Nano, updated)
 		}
 	}
-	var hash, canonical string
+	var canonical string
+	var hash sql.NullString
 	var resetAt sql.NullString
 	var enabled int
 	e := s.DB.QueryRowContext(ctx, "SELECT id,login,password_hash,enabled,password_reset_at FROM users WHERE lower(login)=?", login).Scan(&p.UserID, &canonical, &hash, &enabled, &resetAt)
@@ -74,8 +81,10 @@ func (s Service) LoginWithIP(ctx context.Context, login, password, ip string) (s
 		return
 	}
 	// 未知账号也执行相同成本的 bcrypt 校验，减少枚举账号的时间侧信道。
-	if e != nil {
-		hash = "$2a$10$7EqJtq98hPqEX7fNZaFWoOhi5DxjJbTbgv.UGzS5nBYhI8zCX2.sO"
+	hasCredential := e == nil && hash.Valid && hash.String != ""
+	if !hasCredential {
+		hash.String = "$2a$10$7EqJtq98hPqEX7fNZaFWoOhi5DxjJbTbgv.UGzS5nBYhI8zCX2.sO"
+		hash.Valid = true
 	}
 	// 本机重置后，只允许该账号用新密码越过重置前已有的 IP 锁定。
 	// 其他账号和重置后新产生的 IP 锁定仍按原策略拒绝。
@@ -87,7 +96,7 @@ func (s Service) LoginWithIP(ctx context.Context, login, password, ip string) (s
 			return "", "", p, ErrUnauthorized
 		}
 	}
-	good := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
+	good := bcrypt.CompareHashAndPassword([]byte(hash.String), []byte(password)) == nil && hasCredential
 	if e != nil || enabled != 1 || !good {
 		for _, subject := range subjects {
 			if subject.value == "" {
@@ -144,31 +153,43 @@ func (s Service) ChangePassword(ctx context.Context, p Principal, oldPassword, n
 	if !p.IsUser() {
 		return ErrForbidden
 	}
-	var hash, canonical string
+	var canonical string
+	var hash sql.NullString
+	enabled, err := s.LocalEnabled(ctx)
+	if err != nil {
+		return err
+	}
+	if !enabled {
+		return ErrForbidden
+	}
 	if err := s.DB.QueryRowContext(ctx, "SELECT password_hash,login FROM users WHERE id=?", p.UserID).Scan(&hash, &canonical); err != nil {
 		return err
 	}
-	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(oldPassword)) != nil {
+	if !hash.Valid || hash.String == "" {
+		return ErrForbidden
+	}
+	if bcrypt.CompareHashAndPassword([]byte(hash.String), []byte(oldPassword)) != nil {
 		return ErrUnauthorized
 	}
 	if err := ValidateNewPassword(canonical, newPassword); err != nil {
 		return err
 	}
-	return s.setPassword(ctx, p.UserID, newPassword, hash, "")
+	return s.setPassword(ctx, p.UserID, newPassword, hash.String, "")
 }
 
 func (s Service) ResetPassword(ctx context.Context, login, newPassword string) error {
 	if err := s.valid(); err != nil {
 		return err
 	}
-	var id, canonical, hash string
+	var id, canonical string
+	var hash sql.NullString
 	if err := s.DB.QueryRowContext(ctx, "SELECT id,login,password_hash FROM users WHERE lower(login)=?", strings.ToLower(strings.TrimSpace(login))).Scan(&id, &canonical, &hash); err != nil {
 		return err
 	}
 	if err := ValidateNewPassword(canonical, newPassword); err != nil {
 		return err
 	}
-	return s.setPassword(ctx, id, newPassword, hash, strings.ToLower(canonical))
+	return s.setPassword(ctx, id, newPassword, hash.String, strings.ToLower(canonical))
 }
 
 func (s Service) setPassword(ctx context.Context, id, password, oldHash, resetLogin string) error {
@@ -185,7 +206,12 @@ func (s Service) setPassword(ctx context.Context, id, password, oldHash, resetLo
 	if resetLogin != "" {
 		resetAt = time.Now().UTC().Format(time.RFC3339Nano)
 	}
-	result, err := tx.ExecContext(ctx, "UPDATE users SET password_hash=?,password_reset_at=? WHERE id=? AND password_hash=?", string(hash), resetAt, id, oldHash)
+	var result sql.Result
+	if oldHash == "" {
+		result, err = tx.ExecContext(ctx, "UPDATE users SET password_hash=?,password_reset_at=? WHERE id=? AND password_hash IS NULL", string(hash), resetAt, id)
+	} else {
+		result, err = tx.ExecContext(ctx, "UPDATE users SET password_hash=?,password_reset_at=? WHERE id=? AND password_hash=?", string(hash), resetAt, id, oldHash)
+	}
 	if err != nil {
 		return err
 	}
@@ -201,6 +227,9 @@ func (s Service) setPassword(ctx context.Context, id, password, oldHash, resetLo
 	}
 	if resetLogin != "" {
 		if _, err = tx.ExecContext(ctx, "DELETE FROM login_limits WHERE kind='account' AND subject=?", s.digest("limit:account", resetLogin)); err != nil {
+			return err
+		}
+		if _, err = tx.ExecContext(ctx, "INSERT INTO auth_audit(occurred_at,action,target) VALUES(?,?,?)", time.Now().UTC().Format(time.RFC3339Nano), "password_reset", resetLogin); err != nil {
 			return err
 		}
 	}

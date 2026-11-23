@@ -30,7 +30,7 @@ var ErrConflict = errors.New("merge conflict")
 
 // 表名固定，避免导入文件控制 SQL；顺序只用于稳定输出。
 var catalogTables = []string{"objects", "locations", "uplinks", "hosts", "networks", "ips", "services", "ports", "endpoints", "dependencies", "versions", "credentials", "notes", "contexts", "changes", "version_checks", "host_offline_operations"}
-var fullTables = append(append([]string{}, catalogTables...), "users", "api_keys")
+var fullTables = append(append([]string{}, catalogTables...), "users", "api_keys", "identity_bindings", "auth_settings")
 
 type File struct {
 	SchemaVersion int                         `yaml:"schema_version" json:"schema_version"`
@@ -98,7 +98,7 @@ func (s Service) Export(ctx context.Context, kind string) ([]byte, error) {
 				}
 				row[c] = v
 			}
-			if name != "users" && name != "api_keys" {
+			if name != "users" && name != "api_keys" && name != "identity_bindings" && name != "auth_settings" {
 				if err := secrets.Check(row); err != nil {
 					rows.Close()
 					return nil, err
@@ -151,8 +151,16 @@ func Parse(data []byte) (File, Preview, error) {
 		return parseMerge(f)
 	}
 	// 旧版备份没有停用快照表。允许缺省并在恢复时清空当前快照，避免误用旧操作。
-	if _, ok := f.Tables["host_offline_operations"]; !ok && len(f.Tables) == len(names)-1 {
+	if _, ok := f.Tables["host_offline_operations"]; !ok {
 		f.Tables["host_offline_operations"] = []map[string]any{}
+	}
+	if f.Kind == "full" {
+		if _, ok := f.Tables["identity_bindings"]; !ok {
+			f.Tables["identity_bindings"] = []map[string]any{}
+		}
+		if _, ok := f.Tables["auth_settings"]; !ok {
+			f.Tables["auth_settings"] = []map[string]any{{"name": "local_login_enabled", "value": "1"}}
+		}
 	}
 	if len(f.Tables) != len(names) {
 		return f, p, ErrInvalid
@@ -173,7 +181,7 @@ func Parse(data []byte) (File, Preview, error) {
 					return f, p, &catalog.ValidationError{Fields: []catalog.FieldError{{Field: "fields." + field, Reason: fmt.Sprintf("%s 中对象 %v 仅接受绝对 HTTP 或 HTTPS 地址", name, row["id"]), Expected: "http:// 或 https:// 地址"}}}
 				}
 			}
-			if name != "users" && name != "api_keys" {
+			if name != "users" && name != "api_keys" && name != "identity_bindings" && name != "auth_settings" {
 				if err := secrets.Check(row); err != nil {
 					return f, p, err
 				}
@@ -221,6 +229,11 @@ func apply(ctx context.Context, conn *sql.Conn, f File) error {
 		}
 		sort.Strings(cols)
 		for _, row := range f.Tables[name] {
+			if name == "identity_bindings" && len(row) == len(cols)-1 {
+				if _, ok := row["verified_at"]; !ok {
+					row["verified_at"] = nil
+				}
+			}
 			// 旧备份没有提议提交时快照；恢复后沿用审计记录做保守冲突判断。
 			if name == "versions" && len(row) == len(cols)-1 {
 				if _, ok := row["raw_tag"]; !ok {
@@ -268,6 +281,7 @@ func apply(ctx context.Context, conn *sql.Conn, f File) error {
 	if _, err := tx.ExecContext(ctx, "DELETE FROM sessions"); err != nil {
 		return err
 	}
+	if _, err := tx.ExecContext(ctx, "DELETE FROM auth_pending"); err != nil { return err }
 	if _, err := tx.ExecContext(ctx, "DELETE FROM version_check_lease"); err != nil {
 		return err
 	}

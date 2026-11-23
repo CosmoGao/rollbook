@@ -23,6 +23,7 @@ type Engine struct {
 	VersionChecker    *versioncheck.Checker
 	AllowInsecureHTTP bool
 	TrustedProxyCIDRs []netip.Prefix
+	Providers         ProviderConfig
 }
 type Args map[string]json.RawMessage
 

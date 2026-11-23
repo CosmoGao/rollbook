@@ -94,7 +94,7 @@ func Migrate(ctx context.Context, database *sql.DB) error {
 		if err != nil {
 			return err
 		}
-		if version == 15 {
+		if version == 15 || version == 16 {
 			if _, err = conn.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
 				conn.Close()
 				return err
@@ -106,7 +106,7 @@ func Migrate(ctx context.Context, database *sql.DB) error {
 			return err
 		}
 		if _, err = tx.ExecContext(ctx, string(source)); err == nil {
-			if version == 15 {
+			if version == 15 || version == 16 {
 				var rows *sql.Rows
 				rows, err = tx.QueryContext(ctx, "PRAGMA foreign_key_check")
 				if err == nil {
@@ -122,20 +122,20 @@ func Migrate(ctx context.Context, database *sql.DB) error {
 		}
 		if err != nil {
 			tx.Rollback()
-			if version == 15 {
+			if version == 15 || version == 16 {
 				conn.ExecContext(context.Background(), "PRAGMA foreign_keys=ON")
 			}
 			conn.Close()
 			return fmt.Errorf("migration %s: %w", name, err)
 		}
 		if err := tx.Commit(); err != nil {
-			if version == 15 {
+			if version == 15 || version == 16 {
 				conn.ExecContext(context.Background(), "PRAGMA foreign_keys=ON")
 			}
 			conn.Close()
 			return fmt.Errorf("migration %s: %w", name, err)
 		}
-		if version == 15 {
+		if version == 15 || version == 16 {
 			if _, err = conn.ExecContext(ctx, "PRAGMA foreign_keys=ON"); err != nil {
 				conn.Close()
 				return err
