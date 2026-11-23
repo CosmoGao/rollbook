@@ -6,6 +6,8 @@ Unreleased: global search now has a single control border and focus ring, with k
 
 An empty catalog opens a first-run dialog. Press Escape to close it and return keyboard focus to the current navigation entry. The asset list shows “Permission denied” with a retry action when reading is forbidden. Offline reads show a load error; offline editing is unavailable.
 
+On Assets → Sites, location cards retain the hierarchy. Select a card's main area to open its details; use the separate button on the right to expand or collapse child locations.
+
 ## v0.8.0 Frontend standard
 
 Existing business pages use the pinned frontend and visual standard `v1.0.0`: light and dark themes share semantic colors and control outlines, and long content scrolls within the main area. Invalid JSON in an asset form is linked to its field while entered values are preserved; the bulk rejection dialog manages keyboard focus. Topology names, sidebar account actions, and narrow-screen navigation use more legible text and touch targets. Closing first-run guidance returns focus to navigation, and asset read permission failures show a clear message. Business behavior, APIs, and authorization remain unchanged. See the [frontend implementation record](docs/frontend-implementation.md) for implementation and screenshots. Human screen-reader and system soft-keyboard checks remain unverified.

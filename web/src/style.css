@@ -213,6 +213,21 @@ button.primary:active,.search-box button:active,.mobile-search button:active,.ui
 .radix-modal h2{padding-right:44px}
 
 .asset-form input:not([type=checkbox]),.asset-form select{height:var(--control-h);padding-block:0}
+.asset-location-grid{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:flex-start;gap:12px;min-width:0}
+.asset-location-node{width:min(100%,280px);min-width:0}
+.asset-location-card{display:flex;align-items:stretch;min-width:0;border:1px solid var(--color-control-border);border-radius:var(--radius-card);background:var(--color-surface);overflow:visible}
+.asset-location-open,.asset-location-expand{border:0;background:transparent;color:var(--color-text);cursor:pointer;min-height:var(--control-h-touch)}
+.asset-location-open{display:flex;flex:1;min-width:0;flex-direction:column;justify-content:center;align-items:flex-start;text-align:left;gap:4px;padding:12px;border-radius:var(--radius-card)}
+.asset-location-open strong{max-width:100%;font-size:var(--font-size-body);line-height:var(--line-height-body);overflow-wrap:anywhere}
+.asset-location-open small{color:var(--color-text-muted);font-size:var(--font-size-small);line-height:var(--line-height-small);overflow-wrap:anywhere}
+.asset-location-expand{flex:none;width:44px;border-left:1px solid var(--color-border);font-size:20px;border-radius:0 var(--radius-card) var(--radius-card) 0}
+.asset-location-open:hover,.asset-location-expand:hover{background:var(--color-surface-hover)}
+.asset-location-open:active,.asset-location-expand:active{background:var(--color-surface-active)}
+.asset-location-open:focus-visible,.asset-location-expand:focus-visible{outline:var(--focus-width) solid var(--color-focus);outline-offset:var(--focus-offset);z-index:1}
+.asset-location-children:not([hidden]){display:grid;gap:8px;margin:8px 0 0 12px;padding-left:12px;border-left:1px solid var(--color-border)}
+.asset-location-children[hidden]{display:none}
+@media(max-width:767px){.asset-location-grid{display:grid;grid-template-columns:minmax(0,1fr)}.asset-location-node{width:100%}.asset-location-open strong{font-size:var(--font-size-mobile);line-height:var(--line-height-mobile)}}
+@media(forced-colors:active){.asset-location-open:focus-visible,.asset-location-expand:focus-visible{outline:2px solid Highlight}}
 @media(max-width:767px){
   .topology-toolbar label{font-size:var(--font-size-mobile)}
   .asset-form input:not([type=checkbox]),.asset-form select{height:var(--control-h-touch)}

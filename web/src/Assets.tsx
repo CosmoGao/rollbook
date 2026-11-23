@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { Button } from './components/ui/button';
@@ -13,6 +13,20 @@ let root:Root|undefined;
 const typeEn:Record<string,string>={location:'Sites',uplink:'Uplinks',host:'Devices & hosts',network:'Networks',ip:'IP addresses',service:'Services',port:'Ports',endpoint:'Endpoints',dependency:'Dependencies',version:'Versions',credential:'Credential references',note:'Notes'};
 const types:Record<string,string>={location:'站点',uplink:'网络接入',host:'设备与主机',network:'网段',ip:'IP 地址',service:'服务',port:'端口',endpoint:'访问入口',dependency:'依赖',version:'版本',credential:'凭据引用',note:'笔记'};
 const tabs=['location','host','network','service'];
+function LocationCard({item,children,depth,onOpen,kind,en}:{item:Asset;children:React.ReactNode;depth:number;onOpen:(id:string,type:string)=>void;kind:string;en:boolean}){
+  const [expanded,setExpanded]=useState(depth<2);
+  const childrenId=useId();
+  const hasChildren=React.Children.count(children)>0;
+  return <section className="asset-location-node">
+    <div className="asset-location-card">
+      <button type="button" className="asset-location-open" onClick={()=>onOpen(item.id,item.type)}>
+        <strong>{item.name}</strong>{kind&&<small>{kind}</small>}
+      </button>
+      {hasChildren&&<button type="button" className="asset-location-expand" aria-label={(en?expanded?'Collapse ':'Expand ':expanded?'收起':'展开')+item.name} aria-expanded={expanded} aria-controls={childrenId} onClick={()=>setExpanded(value=>!value)}>{expanded?'−':'+'}</button>}
+    </div>
+    {hasChildren&&<div id={childrenId} className="asset-location-children" hidden={!expanded}>{children}</div>}
+  </section>;
+}
 export function unmountAssets(){if(root){root.unmount();root=undefined}}
 export function mountAssets(target:Element,api:API,onCreate:(type:string)=>void,onOpen:(id:string,type:string)=>void,enumLabel:(field:string,value:string)=>string,initialType='location',initialView:'list'|'tree'='list'){
   unmountAssets();root=createRoot(target);
@@ -31,7 +45,7 @@ function Assets({api,onCreate,onOpen,enumLabel,initialType,initialView}:{api:API
   const matched=new Set((searchQuery.data||[]).map(item=>item.id));
   const permissionDenied=[query.error,searchQuery.error,services.error,ips.error].some(error=>error instanceof Error&&/权限不足|permission denied/i.test(error.message));
   const items=(query.data||[]).filter(item=>(type==='host'?(!search.trim()||matched.has(item.id))&&(!kind||item.kind===kind)&&(!site||(site==='__unassigned__'?!item.site_id:item.site_id===site)):(item.name+' '+item.id+' '+(item.site_name||'')).toLocaleLowerCase().includes(search.toLocaleLowerCase())));
-  const locationTree=(entries:Asset[])=>{const seen=new Set<string>();const node=(item:Asset,depth=0):React.ReactNode=>{if(seen.has(item.id))return null;seen.add(item.id);return <details className="tree-node" key={item.id} open={depth<2}><summary><button className="tree-title" onClick={event=>{event.preventDefault();onOpen(item.id,item.type)}}>{item.name}</button><span className="tree-meta">{enumLabel('kind',item.kind||String(item.fields?.kind||''))}</span></summary><div className="tree-children">{entries.filter(child=>child.fields?.parent_id===item.id).map(child=>node(child,depth+1))}</div></details>};return <div className="host-tree">{entries.filter(item=>!item.fields?.parent_id||!entries.some(parent=>parent.id===item.fields?.parent_id)).map(item=>node(item))}{entries.filter(item=>!seen.has(item.id)).map(item=>node(item))}</div>};
+  const locationTree=(entries:Asset[])=>{const seen=new Set<string>();const node=(item:Asset,depth=0):React.ReactNode=>{if(seen.has(item.id))return null;seen.add(item.id);return <LocationCard key={item.id} item={item} depth={depth} onOpen={onOpen} kind={enumLabel('kind',item.kind||String(item.fields?.kind||''))} en={en}>{entries.filter(child=>child.fields?.parent_id===item.id).map(child=>node(child,depth+1))}</LocationCard>};return <div className="asset-location-grid">{entries.filter(item=>!item.fields?.parent_id||!entries.some(parent=>parent.id===item.fields?.parent_id)).map(item=>node(item))}{entries.filter(item=>!seen.has(item.id)).map(item=>node(item))}</div>};
   return <>
     <div className="hero page-heading"><div><h1>{en?'Manage assets':'资产维护'}</h1><p className="muted">{en?'View, create, and maintain catalog assets by type.':'按类型查看、新建和维护清册。'}</p></div><Button onClick={()=>onCreate(type)}>{en?'New':'新建'}</Button></div>
     <div className="asset-shortcuts"><Tabs items={tabs.map(value=>({value,label:label(value)}))} value={type} onChange={value=>{setType(value);setView('list');setSearch('')}}/></div>
