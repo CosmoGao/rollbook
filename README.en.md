@@ -2,13 +2,15 @@
 
 Rollbook is a self-hosted service and asset catalog for homes and small businesses. Run it on a trusted network. The UI follows the browser language until you select English or Chinese; that choice is saved in the browser. See the [Chinese README](README.md), [changelog](CHANGELOG.md), and [release checklist](docs/releasing.md).
 
-## Unreleased: authentication settings
+## v0.10.0 authentication settings and search fix (release pending)
 
-System Settings → Authentication Settings configures and toggles LDAP, OIDC and Feishu providers, users, explicit bindings, allow flags, local sign-in, and read-only authentication audit. Every signed-in web user has full management rights; Bearer API Keys cannot access these endpoints. Credentials are write-only and encrypted in a separate database table. Full and scheduled YAML backups exclude them and cannot restore page-managed provider credentials. If any environment variable for a provider (including a `_FILE` variant) exists, the startup environment owns that provider and the page is read-only. Any saved page configuration is shadowed. Removing the environment variable requires a restart; saving page configuration takes effect immediately.
+System Settings → Authentication Settings (`/settings/auth`) configures and toggles LDAP/LDAPS, generic OIDC and Feishu providers, users, explicit bindings, allow flags, local sign-in, and read-only authentication audit. Personal Settings (`/settings/personal`) manages the current account; Backup and Restore (`/settings/backup`) manages YAML. Every signed-in web user has full management rights; there is no site-wide RBAC or group mapping. Bearer API Keys cannot access these management endpoints. Page credentials are write-only and encrypted on the server with a key derived from the existing pepper; full and scheduled YAML backups exclude them and cannot restore them. If any provider-specific environment variable or `_FILE` variant exists, the startup environment owns the whole provider, the page is read-only and shows the source, and saved page configuration is shadowed. Removing the variable requires a restart to change sources; saving and toggling page configuration without environment ownership takes effect immediately. See [external sign-in setup](docs/external-auth.md) for configuration and callback registration.
 
-Before upgrading, stop the service and preserve a complete data-volume snapshot, the current `ROLLBOOK_AUTH_PEPPER` or its file, and the provider environment configuration. The original pepper is required to decrypt saved credentials. If it changes or is lost, use `rollbook auth local-login enable` on the server before replacing page credentials. A full YAML import removes any page-managed provider configuration in the target database and refuses a file with local sign-in disabled, avoiding a lockout. Use a file-level snapshot to restore provider credentials. To roll back, restore the complete pre-upgrade data volume and its pepper/environment configuration; an older image cannot safely read the migrated database. Real IdP integration testing remains outstanding.
+Upgrading from `v0.9.0` runs `017_auth_providers.sql`. Stop the service first and save a full file-level `/data` snapshot including the SQLite database, `-wal`, and `-shm` files, plus `/backups` if used separately. Preserve the original `ROLLBOOK_AUTH_PEPPER` or `_FILE` file, provider environment variables or `_FILE` files, and necessary key material. Full YAML cannot replace the snapshot; a full YAML import clears page-managed providers in the target database and rejects a file with local sign-in disabled. The original pepper is needed to decrypt saved credentials. If it changes or is lost, use `rollbook auth local-login enable` locally to preserve a recovery path, then re-enter page credentials. To roll back, restore the complete pre-upgrade snapshot and original configuration, then start the official `v0.9.0` image. Do not point an older image at the migrated database. Real LDAP, OIDC, and Feishu IdPs have not been integration tested.
 
 An empty catalog opens a first-run dialog. Press Escape to close it and return keyboard focus to the current navigation entry. The asset list shows “Permission denied” with a retry action when reading is forbidden. Offline reads show a load error; offline editing is unavailable.
+
+In light and dark themes, search selection, hover and focus highlights coincide with the control's actual border rather than a detached outer ring. Merging code, publishing a formal release, and deploying an instance are separate steps; this version still awaits its tag, Release, and image verification.
 
 ## v0.9.0 sign-in and UI updates
 
@@ -58,7 +60,7 @@ Assets lets you create and browse sites, hosts, networks, services, and other re
 
 ## Install and version
 
-Tagged releases provide a multi-architecture GHCR image, Linux/macOS/Windows amd64 and arm64 CLI archives, `SHA256SUMS`, and `install.sh`. Linux/macOS users can download and run the release's `install.sh` to install under `~/.local/bin`; after the official Release and image are verified, set `ROLLBOOK_VERSION=v0.9.0` to pin this release or `ROLLBOOK_INSTALL_DIR` to choose a destination. Windows users should choose an archive and verify its checksum. The installer only replaces the local CLI. `rollbook version`, the sign-in screen, footer, `GET /api/version`, and MCP `initialize.serverInfo` report the same build version.
+Tagged releases provide a multi-architecture GHCR image, Linux/macOS/Windows amd64 and arm64 CLI archives, `SHA256SUMS`, and `install.sh`. Linux/macOS users can download and run the release's `install.sh` to install under `~/.local/bin`; after the official Release and image are verified, set `ROLLBOOK_VERSION=v0.10.0` to pin this release or `ROLLBOOK_INSTALL_DIR` to choose a destination. Windows users should choose an archive and verify its checksum. The installer only replaces the local CLI. `rollbook version`, the sign-in screen, footer, `GET /api/version`, and MCP `initialize.serverInfo` report the same build version.
 
 YAML backups use `schema_version: 1`; unsupported versions are rejected. Newer databases may not be readable by older binaries. Make a full file-level snapshot before upgrading. The CLI uses REST. Run `rollbook login` to enter a server URL and key without echoing the key; the profile is stored in the user config directory with mode `0600`. `rollbook --profile home login` creates another profile. `ROLLBOOK_URL` and `ROLLBOOK_KEY` override the chosen profile for a process. With no configured URL, it defaults to `http://127.0.0.1:8080`. `--output json|yaml|table` controls REST output; `export` always writes YAML. `rollbook completion bash|zsh|fish` generates shell completion.
 
@@ -89,7 +91,7 @@ Set a service's `upstream_json` to a supported public provider, for example `{"p
 
 ## Docker Compose deployment
 
-Requires Docker Engine and Compose. In the repository root, pin the verified `ROLLBOOK_VERSION=v0.9.0` in `.env` for production after the official Release and image are verified; the example defaults to `latest` for a trial. Run:
+Requires Docker Engine and Compose. In the repository root, pin the verified `ROLLBOOK_VERSION=v0.10.0` in `.env` for production after the official Release and image are verified; the example defaults to `latest` for a trial. Run:
 
 ```sh
 cp .env.example .env
@@ -121,17 +123,18 @@ For direct HTTP testing only on a trusted network, set `ROLLBOOK_BIND_ADDR` to t
 
 ### Upgrade and rollback
 
-Before upgrading from `v0.8.0`, save `.env`, the authentication pepper and all configured identity-provider secrets, the full `/data` volume, and `/backups` if used separately. A full YAML backup contains password and key hashes and needs protected storage, but it cannot replace a file-level snapshot. SQLite uses WAL, so stop Rollbook before a file-level snapshot and preserve the database together with its `-wal` and `-shm` files. For example:
+Before upgrading from `v0.9.0` to the planned `v0.10.0`, preserve `.env`, the original `ROLLBOOK_AUTH_PEPPER` or `ROLLBOOK_AUTH_PEPPER_FILE` file, provider environment variables or their `_FILE` files, and necessary key material. Stop the service before copying the full `/data` volume; keep the SQLite database with its `-wal` and `-shm` files. Save `/backups` when used separately. A full YAML backup contains account and Key hashes and needs protected storage, but excludes page-managed provider credentials and cannot replace a file-level snapshot. Compose example (protect the resulting directories):
 
 ```sh
 docker compose stop rollbook
 mkdir -p snapshot-data snapshot-backups
 docker compose cp rollbook:/data/. ./snapshot-data/
 docker compose cp rollbook:/backups/. ./snapshot-backups/
-docker compose start rollbook
 ```
 
-Check that the snapshot is readable. Change `ROLLBOOK_VERSION` in `.env` to the intended verified tag (`v0.9.0` after its official Release and image are verified), run `docker compose pull && docker compose up -d`, then check `docker compose ps`, `/healthz`, and web sign-in. Do not run two versions against one database. This release changes the user table to allow accounts without a local password and adds identity bindings, authentication settings, audit records, and provider-aware sessions. Migrations are forward-only. To roll back, stop the service, restore the complete pre-upgrade `/data` and separately used `/backups` snapshots plus the original `.env` and all authentication secrets, then start the official `v0.8.0` image. Merely switching image tags against a migrated database is unsafe. Older full YAML backups can be restored into the new database with no external bindings and local sign-in enabled. New full YAML backups still use `schema_version: 1`, but older software is not guaranteed to import their identity tables. Catalog YAML exports contain assets only and are not rollback snapshots. GitHub Actions tests PRs and publishes images and archives on tags; the workflow does not deploy your instance.
+After checking the snapshot is readable and the original pepper and provider configuration are preserved, wait for the official Release and image verification. Then set `ROLLBOOK_VERSION=v0.10.0` in `.env`, run `docker compose pull && docker compose up -d`, and check `docker compose ps`, `/healthz`, and web sign-in. Do not run two versions against one database. Startup applies forward-only migration `017_auth_providers.sql`, adding `auth_provider_settings` (encrypted credentials) and `auth_pending.config_version`. Page credentials require the original pepper-derived key. If the pepper changes or is lost, run `rollbook auth local-login enable` locally to preserve recovery access, then re-enter page credentials; use `rollbook reset-password <existing-login>` if a local password must be restored. A full YAML import clears page-managed providers in the target database and rejects a file with local sign-in disabled.
+
+**Database migrations only run forward.** To roll back, stop the service, restore the complete pre-upgrade `/data` and separately used `/backups` snapshots, original `.env`, pepper, provider environment configuration, and key material, then start the official `v0.9.0` image. Do not point the old image at the migrated database. Full YAML cannot restore page credentials; catalog YAML exports contain assets only. The GitHub Actions tag pipeline publishes the official image and CLI; it does not deploy your instance.
 
 ## Backup and restore
 

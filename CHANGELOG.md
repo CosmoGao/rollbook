@@ -2,16 +2,27 @@
 
 按 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 分类，依据各 Release、tag 区间和已合并 PR 编写。公开 Release 从 v0.3.0 开始；另有 `v0.0.1` tag，但无对应 Release。未发现 v0.1.0、v0.2.0 的发布证据，不为其编造条目。
 
-## 未发布
+## v0.10.0（发布准备中；正式 tag 与 Release 尚未创建）
+
+本节依据 `v0.9.0..main` 的已合并 [#62](https://github.com/CosmoGao/rollbook/pull/62)、[#63](https://github.com/CosmoGao/rollbook/pull/63)、[#64](https://github.com/CosmoGao/rollbook/pull/64) 归档；#62 只补齐上一版 CHANGELOG 的 Release 链接。待正式 Release 实际生成后再补本版链接。
 
 ### 新增
 
 - 设置目录新增认证设置页，可管理 LDAP、OIDC、飞书身份源、用户与显式绑定、本地登录，以及分页查看认证审计；页面凭据用现有 pepper 派生的密钥加密保存，不进入 YAML 备份。
 
+### 修复
+
+- 全局搜索框选中高亮与真实框线重合：深浅主题的悬停、聚焦状态沿同一条 `border-box` 框线变化，不再出现偏离的外圈（[#63](https://github.com/CosmoGao/rollbook/pull/63)）。
+
 ### 安全与兼容
 
 - 环境变量按身份源整体优先于页面配置；外部登录流程在配置切换后安全失败。关闭本地登录与修改身份源时核对已启用源和近一小时真实试登录，变更撤销相关会话。
 - 完整 YAML 导入清除目标库页面身份源配置，并拒绝本地入口已关闭的文件。升级和回退须保留升级前完整数据卷快照、当时的 pepper 和环境配置，不能只切换旧镜像。
+
+### 升级注意事项
+
+- 从 `v0.9.0` 升级会执行前向迁移 `017_auth_providers.sql`：新增加密凭据表 `auth_provider_settings` 和 `auth_pending.config_version`。停服务后保存完整 `/data` 文件级快照（含 SQLite 数据库、`-wal`、`-shm`），独立使用 `/backups` 时也保存该卷；同时保存原 `ROLLBOOK_AUTH_PEPPER` 或 `_FILE` 文件、身份源环境变量或 `_FILE` 文件及所需密钥材料。完整 YAML 不含页面凭据，不能代替快照。
+- 回退须停服务，恢复升级前完整快照及当时配置和密钥，然后启动 `v0.9.0` 正式镜像；不能让旧镜像直接读取迁移后的数据库。原 pepper 丢失会使页面密文无法解密，须先用本机 `rollbook auth local-login enable` 保留本地入口，再重新填写页面凭据。真实 LDAP、OIDC、飞书 IdP 尚未联调；没有新增全站 RBAC 或群组映射。
 
 ## [v0.9.0](https://github.com/CosmoGao/rollbook/releases/tag/v0.9.0)
 
