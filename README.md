@@ -2,7 +2,9 @@
 
 Rollbook 是面向家庭与小企业的自建服务和资产清册。请只在可信内网运行。英文说明见 [README.en.md](README.en.md)，版本变化见 [CHANGELOG.md](CHANGELOG.md)，发版检查见 [docs/releasing.md](docs/releasing.md)。
 
-## v0.10.0 认证设置与搜索框修复（发布准备中）
+## v0.10.0 认证设置与搜索框修复
+
+本版已正式发布：[v0.10.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.10.0)。发布镜像与 CLI 不会自动更新现有实例。
 
 系统「设置 → 认证设置」（`/settings/auth`）可配置并启停 LDAP/LDAPS、通用 OIDC、飞书身份源，管理用户、显式身份绑定、允许登录、本地入口与只读认证审计；「个人设置」（`/settings/personal`）处理当前账号，「备份与恢复」（`/settings/backup`）处理 YAML。所有已登录网页用户均有完整管理权，没有全站 RBAC 或群组映射；Bearer API Key 不能调用这些管理接口。页面凭据只写不读，以现有 pepper 派生密钥在服务端加密保存；完整与定时 YAML 不含页面凭据，也不能恢复它们。任一同源环境变量或 `_FILE` 存在时，启动环境接管整个身份源，页面只读并提示来源，已保存配置被遮蔽；移除后须重启才能切源。无环境接管时，页面保存与启停热生效。配置步骤和回调登记见[外部身份登录说明](docs/external-auth.md)。
 
@@ -10,7 +12,7 @@ Rollbook 是面向家庭与小企业的自建服务和资产清册。请只在�
 
 网页首次进入空库会显示引导弹层；按 Escape 关闭后可继续使用当前导航。资产列表读取权限不足时显示「权限不足」及重试入口；离线读取会显示加载失败，清册不提供离线编辑。
 
-全局搜索框在深浅主题的选中、悬停和聚焦状态沿真实框线高亮，不再出现偏离边框的外圈。代码合入、正式发布和实例部署是不同步骤；此处版本尚待正式 tag、Release 与镜像产物核验。
+全局搜索框在深浅主题的选中、悬停和聚焦状态沿真实框线高亮，不再出现偏离边框的外圈。`v0.10.0` 已有正式 tag、Release 与核验通过的镜像产物；实例升级仍须按下文备份和回退步骤办理。
 
 ## v0.9.0 身份登录与界面更新
 
@@ -73,7 +75,7 @@ CLI 使用与服务端相同的 REST API。首次运行 `rollbook login`，依�
 
 ## 安装与版本
 
-正式 tag `vX.Y.Z` 会在同一构建流程发布 GHCR 镜像、Linux/macOS/Windows 的 amd64/arm64 压缩包、`SHA256SUMS`、`install.sh` 和自动生成的 Release notes。Linux/macOS 可以下载 Release 中的 `install.sh` 后运行，默认安装到 `~/.local/bin`；待本版正式 Release 与镜像验证后可通过 `ROLLBOOK_VERSION=v0.10.0` 固定本版，`ROLLBOOK_INSTALL_DIR` 调整安装目录。Windows 请从 Release 下载对应压缩包并核对 SHA256。安装程序只替换本机 CLI 二进制，不更改数据库。`rollbook version`、网页登录页与登录后的页脚、`GET /api/version` 与 MCP `initialize.serverInfo` 使用同一构建版本；网页中 tag 显示版本号，main 显示版本号和短提交号。
+正式 tag `vX.Y.Z` 会在同一构建流程发布 GHCR 镜像、Linux/macOS/Windows 的 amd64/arm64 压缩包、`SHA256SUMS`、`install.sh` 和自动生成的 Release notes。Linux/macOS 可以下载 Release 中的 `install.sh` 后运行，默认安装到 `~/.local/bin`；可通过 `ROLLBOOK_VERSION=v0.10.0` 固定已核验的本版，`ROLLBOOK_INSTALL_DIR` 调整安装目录。Windows 请从 Release 下载对应压缩包并核对 SHA256。安装程序只替换本机 CLI 二进制，不更改数据库。`rollbook version`、网页登录页与登录后的页脚、`GET /api/version` 与 MCP `initialize.serverInfo` 使用同一构建版本；网页中 tag 显示版本号，main 显示版本号和短提交号。
 
 YAML 备份当前使用 `schema_version: 1`。导入仅接受程序支持的 schema 版本；新版若提高 schema 版本，会先提供升级路径，不承诺新版 YAML 能由旧程序导入。数据库在启动时执行向前迁移；不承诺降级读取已迁移数据库，升级前须保留完整文件级快照。完整回退流程见下文“升级和回退”。
 
@@ -138,7 +140,7 @@ rollbook search 示例
 
 ## Docker Compose 部署
 
-宿主机需要 Docker Engine 和 Compose 插件。默认镜像是 `ghcr.io/cosmogao/rollbook:${ROLLBOOK_VERSION}`；试运行可用 `latest`，正式部署请在 `.env` 固定已验证的 `vX.Y.Z`（目标版本为 `v0.10.0`，须待正式 Release 及镜像验证后使用）。在仓库目录运行：
+宿主机需要 Docker Engine 和 Compose 插件。默认镜像是 `ghcr.io/cosmogao/rollbook:${ROLLBOOK_VERSION}`；试运行可用 `latest`，正式部署请在 `.env` 固定已验证的 `vX.Y.Z`（本版为 `v0.10.0`）。在仓库目录运行：
 
 ```sh
 cp .env.example .env
@@ -187,7 +189,7 @@ sudo chown -R 10001:10001 /srv/rollbook/data /srv/rollbook/backups
 
 ### 升级和回退
 
-从 `v0.9.0` 升级到目标版本 `v0.10.0` 前，保存 `.env`、原 `ROLLBOOK_AUTH_PEPPER` 或 `ROLLBOOK_AUTH_PEPPER_FILE` 文件、身份源环境变量或其 `_FILE` 文件及必要密钥材料。先停服务，再复制完整 `/data` 数据卷；SQLite 数据库及 `-wal`、`-shm` 文件须一起保存，独立使用 `/backups` 时也保存该卷。完整 YAML 含账号及 Key 哈希，应作为敏感数据保护，但它不含页面身份源凭据，不能代替文件级快照。Compose 示例（目录须自行妥善保护）：
+从 `v0.9.0` 升级到 `v0.10.0` 前，保存 `.env`、原 `ROLLBOOK_AUTH_PEPPER` 或 `ROLLBOOK_AUTH_PEPPER_FILE` 文件、身份源环境变量或其 `_FILE` 文件及必要密钥材料。先停服务，再复制完整 `/data` 数据卷；SQLite 数据库及 `-wal`、`-shm` 文件须一起保存，独立使用 `/backups` 时也保存该卷。完整 YAML 含账号及 Key 哈希，应作为敏感数据保护，但它不含页面身份源凭据，不能代替文件级快照。Compose 示例（目录须自行妥善保护）：
 
 ```sh
 docker compose stop rollbook
@@ -196,7 +198,7 @@ docker compose cp rollbook:/data/. ./snapshot-data/
 docker compose cp rollbook:/backups/. ./snapshot-backups/
 ```
 
-确认快照可读、原 pepper 和身份源配置已安全保留后，待正式 Release 与镜像验证，再将 `.env` 的 `ROLLBOOK_VERSION` 改为 `v0.10.0`，执行 `docker compose pull && docker compose up -d`，检查 `docker compose ps`、`/healthz` 和网页登录。不要让新旧版本同时使用同一数据库。启动时执行前向迁移 `017_auth_providers.sql`，新增 `auth_provider_settings`（加密凭据）和 `auth_pending.config_version`。页面凭据由原 pepper 派生密钥解密；原 pepper 遗失或更换时，先在本机运行 `rollbook auth local-login enable` 保留恢复入口，再重新填写页面凭据，必要时用 `rollbook reset-password <已有清册登录名>` 恢复本地口令。全量 YAML 导入清除目标库页面身份源配置，并拒绝本地入口已关闭的文件。
+确认快照可读、原 pepper 和身份源配置已安全保留后，将 `.env` 的 `ROLLBOOK_VERSION` 改为 `v0.10.0`，执行 `docker compose pull && docker compose up -d`，检查 `docker compose ps`、`/healthz` 和网页登录。不要让新旧版本同时使用同一数据库。启动时执行前向迁移 `017_auth_providers.sql`，新增 `auth_provider_settings`（加密凭据）和 `auth_pending.config_version`。页面凭据由原 pepper 派生密钥解密；原 pepper 遗失或更换时，先在本机运行 `rollbook auth local-login enable` 保留恢复入口，再重新填写页面凭据，必要时用 `rollbook reset-password <已有清册登录名>` 恢复本地口令。全量 YAML 导入清除目标库页面身份源配置，并拒绝本地入口已关闭的文件。
 
 **数据库只保证向前迁移。**回退时先停服务，恢复升级前完整 `/data` 与独立使用的 `/backups` 快照、原 `.env`、pepper、身份源环境配置及密钥材料，然后启动 `v0.9.0` 正式镜像。不能只切换旧镜像去读迁移后数据库。完整 YAML 不能恢复页面凭据；清册 YAML 导出只含资产。GitHub Actions 的 tag 流水线发布正式镜像与 CLI，不会部署你的实例。
 
