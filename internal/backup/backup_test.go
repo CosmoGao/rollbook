@@ -222,3 +222,38 @@ func TestAtomicFile(t *testing.T) {
 		t.Fatalf("mode: %v", info.Mode())
 	}
 }
+
+func TestFullImportClearsPageProvidersAndRejectsClosedLocal(t *testing.T) {
+	ctx := context.Background()
+	d, err := db.Open(ctx, filepath.Join(t.TempDir(), "auth-backup.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	if _, err = d.ExecContext(ctx, "INSERT INTO auth_provider_settings(kind,enabled,config,secret) VALUES('feishu',1,'{}','v1:fake-ciphertext')"); err != nil {
+		t.Fatal(err)
+	}
+	s := Service{DB: d}
+	data, err := s.Export(ctx, "full")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(data, []byte("auth_provider_settings")) || bytes.Contains(data, []byte("fake-ciphertext")) {
+		t.Fatal("page credential exported")
+	}
+	f, _, err := Parse(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.Restore(ctx, f); err != nil {
+		t.Fatal(err)
+	}
+	var count int
+	if err = d.QueryRowContext(ctx, "SELECT count(*) FROM auth_provider_settings").Scan(&count); err != nil || count != 0 {
+		t.Fatal(count, err)
+	}
+	f.Tables["auth_settings"] = []map[string]any{{"name": "local_login_enabled", "value": "0"}}
+	if err = s.Restore(ctx, f); err == nil {
+		t.Fatal("unsafe full import accepted")
+	}
+}

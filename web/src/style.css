@@ -262,3 +262,20 @@ button.primary:active,.search-box button:active,.mobile-search button:active,.ui
 .login-methods button:focus-visible, .external-login:focus-visible { outline:2px solid var(--color-focus); outline-offset:2px; }
 .top-controls{position:relative}.account-error{position:absolute;right:0;top:calc(100% + 8px);z-index:109;max-width:min(400px,calc(100vw - 32px));padding:8px 12px;background:var(--color-surface);border:1px solid var(--color-danger-text);border-radius:var(--radius-control)}
 .top-controls .account-avatar{display:grid!important}
+
+/* 认证设置使用既有语义变量；窄屏表格仅在局部横滚。 */
+.auth-settings { max-width:var(--content-max); min-width:0; }
+.auth-provider { padding:var(--space-4); margin:var(--space-5) 0; border:var(--border-width) solid var(--color-border); border-radius:var(--radius-card); max-width:var(--form-max); }
+.auth-provider h3 { margin-top:0; }
+.auth-fields { display:grid; gap:var(--space-4); max-width:var(--form-max); }
+.auth-fields label,.auth-inline label { display:grid; gap:var(--space-1); min-width:0; }
+.auth-fields input,.auth-fields select,.auth-inline input,.auth-provider input[type=password] { min-width:0; width:100%; background:var(--color-surface); color:var(--color-text); border:var(--border-width) solid var(--color-control-border); border-radius:var(--radius-control); min-height:var(--control-h); padding:var(--space-2); }
+.auth-fields input:read-only { background:var(--color-disabled-bg); }
+.auth-provider fieldset { display:grid; gap:var(--space-2); margin:var(--space-4) 0; border:var(--border-width) solid var(--color-border); border-radius:var(--radius-control); }
+.auth-provider fieldset label,.auth-check { display:flex; gap:var(--space-2); align-items:center; min-height:var(--control-h); }
+.auth-provider code { overflow-wrap:anywhere; }
+.auth-inline { display:flex; flex-wrap:wrap; align-items:end; gap:var(--space-3); margin:var(--space-4) 0 var(--space-5); }
+.auth-table-scroll { overflow-x:auto; max-width:100%; margin:var(--space-3) 0; }
+.auth-table-scroll table { min-width:520px; width:100%; border-collapse:collapse; }
+.auth-table-scroll th,.auth-table-scroll td { text-align:left; padding:var(--space-2) var(--space-3); border-bottom:var(--border-width) solid var(--color-border); overflow-wrap:anywhere; }
+@media(max-width:767px) { .auth-provider { padding:var(--space-3); } .auth-fields input,.auth-fields select,.auth-inline input,.auth-check { min-height:var(--control-h-touch); font-size:16px; } }

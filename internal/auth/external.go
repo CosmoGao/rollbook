@@ -131,7 +131,7 @@ func (s Service) ManageBinding(ctx context.Context, provider, instance, subject,
 	if _, err = tx.ExecContext(ctx, "DELETE FROM sessions WHERE user_id=? OR user_id=?", userID, oldUser); err != nil {
 		return err
 	}
-	if err = ensureLoginPath(ctx, tx); err != nil {
+	if err = s.ensureLoginPath(ctx, tx); err != nil {
 		return err
 	}
 	if _, err = tx.ExecContext(ctx, "INSERT INTO auth_audit(occurred_at,action,target) VALUES(?,?,?)", time.Now().UTC().Format(time.RFC3339Nano), "binding_update", provider+":"+instance+":"+subject); err != nil {
@@ -161,7 +161,7 @@ func (s Service) SetUserEnabled(ctx context.Context, login string, enabled bool)
 	if _, err = tx.ExecContext(ctx, "DELETE FROM sessions WHERE user_id=(SELECT id FROM users WHERE lower(login)=lower(?))", login); err != nil {
 		return err
 	}
-	if err = ensureLoginPath(ctx, tx); err != nil {
+	if err = s.ensureLoginPath(ctx, tx); err != nil {
 		return err
 	}
 	if _, err = tx.ExecContext(ctx, "INSERT INTO auth_audit(occurred_at,action,target) VALUES(?,?,?)", time.Now().UTC().Format(time.RFC3339Nano), "user_enabled_"+strings.ToLower(map[bool]string{true: "true", false: "false"}[enabled]), login); err != nil {
@@ -171,7 +171,7 @@ func (s Service) SetUserEnabled(ctx context.Context, login string, enabled bool)
 }
 
 // 本机恢复命令始终可重新开放入口；常规管理操作避免意外移除最后一个可用账号。
-func ensureLoginPath(ctx context.Context, tx *sql.Tx) error {
+func (s Service) ensureLoginPath(ctx context.Context, tx *sql.Tx) error {
 	var count int
 	if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM users WHERE enabled=1").Scan(&count); err != nil {
 		return err
@@ -186,13 +186,28 @@ func ensureLoginPath(ctx context.Context, tx *sql.Tx) error {
 	if local == "1" {
 		return nil
 	}
-	if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM identity_bindings b JOIN users u ON u.id=b.user_id WHERE b.allowed=1 AND b.verified_at IS NOT NULL AND u.enabled=1").Scan(&count); err != nil {
+	return s.verifiedPath(ctx, tx)
+}
+
+func (s Service) verifiedPath(ctx context.Context, tx *sql.Tx) error {
+	rows, err := tx.QueryContext(ctx, "SELECT b.provider,b.instance FROM identity_bindings b JOIN users u ON u.id=b.user_id WHERE b.allowed=1 AND b.verified_at>=? AND u.enabled=1", time.Now().UTC().Add(-time.Hour).Format(time.RFC3339Nano))
+	if err != nil {
 		return err
 	}
-	if count == 0 {
-		return ErrForbidden
+	defer rows.Close()
+	for rows.Next() {
+		var kind, instance string
+		if err = rows.Scan(&kind, &instance); err != nil {
+			return err
+		}
+		if s.EnabledProvider == nil || s.EnabledProvider(kind, instance) {
+			return nil
+		}
 	}
-	return nil
+	if err = rows.Err(); err != nil {
+		return err
+	}
+	return ErrForbidden
 }
 
 func (s Service) CreateExternalUser(ctx context.Context, login string) error {
@@ -226,13 +241,8 @@ func (s Service) SetLocalEnabled(ctx context.Context, enabled bool) error {
 	}
 	defer tx.Rollback()
 	if !enabled {
-		var count int
-		err = tx.QueryRowContext(ctx, "SELECT count(*) FROM identity_bindings b JOIN users u ON u.id=b.user_id WHERE b.allowed=1 AND b.verified_at>=? AND u.enabled=1", time.Now().UTC().Add(-time.Hour).Format(time.RFC3339Nano)).Scan(&count)
-		if err != nil {
+		if err = s.verifiedPath(ctx, tx); err != nil {
 			return err
-		}
-		if count == 0 {
-			return ErrForbidden
 		}
 		if _, err = tx.ExecContext(ctx, "DELETE FROM sessions WHERE provider='local'"); err != nil {
 			return err

@@ -24,6 +24,7 @@ func WriteJSON(w http.ResponseWriter, status int, v any) {
 func WriteError(w http.ResponseWriter, err error) { status, v := Error(err); WriteJSON(w, status, v) }
 
 func (e Engine) Principal(r *http.Request) (auth.Principal, error) {
+	e = e.withProviders()
 	h := r.Header.Get("Authorization")
 	if h != "" {
 		parts := strings.Fields(h)
@@ -57,26 +58,31 @@ func (e Engine) Handler() http.Handler {
 			return
 		}
 		if r.URL.Path == "/api/config" && r.Method == http.MethodGet {
+			active := e.withProviders()
 			local, _ := e.Auth.LocalEnabled(r.Context())
-			WriteJSON(w, 200, map[string]any{"allow_insecure_http": e.AllowInsecureHTTP, "http_risk": !e.secureRequest(r), "login_methods": map[string]bool{"local": local, "ldap": e.Providers.Enabled("ldap"), "oidc": e.Providers.Enabled("oidc"), "feishu": e.Providers.Enabled("feishu")}})
+			WriteJSON(w, 200, map[string]any{"allow_insecure_http": e.AllowInsecureHTTP, "http_risk": !e.secureRequest(r), "login_methods": map[string]bool{"local": local, "ldap": active.Providers.Enabled("ldap"), "oidc": active.Providers.Enabled("oidc"), "feishu": active.Providers.Enabled("feishu")}})
 			return
 		}
 		if r.URL.Path == "/api/auth/ldap/login" {
-			e.ldapLogin(w, r)
+			e.withProviders().ldapLogin(w, r)
 			return
 		}
 		for _, kind := range []string{"oidc", "feishu"} {
 			if r.URL.Path == "/api/auth/"+kind+"/start" {
-				e.providerStart(w, r, kind)
+				e.withProviders().providerStart(w, r, kind)
 				return
 			}
 			if r.URL.Path == "/api/auth/"+kind+"/callback" {
-				e.providerCallback(w, r, kind)
+				e.withProviders().providerCallback(w, r, kind)
 				return
 			}
 		}
 		if r.URL.Path == "/api/auth/login" {
 			e.login(w, r)
+			return
+		}
+		if r.URL.Path == "/api/auth/settings" || strings.HasPrefix(r.URL.Path, "/api/auth/settings/") {
+			e.providerSettings(w, r)
 			return
 		}
 		p, err := e.Principal(r)

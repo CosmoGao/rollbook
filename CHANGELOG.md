@@ -2,6 +2,17 @@
 
 按 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 分类，依据各 Release、tag 区间和已合并 PR 编写。公开 Release 从 v0.3.0 开始；另有 `v0.0.1` tag，但无对应 Release。未发现 v0.1.0、v0.2.0 的发布证据，不为其编造条目。
 
+## 未发布
+
+### 新增
+
+- 设置目录新增认证设置页，可管理 LDAP、OIDC、飞书身份源、用户与显式绑定、本地登录，以及分页查看认证审计；页面凭据用现有 pepper 派生的密钥加密保存，不进入 YAML 备份。
+
+### 安全与兼容
+
+- 环境变量按身份源整体优先于页面配置；外部登录流程在配置切换后安全失败。关闭本地登录与修改身份源时核对已启用源和近一小时真实试登录，变更撤销相关会话。
+- 完整 YAML 导入清除目标库页面身份源配置，并拒绝本地入口已关闭的文件。升级和回退须保留升级前完整数据卷快照、当时的 pepper 和环境配置，不能只切换旧镜像。
+
 ## [v0.9.0](https://github.com/CosmoGao/rollbook/releases/tag/v0.9.0)
 
 本节依据 `v0.8.0..main` 的已合并 [#55](https://github.com/CosmoGao/rollbook/pull/55)、[#56](https://github.com/CosmoGao/rollbook/pull/56)、[#57](https://github.com/CosmoGao/rollbook/pull/57)、[#58](https://github.com/CosmoGao/rollbook/pull/58)、[#59](https://github.com/CosmoGao/rollbook/pull/59)、[#60](https://github.com/CosmoGao/rollbook/pull/60) 归档。

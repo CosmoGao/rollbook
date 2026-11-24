@@ -12,6 +12,7 @@ import (
 func TestLocalRecoveryCommandRequiresVerifiedExternalLogin(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "auth.db")
 	t.Setenv("ROLLBOOK_DB_PATH", path)
+	t.Setenv("ROLLBOOK_AUTH_PEPPER", "12345678901234567890123456789012")
 	d, err := db.Open(context.Background(), path)
 	if err != nil {
 		t.Fatal(err)

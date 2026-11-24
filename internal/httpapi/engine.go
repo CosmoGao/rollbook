@@ -24,6 +24,8 @@ type Engine struct {
 	AllowInsecureHTTP bool
 	TrustedProxyCIDRs []netip.Prefix
 	Providers         ProviderConfig
+	ProviderRegistry  *ProviderRegistry
+	providerVersion   string
 }
 type Args map[string]json.RawMessage
 

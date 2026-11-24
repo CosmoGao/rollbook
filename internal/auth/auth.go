@@ -38,9 +38,10 @@ type Principal struct {
 func (p Principal) IsUser() bool { return p.UserID != "" && p.KeyID == "" }
 
 type Service struct {
-	DB          *sql.DB
-	Pepper      []byte
-	LoginPolicy LoginPolicy
+	DB              *sql.DB
+	Pepper          []byte
+	LoginPolicy     LoginPolicy
+	EnabledProvider func(kind, instance string) bool
 }
 
 func (s Service) valid() error {
