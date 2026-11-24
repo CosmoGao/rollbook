@@ -1,7 +1,8 @@
 import { mountOverview, unmountOverview } from './Overview';
 import { mountAssets, unmountAssets } from './Assets';
 import { mountSettings, mountPersonalSettings, unmountSettings } from './Settings';
-import {mountAuthSettings,unmountAuthSettings} from './AuthSettings';
+import {mountAuthSettings,unmountAuthSettings,canLeaveAuthSettings,authSettingsLocation} from './AuthSettings';
+export {canLeaveAuthSettings} from './AuthSettings';
 import { mountSearch, unmountSearch } from './Search';
 import { mountPending, unmountPending } from './Pending';
 import { mountKeys, unmountKeys } from './Keys';
@@ -34,7 +35,8 @@ const unmountAll=()=>{unmountOverview();unmountAssets();unmountSettings();unmoun
 const error=(value:unknown)=>{const element=document.createElement('div');element.className='error';element.textContent=value instanceof Error?value.message:String(value);root.replaceChildren(element)};
 export function openObject(id:string,type?:string){unmountAll();document.querySelectorAll('#nav button').forEach(button=>button.classList.remove('active'));document.querySelectorAll('#nav button').forEach(button=>button.removeAttribute('aria-current'));root.replaceChildren();mountDetail(root,{id,type,api,t,enumLabel,types,open:openObject,navigate})}
 const assetForm=(type:string)=>openAssetForm(type,null,api,t,enumLabel,types,openObject);
-export async function navigate(view:string,push=true){
+export async function navigate(view:string,push=true,confirmed=false){
+  if(!confirmed&&root.querySelector('.auth-settings')&&!canLeaveAuthSettings())return;
   unmountAll();const target=routePaths[view];if(push&&target&&target!==location.pathname+location.search)history.pushState({},'',target);
   const menuView=['pending','unverified','outdated'].includes(view)?'pendingHub':['services','sites','hosts','networks'].includes(view)?'assets':view==='authSettings'||view==='backup'?'settings':view;
 
@@ -62,4 +64,10 @@ export function setSearchQuery(value:string){pendingSearchTerm=value}
 export function buildVersionLabel(info:{version?:string;commit?:string}){const version=String(info?.version||'').trim(),commit=String(info?.commit||'').trim().match(/^[0-9a-f]{7}/i)?.[0].toLowerCase();if(/^v\d+\.\d+\.\d+$/.test(version))return `Rollbook ${version}`;if(version==='main'||version==='dev')return `Rollbook ${version}${commit?' '+commit:''}`;return 'Rollbook'}
 export async function showFirstRun(){if(firstRunOpen)return;try{const sites=await api<any[]>('/api/browse?type=location');if(sites.length)return;firstRunOpen=true;openFirstRun(api,t,()=>assetForm('location'),()=>navigate('sites'),()=>{firstRunOpen=false})}catch(cause){console.error('首次引导检查失败',cause)}}
 function routeFromLocation(){const path=location.pathname,tab=new URLSearchParams(location.search).get('tab');if(path==='/pending')return tab==='unverified'?'unverified':tab==='outdated'?'outdated':'pendingHub';return Object.keys(routePaths).find(key=>routePaths[key]===path)||'overview'}
-window.addEventListener('popstate',()=>navigate(routeFromLocation(),false));
+let lastLocation=location.pathname+location.search;
+window.addEventListener('popstate',()=>{
+  const next=location.pathname+location.search;
+  if(location.pathname==='/settings/auth'&&root.querySelector('.auth-settings')){window.dispatchEvent(new Event('rollbook:auth-location'));lastLocation=location.pathname+location.search;return}
+  if(root.querySelector('.auth-settings')&&!canLeaveAuthSettings()){history.pushState({},'',authSettingsLocation());return}
+  lastLocation=next;void navigate(routeFromLocation(),false,true);
+});

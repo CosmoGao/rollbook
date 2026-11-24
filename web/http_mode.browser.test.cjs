@@ -57,7 +57,9 @@ test('真实浏览器经 TLS 终结反代与直连 HTTP 的提示和 Cookie', {t
    page.on('response',response=>{const url=new URL(response.url());if(url.pathname==='/api/changes'&&url.searchParams.get('state')==='待确认')pendingResponses.push(response.status())});
    await page.goto(scenario.url);
    await page.locator('#login-form').waitFor();
-   assert.equal(await page.locator('#login .http-mode-notice').isVisible(),!scenario.secure);
+   const httpNotice=page.locator('#login .http-mode-notice');
+   await httpNotice.waitFor({state:scenario.secure?'hidden':'visible'});
+   assert.equal(await httpNotice.isVisible(),!scenario.secure);
    await page.locator('input[name=login]').fill('owner');
    await page.locator('input[name=password]').fill('strong password 12345');
    await page.locator('#login-form button[type=submit]').click();

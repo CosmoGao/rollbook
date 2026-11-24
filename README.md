@@ -6,7 +6,7 @@ Rollbook 是面向家庭与小企业的自建服务和资产清册。请只在�
 
 本版已正式发布：[v0.10.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.10.0)。发布镜像与 CLI 不会自动更新现有实例。
 
-系统「设置 → 认证设置」（`/settings/auth`）可配置并启停 LDAP/LDAPS、通用 OIDC、飞书身份源，管理用户、显式身份绑定、允许登录、本地入口与只读认证审计；「个人设置」（`/settings/personal`）处理当前账号，「备份与恢复」（`/settings/backup`）处理 YAML。所有已登录网页用户均有完整管理权，没有全站 RBAC 或群组映射；Bearer API Key 不能调用这些管理接口。页面凭据只写不读，以现有 pepper 派生密钥在服务端加密保存；完整与定时 YAML 不含页面凭据，也不能恢复它们。任一同源环境变量或 `_FILE` 存在时，启动环境接管整个身份源，页面只读并提示来源，已保存配置被遮蔽；移除后须重启才能切源。无环境接管时，页面保存与启停热生效。配置步骤和回调登记见[外部身份登录说明](docs/external-auth.md)。
+系统「设置 → 认证设置」（`/settings/auth`，默认显示本地登录；可用 `?section=ldap|oidc|feishu|accounts|audit` 直接打开分组）以六组导航配置并启停 LDAP/LDAPS、通用 OIDC、飞书身份源，管理用户、显式身份绑定、允许登录、本地入口与只读认证审计；「个人设置」（`/settings/personal`）处理当前账号，「备份与恢复」（`/settings/backup`）处理 YAML。所有已登录网页用户均有完整管理权，没有全站 RBAC 或群组映射；Bearer API Key 不能调用这些管理接口。页面凭据只写不读，以现有 pepper 派生密钥在服务端加密保存；完整与定时 YAML 不含页面凭据，也不能恢复它们。任一同源环境变量或 `_FILE` 存在时，启动环境接管整个身份源，页面只读并提示来源，已保存配置被遮蔽；移除后须重启才能切源。无环境接管时，页面保存与启停热生效。配置步骤和回调登记见[外部身份登录说明](docs/external-auth.md)。
 
 从 `v0.9.0` 升级会执行 `017_auth_providers.sql`。升级前停服务，保存完整 `/data` 文件级快照（包括 SQLite 数据库、`-wal`、`-shm`）及独立使用的 `/backups`，保留当时的 `ROLLBOOK_AUTH_PEPPER` 或 `_FILE` 文件、身份源环境变量或 `_FILE` 文件和必要密钥材料。完整 YAML 不能代替快照；全量 YAML 导入会清除目标库页面身份源配置，且拒绝本地入口已关闭的文件。密文只能用原 pepper 解密；丢失或更换后须先用本机 `rollbook auth local-login enable` 保留恢复路径，再重新填写页面凭据。回退须恢复升级前完整快照和配置，然后启动 `v0.9.0` 正式镜像；旧镜像不能直接读迁移后数据库。真实 LDAP、OIDC、飞书 IdP 联调尚未进行。
 
