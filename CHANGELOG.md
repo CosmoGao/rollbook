@@ -2,7 +2,9 @@
 
 按 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 分类，依据各 Release、tag 区间和已合并 PR 编写。公开 Release 从 v0.3.0 开始；另有 `v0.0.1` tag，但无对应 Release。未发现 v0.1.0、v0.2.0 的发布证据，不为其编造条目。
 
-## 未发布
+## v0.9.0
+
+本节依据 `v0.8.0..main` 的已合并 [#55](https://github.com/CosmoGao/rollbook/pull/55)、[#56](https://github.com/CosmoGao/rollbook/pull/56)、[#57](https://github.com/CosmoGao/rollbook/pull/57)、[#58](https://github.com/CosmoGao/rollbook/pull/58)、[#59](https://github.com/CosmoGao/rollbook/pull/59)、[#60](https://github.com/CosmoGao/rollbook/pull/60) 归档。
 
 ### 新增
 
@@ -21,6 +23,12 @@
 
 - 资产维护的站点位置树改为左对齐的卡片导航；打开详情与展开下级位置使用独立按钮，保持原有导航和层级语义。
 - 数据库支持无本地口令的外部账号与认证源会话；完整 YAML 备份包含绑定和入口设置，旧版备份可恢复。
+
+### 升级注意事项
+
+- 从 `v0.8.0` 升级前，保存 `.env`、认证 pepper 及所有已配置身份源密钥，并在停服务后保存完整 `/data` 数据卷快照；独立使用 `/backups` 时也保存该卷。SQLite 的数据库、WAL 与 SHM 文件须一起保存。完整 YAML 备份不能替代文件级快照。
+- 本版的用户表允许无本地口令账号，并新增身份绑定、认证设置、审计及认证源会话结构；数据库迁移只保证向前执行。回退须停服务、恢复升级前的完整 `/data`（及独立 `/backups`）快照和原有配置与密钥，再启动 `v0.8.0` 正式镜像；不能仅换回旧镜像读取迁移后的数据库。
+- 旧版完整 YAML 可恢复到新版库，缺省外部绑定为空且本地入口开放；新版完整 YAML 即使仍为 `schema_version: 1`，也不保证旧程序能够导入其中的身份绑定与设置。真实 LDAP、OIDC、飞书身份源联调尚未进行。
 
 ## [v0.8.0](https://github.com/CosmoGao/rollbook/releases/tag/v0.8.0)
 
