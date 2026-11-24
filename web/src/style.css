@@ -304,3 +304,10 @@ header.topbar form.mobile-search button[type="submit"]:focus-visible{outline:0!i
 .auth-table-scroll table { min-width:520px; width:100%; border-collapse:collapse; }
 .auth-table-scroll th,.auth-table-scroll td { text-align:left; padding:var(--space-2) var(--space-3); border-bottom:var(--border-width) solid var(--color-border); overflow-wrap:anywhere; }
 @media(max-width:767px) { .auth-provider { padding:var(--space-3); } .auth-fields input,.auth-fields select,.auth-inline input,.auth-check { min-height:var(--control-h-touch); font-size:16px; } }
+.auth-sections { display:flex; flex-wrap:wrap; gap:var(--space-2); margin:var(--space-4) 0; }
+.auth-sections button { min-height:var(--control-h-touch); padding:var(--space-2) var(--space-3); border:var(--border-width) solid var(--color-border); border-radius:var(--radius-control); background:var(--color-surface); color:var(--color-text); cursor:pointer; }
+.auth-sections button.active { border-color:var(--color-primary); color:var(--color-primary); font-weight:600; }
+.auth-sections button:focus-visible { outline:2px solid var(--color-primary); outline-offset:2px; }
+.auth-panel { min-width:0; }
+.auth-panel .auth-provider { border:0; padding:0; margin:0; }
+@media(max-width:400px) { .auth-sections { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); } .auth-sections button { min-width:0; overflow-wrap:anywhere; } }

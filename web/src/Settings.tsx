@@ -18,7 +18,7 @@ function Settings({onBackup,onAuth}:{onBackup:()=>void;onAuth:()=>void}){
   return <>
     <div className="hero"><h1>{t('settings')}</h1><p className="muted">{t('系统配置与数据管理')}</p></div>
     <section className="section"><h2>{t('备份与恢复')}</h2><div className="controls"><Button variant="outline" onClick={onBackup}>{t('打开备份与恢复')}</Button></div></section>
-    <section className="section"><h2>认证设置</h2><p className="muted">配置身份源、用户绑定和本地登录。</p><Button variant="outline" onClick={onAuth}>打开认证设置</Button></section>
+    <section className="section"><h2>{t('认证设置')}</h2><p className="muted">{t('配置身份源、用户绑定和本地登录。')}</p><Button variant="outline" onClick={onAuth}>{t('打开认证设置')}</Button></section>
   </>;
 }
 function PersonalSettings(){

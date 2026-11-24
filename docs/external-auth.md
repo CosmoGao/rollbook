@@ -6,7 +6,9 @@
 
 ## 网页认证设置与边界
 
-系统「设置 → 认证设置」（`/settings/auth`）管理身份源、用户与绑定、允许名单、本地登录开关及只读的分页认证审计。右上角头像的「个人设置」（`/settings/personal`）管理当前用户信息、可用时的本地改密和清册会话；系统「备份与恢复」（`/settings/backup`）管理 YAML，不负责保存页面身份源凭据。所有已登录网页用户仍有完整管理权；Bearer API Key 无法调用认证设置管理接口。
+系统「设置 → 认证设置」（`/settings/auth`，默认「本地登录」；`?section=ldap|oidc|feishu|accounts|audit` 可直达其他分组）通过六组导航管理身份源、用户与绑定、允许名单、本地登录开关及只读的分页认证审计。右上角头像的「个人设置」（`/settings/personal`）管理当前用户信息、可用时的本地改密和清册会话；系统「备份与恢复」（`/settings/backup`）管理 YAML，不负责保存页面身份源凭据。所有已登录网页用户仍有完整管理权；Bearer API Key 无法调用认证设置管理接口。
+
+切换分组或离开页面时，未保存草稿会触发确认；刷新或关闭浏览器使用浏览器原生确认。保存某一身份源只刷新该源，其他未保存草稿继续保留。
 
 在认证设置页分别配置并启停 LDAP/LDAPS、通用 OIDC、飞书。LDAP 表单包含服务器 URL、实例名、Base DN、Bind DN、含 `{login}` 的搜索筛选器和稳定主体属性；Bind Password 在敏感凭据栏填写。OIDC 表单包含 Issuer、Client ID、固定回调 URL 与 Client Secret；飞书表单包含 App ID、固定回调 URL 与 App Secret。页面展示回调 URL，须在 IdP 后台登记完全相同的公开 HTTPS 地址；若服务在反向代理后，先确认浏览器访问的主机名正确。LDAP 使用受验证证书的 LDAPS 或 StartTLS，不提供跳过证书验证选项。
 
