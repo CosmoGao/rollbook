@@ -10,7 +10,7 @@ test('认证设置：浅深主题、320/1280、键盘、只写凭据和失败反
  const browser=await chromium.launch({headless:true});
  try{
   const page=await browser.newPage({locale:'zh-CN',viewport:{width:1280,height:900}});page.setDefaultTimeout(5000);
-  const secret='FAKE-DOM-SECRET-123';let fail=false,signedIn=true;const writes=[];
+  const secret='FAKE-DOM-SECRET-123';let fail=false,signedIn=true,passwordWrites=0;const writes=[]
   let providers=['ldap','oidc','feishu'].map(emptyProvider);
   await page.route('http://rollbook.test/**',route=>{
    const req=route.request(),url=new URL(req.url()),p=url.pathname;
@@ -19,9 +19,10 @@ test('认证设置：浅深主题、320/1280、键盘、只写凭据和失败反
    if(p==='/api/version')return route.fulfill({json:{version:'test'}});
    if(p==='/api/auth/session')return route.fulfill(signedIn?{json:{login:'owner',can_change_password:true}}:{status:401,json:{code:'unauthorized'}});
    if(p==='/api/auth/logout'&&req.method()==='POST'){signedIn=false;return route.fulfill({json:{ok:true}})}
+   if(p==='/api/auth/change-password'&&req.method()==='POST'){passwordWrites++;signedIn=false;return route.fulfill({json:{ok:true}})}
    if(p==='/api/browse')return route.fulfill({json:[{id:'location:one',type:'location',name:'One'}]});
    if(p==='/api/auth/settings'&&req.method()==='GET')return fail?route.fulfill({status:500,json:{message:'测试读取失败'}}):route.fulfill({json:{providers,local_enabled:true}});
-   if(p==='/api/auth/settings/identities')return route.fulfill({json:{users:[{login:'external',enabled:true,has_local_password:false},{login:'owner',enabled:true,has_local_password:true}],bindings:[]}});
+   if(p==='/api/auth/settings/identities')return route.fulfill({json:{users:[{login:'external',enabled:false,has_local_password:false},{login:'owner',enabled:true,has_local_password:true}],bindings:[]}});
    if(p==='/api/auth/settings/audit')return route.fulfill({json:{page:1,entries:[]}});
    if(p==='/api/auth/settings/oidc'&&req.method()==='PUT'){
     const data=req.postDataJSON();writes.push(data);providers=providers.map(item=>item.kind==='oidc'?{...item,enabled:data.enabled,config:data.config,secret_configured:true}:item);
@@ -41,6 +42,7 @@ test('认证设置：浅深主题、320/1280、键盘、只写凭据和失败反
    const scroll=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);assert.equal(scroll,0);
    const out=process.env.AUTH_SETTINGS_SCREENSHOTS;if(out){fs.mkdirSync(out,{recursive:true});await page.screenshot({path:path.join(out,`auth-${theme}-${width}.png`),fullPage:true})}
   }
+  await page.setViewportSize({width:1280,height:900});
   await page.goto('http://rollbook.test/settings/auth?section=unknown');
   await page.getByRole('heading',{name:'本地登录'}).waitFor();
   assert.equal(new URL(page.url()).search,'');
@@ -66,10 +68,49 @@ test('认证设置：浅深主题、320/1280、键盘、只写凭据和失败反
   await oidc.getByText('敏感凭据：已配置').waitFor();
   assert.equal(writes.length,1);assert.equal(writes[0].secret,secret);assert.equal(writes[0].config.redirect_url,'https://rollbook.test/api/auth/oidc/callback');
   await oidc.getByLabel('新凭据').waitFor({state:'detached'});assert.equal((await page.locator('body').innerText()).includes(secret),false);
+  await page.getByRole('button',{name:'LDAP / LDAPS'}).click();
+  await page.getByLabel('服务器 URL').fill('ldaps://keep-me');
+  page.once('dialog',dialog=>dialog.accept());
+  await page.getByRole('button',{name:'通用 OIDC'}).click();
+  assert.equal(new URL(page.url()).searchParams.get('section'),'oidc');
+  page.once('dialog',dialog=>dialog.accept());
+  await page.getByRole('button',{name:'LDAP / LDAPS'}).click();
+  assert.equal(await page.getByLabel('服务器 URL').inputValue(),'ldaps://keep-me');
+  await page.getByLabel('服务器 URL').fill('');
+  await page.getByRole('button',{name:'通用 OIDC'}).click();
   providers=providers.map(item=>item.kind==='ldap'?{...item,source:'environment',shadowed:true,enabled:true,secret_configured:true,config:{url:'ldaps://directory.example',instance:'directory'}}:item);
   await page.reload();await page.getByRole('button',{name:'LDAP / LDAPS'}).click();const ldap=page.locator('.auth-provider');await ldap.getByText('已保存页面配置被环境遮蔽').waitFor();assert.equal(await ldap.getByRole('button',{name:'保存身份源'}).count(),0);
   fail=true;await page.reload();await page.getByRole('heading',{name:'认证设置'}).waitFor();await page.getByRole('alert').getByText('测试读取失败').waitFor();
   fail=false;await page.reload();await page.getByRole('button',{name:'账号与绑定'}).click();await page.getByText('暂无绑定。').waitFor();
+  await page.evaluate(()=>localStorage.setItem('rollbook.language','en'));
+  await page.reload();
+  await page.getByRole('heading',{name:'Accounts and bindings'}).waitFor();
+  const accountRows=page.locator('.auth-settings table').first().locator('tbody tr');
+  assert.equal(await accountRows.first().locator('td').nth(1).innerText(),'Disabled');
+  assert.equal(await accountRows.first().getByRole('button').innerText(),'Enable');
+  assert.equal(await accountRows.nth(1).locator('td').nth(1).innerText(),'Enabled');
+  assert.equal(await accountRows.nth(1).getByRole('button').innerText(),'Disable');
+  await page.getByRole('button',{name:'Authentication audit'}).click();
+  assert.equal(await page.locator('.auth-panel .controls span').innerText(),'Page 1');
+  await page.getByRole('button',{name:'LDAP / LDAPS'}).click();
+  assert.match(await page.locator('.auth-provider').innerText(),/Source: .*; Current: .*; Credential:/);
+  assert.doesNotMatch(await page.locator('.auth-provider').innerText(),/[：；页]/);
+  await page.getByRole('button',{name:'Local sign-in'}).click();
+  assert.match(await page.locator('.auth-panel').innerText(),/Current: Enabled/);
+  await page.evaluate(()=>localStorage.setItem('rollbook.language','zh-CN'));
+  await page.reload();
+  await page.getByRole('button',{name:'通用 OIDC'}).click();
+  await page.getByLabel('Issuer').fill('https://changed.example');
+  await page.locator('.account-avatar').click();
+  await page.getByRole('menuitem',{name:'改密码'}).click();
+  await page.getByLabel('当前密码').fill('Old1234!');
+  await page.getByLabel('新密码').fill('New1234!');
+  page.once('dialog',dialog=>dialog.dismiss());
+  await page.getByRole('button',{name:'修改并重新登录'}).click();
+  assert.equal(passwordWrites,0);
+  await page.getByRole('button',{name:'取消'}).click();
+  assert.equal(await page.getByLabel('Issuer').inputValue(),'https://changed.example');
+  await page.getByLabel('Issuer').fill('https://issuer.example');
   await page.locator('.account-avatar').click();await page.getByRole('menuitem',{name:'退出登录'}).click();
   await page.getByRole('link',{name:'使用 OIDC 登录'}).waitFor();
   assert.equal(new URL(page.url()).pathname,'/');
