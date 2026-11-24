@@ -2,9 +2,9 @@
 
 按 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 分类，依据各 Release、tag 区间和已合并 PR 编写。公开 Release 从 v0.3.0 开始；另有 `v0.0.1` tag，但无对应 Release。未发现 v0.1.0、v0.2.0 的发布证据，不为其编造条目。
 
-## v0.10.0（发布准备中；正式 tag 与 Release 尚未创建）
+## [v0.10.0](https://github.com/CosmoGao/rollbook/releases/tag/v0.10.0)
 
-本节依据 `v0.9.0..main` 的已合并 [#62](https://github.com/CosmoGao/rollbook/pull/62)、[#63](https://github.com/CosmoGao/rollbook/pull/63)、[#64](https://github.com/CosmoGao/rollbook/pull/64) 归档；#62 只补齐上一版 CHANGELOG 的 Release 链接。待正式 Release 实际生成后再补本版链接。
+本节依据 `v0.9.0..v0.10.0` 的已合并 [#62](https://github.com/CosmoGao/rollbook/pull/62)、[#63](https://github.com/CosmoGao/rollbook/pull/63)、[#64](https://github.com/CosmoGao/rollbook/pull/64)、[#65](https://github.com/CosmoGao/rollbook/pull/65) 归档；#62 只补齐上一版 CHANGELOG 的 Release 链接，#65 为本版发布文档。
 
 ### 新增
 
