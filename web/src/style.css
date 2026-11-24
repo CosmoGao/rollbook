@@ -142,6 +142,31 @@ button.primary:active,.search-box button:active,.mobile-search button:active,.ui
 .ui-button-default{min-height:var(--control-h)}.ui-button-compact{min-height:var(--control-h-compact)}.ui-button-touch{min-height:var(--control-h-touch)}
 .top-search{height:var(--control-h);padding:0 12px}.top-search input{min-height:0!important;height:100%;border:0!important;box-shadow:none!important;background:transparent!important}.top-search input:focus-visible{outline:none!important}
 
+/* HEADER 的图标、输入框与按钮共用组合控件的唯一边界。 */
+header.topbar form.top-search,
+header.topbar form.mobile-search,
+header.topbar label.theme-control{border:var(--border-width) solid var(--color-control-border)!important;border-radius:var(--radius-control);background:var(--color-surface)!important;box-shadow:none;outline:0!important;min-width:0}
+header.topbar form.top-search:hover,
+header.topbar form.mobile-search:hover,
+header.topbar label.theme-control:hover{border-color:var(--color-control-border-hover)!important;background:var(--color-surface-hover)!important}
+header.topbar form.top-search:focus-within,
+header.topbar form.mobile-search:focus-within,
+header.topbar label.theme-control:focus-within{border-color:var(--color-focus)!important;box-shadow:inset 0 0 0 var(--border-width) var(--color-focus)}
+header.topbar form.top-search input,
+header.topbar form.mobile-search input[type="search"]{width:0;min-width:0;flex:1 1 auto;border:0!important;border-radius:0!important;outline:0!important;box-shadow:none!important;background:transparent!important}
+header.topbar form.top-search input:focus-visible,
+header.topbar form.mobile-search input[type="search"]:focus-visible,
+header.topbar label.theme-control select:focus-visible{outline:0!important;outline-offset:0!important;box-shadow:none!important}
+header.topbar label.theme-control select{border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+header.topbar form.mobile-search{overflow:hidden}
+header.topbar form.mobile-search button[type="submit"]{flex:none;border:0!important;border-radius:0 calc(var(--radius-control) - var(--border-width)) calc(var(--radius-control) - var(--border-width)) 0!important;box-shadow:none!important;white-space:nowrap}
+header.topbar form.mobile-search button[type="submit"]:focus-visible{outline:0!important;text-decoration:underline;text-underline-offset:3px}
+@media(forced-colors:active){
+  header.topbar form.top-search,header.topbar form.mobile-search,header.topbar label.theme-control{border-color:CanvasText!important}
+  header.topbar form.top-search:focus-within,header.topbar form.mobile-search:focus-within,header.topbar label.theme-control:focus-within{border-color:Highlight!important;outline:var(--focus-width) solid Highlight!important;outline-offset:0!important}
+  header.topbar form.mobile-search button[type="submit"]:focus-visible{text-decoration:underline!important}
+}
+
 /* 业务视图共用的列表、详情、表单与状态外观。 */
 .content{width:100%;max-width:none;margin-inline:0;min-width:0}
 .content>*,.hero,.section,.card,.detail-grid,.overview-layout,.overview-main,.overview-aside{min-width:0}
