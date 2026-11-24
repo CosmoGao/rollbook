@@ -1,24 +1,20 @@
 # Rollbook
 
-## Unreleased: external sign-in
-
-LDAP/LDAPS, generic OIDC, and Feishu OAuth sign-in can be enabled independently and are off by default. Local sign-in stays on until a verified external test sign-in and an explicit local command disable it. Each external subject must be explicitly bound to a pre-existing Rollbook user; email and display name never bind accounts. See [external sign-in setup](docs/external-auth.md) for server-only configuration, allowlist, recovery commands, session revocation timing, and rollback. This feature has not been released or connected to a real identity provider.
-
 Rollbook is a self-hosted service and asset catalog for homes and small businesses. Run it on a trusted network. The UI follows the browser language until you select English or Chinese; that choice is saved in the browser. See the [Chinese README](README.md), [changelog](CHANGELOG.md), and [release checklist](docs/releasing.md).
-
-Unreleased: the top-right avatar is the account entry on desktop and narrow screens. Personal settings shows account details, local password change when available, and Rollbook session controls. System settings keeps backup and restore. Sign out ends only the current Rollbook browser session; sign out everywhere ends all Rollbook browser sessions, without signing out of upstream SSO or revoking API Keys.
-
-Unreleased: global search now has a single control border and focus ring, with keyboard-accessible input, clear, and submit actions. Search results and API behavior are unchanged.
 
 An empty catalog opens a first-run dialog. Press Escape to close it and return keyboard focus to the current navigation entry. The asset list shows “Permission denied” with a retry action when reading is forbidden. Offline reads show a load error; offline editing is unavailable.
 
-On Assets → Sites, location cards retain the hierarchy. Select a card's main area to open its details; use the separate button on the right to expand or collapse child locations.
+## v0.9.0 sign-in and UI updates
 
-## v0.8.0 Frontend standard
+LDAP/LDAPS, generic OIDC, and independent Feishu OAuth sign-in can be enabled separately and are off by default. LDAP connections use verified LDAPS or StartTLS; OIDC and Feishu require fixed HTTPS callbacks. Local sign-in remains on by default. A local command must explicitly bind each external subject to an existing or pre-created Rollbook user and allow it; email and display name never bind accounts. Every web user still has full Rollbook administration; there is no RBAC or group mapping. Disable local sign-in with a local command only after a verified external test sign-in. On the server, `rollbook auth local-login enable` restores the entry point and `rollbook reset-password <existing-login>` can restore a local credential. See [external sign-in setup](docs/external-auth.md) for configuration, commands, session expiry, and recovery. Real LDAP, OIDC, and Feishu IdP integration testing has not been done.
+
+The top-right avatar is the account entry on desktop and narrow screens. Personal settings shows account details, local password change when available, sign out, and sign out everywhere. System settings keeps backup and restore. Sign out ends only the current Rollbook browser session; sign out everywhere ends all Rollbook browser sessions. Neither signs out of upstream SSO or revokes API Keys.
+
+Global search has a single control border and focus ring with keyboard-accessible input, clear, and submit actions; results and APIs are unchanged. The sign-in page and top bar select Light, Dark, or Follow system with one click and update immediately. On Assets → Sites, location cards open details from their main area and expand children with a separate button. Topology site cards receive their own wheel scrolling; the main area has a native scrollbar at the viewport edge.
+
+## Frontend standard
 
 Existing business pages use the pinned frontend and visual standard `v1.0.0`: light and dark themes share semantic colors and control outlines, and long content scrolls within the main area. The sign-in page and top bar let you explicitly choose Light, Dark, or Follow system; the browser retains the choice across reloads. Invalid JSON in an asset form is linked to its field while entered values are preserved; the bulk rejection dialog manages keyboard focus. Topology names, sidebar account actions, and narrow-screen navigation use more legible text and touch targets. Closing first-run guidance returns focus to navigation, and asset read permission failures show a clear message. Business behavior, APIs, and authorization remain unchanged. See the [frontend implementation record](docs/frontend-implementation.md) for implementation and screenshots. Human screen-reader and system soft-keyboard checks remain unverified.
-
-Upgrading from `v0.7.0` to `v0.8.0` adds no database migration, but migrations only run forward. Before upgrading, save `.env`, the authentication pepper, and a complete `/data` snapshot; also save `/backups` if used separately. To roll back, stop the service, restore the complete pre-upgrade snapshot, then start `v0.7.0`. Do not let the old version read the new database directly. See **Upgrade and rollback** below.
 
 ## v0.7.0 Devices & hosts
 
@@ -48,7 +44,7 @@ New and reset passwords need at least eight characters and at least three of upp
 
 REST is under `/api/`, Streamable HTTP MCP under `/mcp`; both use `Authorization: Bearer <key>`. The UI uses a session cookie that is `Secure` by default. Key values are displayed only once. A `read` key queries; `propose` submits changes for web approval; `write` applies changes directly. Never store passwords or tokens in catalog notes or reasons. Credential objects should refer to a separate vault. Pending imports are limited to ten per submitter and 100 globally and expire after seven days; startup and hourly cleanup remove the source file while retaining audit metadata.
 
-## Web UI (v0.8.0)
+## Web UI
 
 The six main menu items are **Overview, Assets, Topology, To do, Agent access, Settings**. Global search sits in the top bar; mobile navigation uses a drawer. Overview surfaces proposals, new upstream versions, and assets needing verification, then shows hosts, services, and access points by site. Search accepts IPs, domains, ports, and service names, and shows related hosts, services, endpoints, and access paths. Only safe HTTP(S) URLs become links.
 
@@ -56,7 +52,7 @@ Assets lets you create and browse sites, hosts, networks, services, and other re
 
 ## Install and version
 
-Tagged releases provide a multi-architecture GHCR image, Linux/macOS/Windows amd64 and arm64 CLI archives, `SHA256SUMS`, and `install.sh`. Linux/macOS users can download and run the release's `install.sh` to install under `~/.local/bin`; set `ROLLBOOK_VERSION=v0.8.0` to pin or `ROLLBOOK_INSTALL_DIR` to choose a destination. Windows users should choose an archive and verify its checksum. The installer only replaces the local CLI. `rollbook version`, the sign-in screen, footer, `GET /api/version`, and MCP `initialize.serverInfo` report the same build version.
+Tagged releases provide a multi-architecture GHCR image, Linux/macOS/Windows amd64 and arm64 CLI archives, `SHA256SUMS`, and `install.sh`. Linux/macOS users can download and run the release's `install.sh` to install under `~/.local/bin`; after the official Release and image are verified, set `ROLLBOOK_VERSION=v0.9.0` to pin this release or `ROLLBOOK_INSTALL_DIR` to choose a destination. Windows users should choose an archive and verify its checksum. The installer only replaces the local CLI. `rollbook version`, the sign-in screen, footer, `GET /api/version`, and MCP `initialize.serverInfo` report the same build version.
 
 YAML backups use `schema_version: 1`; unsupported versions are rejected. Newer databases may not be readable by older binaries. Make a full file-level snapshot before upgrading. The CLI uses REST. Run `rollbook login` to enter a server URL and key without echoing the key; the profile is stored in the user config directory with mode `0600`. `rollbook --profile home login` creates another profile. `ROLLBOOK_URL` and `ROLLBOOK_KEY` override the chosen profile for a process. With no configured URL, it defaults to `http://127.0.0.1:8080`. `--output json|yaml|table` controls REST output; `export` always writes YAML. `rollbook completion bash|zsh|fish` generates shell completion.
 
@@ -87,7 +83,7 @@ Set a service's `upstream_json` to a supported public provider, for example `{"p
 
 ## Docker Compose deployment
 
-Requires Docker Engine and Compose. In the repository root, pin `ROLLBOOK_VERSION=v0.8.0` in `.env` for production after the official Release and image are verified; the example defaults to `latest` for a trial. Run:
+Requires Docker Engine and Compose. In the repository root, pin the verified `ROLLBOOK_VERSION=v0.9.0` in `.env` for production after the official Release and image are verified; the example defaults to `latest` for a trial. Run:
 
 ```sh
 cp .env.example .env
@@ -119,7 +115,7 @@ For direct HTTP testing only on a trusted network, set `ROLLBOOK_BIND_ADDR` to t
 
 ### Upgrade and rollback
 
-Before upgrading, save `.env`, the pepper file, the full `/data` volume, and `/backups` if used separately. SQLite uses WAL, so stop Rollbook before a file-level snapshot and preserve the database together with its `-wal` and `-shm` files. For example:
+Before upgrading from `v0.8.0`, save `.env`, the authentication pepper and all configured identity-provider secrets, the full `/data` volume, and `/backups` if used separately. A full YAML backup contains password and key hashes and needs protected storage, but it cannot replace a file-level snapshot. SQLite uses WAL, so stop Rollbook before a file-level snapshot and preserve the database together with its `-wal` and `-shm` files. For example:
 
 ```sh
 docker compose stop rollbook
@@ -129,7 +125,7 @@ docker compose cp rollbook:/backups/. ./snapshot-backups/
 docker compose start rollbook
 ```
 
-Check that the snapshot is readable. Change `ROLLBOOK_VERSION` in `.env` to the intended verified tag (`v0.8.0` for this upgrade), run `docker compose pull && docker compose up -d`, then check `docker compose ps`, `/healthz`, and web sign-in. Do not run two versions against one database. Migrations are forward-only; for rollback, stop the service, restore the complete pre-upgrade `/data` snapshot, set the old image tag, then start it. Merely switching tags against a migrated database is unsafe. If using YAML instead, first verify that the old binary supports its `schema_version` and preserve the original credentials and pepper. A full volume snapshot is preferred. GitHub Actions tests PRs and publishes images and archives on tags; the workflow does not deploy your instance.
+Check that the snapshot is readable. Change `ROLLBOOK_VERSION` in `.env` to the intended verified tag (`v0.9.0` after its official Release and image are verified), run `docker compose pull && docker compose up -d`, then check `docker compose ps`, `/healthz`, and web sign-in. Do not run two versions against one database. This release changes the user table to allow accounts without a local password and adds identity bindings, authentication settings, audit records, and provider-aware sessions. Migrations are forward-only. To roll back, stop the service, restore the complete pre-upgrade `/data` and separately used `/backups` snapshots plus the original `.env` and all authentication secrets, then start the official `v0.8.0` image. Merely switching image tags against a migrated database is unsafe. Older full YAML backups can be restored into the new database with no external bindings and local sign-in enabled. New full YAML backups still use `schema_version: 1`, but older software is not guaranteed to import their identity tables. Catalog YAML exports contain assets only and are not rollback snapshots. GitHub Actions tests PRs and publishes images and archives on tags; the workflow does not deploy your instance.
 
 ## Backup and restore
 
