@@ -118,7 +118,7 @@ test('资产、拓扑、待处理、Key 与设置在新构建中可操作',async
   assert.equal(writes[0].name,'测试 Key');
   await page.getByRole('button',{name:'完成'}).click();
   await page.locator('#nav button[data-view="settings"]').click();
-  await page.getByRole('heading',{name:'设置'}).waitFor();await shot(page,'desktop-settings-light');
+  await page.getByRole('heading',{name:'设置',exact:true}).waitFor();await shot(page,'desktop-settings-light');
   await page.getByRole('button',{name:'备份与恢复'}).click();
   await page.getByRole('heading',{name:'备份与恢复'}).waitFor();await shot(page,'desktop-backup-light');
   await page.locator('.top-controls .theme-control select').selectOption('dark');assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');await shot(page,'desktop-backup-dark');
@@ -159,9 +159,9 @@ test('SPA 深链接在刷新后仍打开设置',async t=>{
     return route.fulfill({status:200,contentType:mime[path.extname(file)]||'application/octet-stream',body:fs.readFileSync(file)});
   });
   await page.goto('http://rollbook.test/settings');
-  await page.getByRole('heading',{name:'设置'}).waitFor();
+  await page.getByRole('heading',{name:'设置',exact:true}).waitFor();
   await page.reload();
-  await page.getByRole('heading',{name:'设置'}).waitFor();
+  await page.getByRole('heading',{name:'设置',exact:true}).waitFor();
 });
 
 test('待处理页可批准提议、核实资产和检查版本',async t=>{

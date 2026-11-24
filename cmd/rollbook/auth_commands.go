@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/CosmoGao/rollbook/internal/auth"
 	"github.com/CosmoGao/rollbook/internal/db"
@@ -48,6 +47,19 @@ func providerConfig() (httpapi.ProviderConfig, error) {
 	}
 	return c, c.Validate()
 }
+func environmentProviderOwnership() map[string]bool {
+	owned := map[string]bool{}
+	for _, kind := range []string{"ldap", "oidc", "feishu"} {
+		prefix := "ROLLBOOK_" + strings.ToUpper(kind) + "_"
+		for _, entry := range os.Environ() {
+			if strings.HasPrefix(entry, prefix) {
+				owned[kind] = true
+				break
+			}
+		}
+	}
+	return owned
+}
 func authCommand(args []string) error {
 	usage := errors.New("usage: rollbook auth user-create <login> | user-enable <login> <true|false> | bind <ldap|oidc|feishu> <instance> <subject> <login> | allow <ldap|oidc|feishu> <instance> <subject> <login> <true|false> | local-login <enable|disable>")
 	if len(args) == 0 {
@@ -67,6 +79,21 @@ func authCommand(args []string) error {
 	defer database.Close()
 	service := auth.Service{DB: database}
 	ctx := context.Background()
+	if !(args[0] == "local-login" && len(args) == 2 && args[1] == "enable") {
+		c, err := providerConfig()
+		if err != nil {
+			return err
+		}
+		pepper, err := authPepper()
+		if err != nil {
+			return err
+		}
+		registry, err := httpapi.NewProviderRegistry(ctx, database, pepper, c, environmentProviderOwnership())
+		if err != nil {
+			return err
+		}
+		service.EnabledProvider = registry.Enabled
+	}
 	switch args[0] {
 	case "user-create":
 		if len(args) != 2 {
@@ -100,20 +127,6 @@ func authCommand(args []string) error {
 		}
 		if args[1] != "enable" && args[1] != "disable" {
 			return usage
-		}
-		if args[1] == "disable" {
-			c, err := providerConfig()
-			if err != nil {
-				return err
-			}
-			var count int
-			err = database.QueryRowContext(ctx, `SELECT count(*) FROM identity_bindings b JOIN users u ON u.id=b.user_id WHERE b.allowed=1 AND b.verified_at>=? AND u.enabled=1 AND ((b.provider='ldap' AND b.instance=? AND ?<>'') OR (b.provider='oidc' AND b.instance=? AND ?<>'') OR (b.provider='feishu' AND b.instance=? AND ?<>''))`, time.Now().UTC().Add(-time.Hour).Format(time.RFC3339Nano), c.LDAP.Instance, c.LDAP.URL, c.OIDC.Issuer, c.OIDC.Issuer, c.Feishu.ClientID, c.Feishu.ClientID).Scan(&count)
-			if err != nil {
-				return err
-			}
-			if count == 0 || (!c.Enabled("ldap") && !c.Enabled("oidc") && !c.Enabled("feishu")) {
-				return auth.ErrForbidden
-			}
 		}
 		return service.SetLocalEnabled(ctx, args[1] == "enable")
 	}

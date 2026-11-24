@@ -233,7 +233,7 @@ func TestLDAPRejectsInvalidConfigAndPlaintext(t *testing.T) {
 			conn.Close()
 		}
 	}()
-	c := ProviderConfig{LDAP: LDAPConfig{URL: "ldap://" + listener.Addr().String(), BaseDN: "dc=example,dc=com", BindDN: "cn=reader", BindPassword: "secret", SubjectAttribute: "entryUUID", Instance: "test"}}
+	c := ProviderConfig{LDAP: LDAPConfig{URL: "ldap://" + listener.Addr().String(), BaseDN: "dc=example,dc=com", BindDN: "cn=reader", BindPassword: "secret", Filter: "(uid={login})", SubjectAttribute: "entryUUID", Instance: "test"}}
 	if err := c.Validate(); err != nil {
 		t.Fatal(err)
 	}

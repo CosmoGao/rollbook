@@ -51,7 +51,7 @@ func (c ProviderConfig) Enabled(kind string) bool {
 func (c ProviderConfig) Validate() error {
 	if c.LDAP.URL != "" {
 		u, e := url.Parse(c.LDAP.URL)
-		if e != nil || (u.Scheme != "ldaps" && u.Scheme != "ldap") || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || c.LDAP.BaseDN == "" || c.LDAP.BindDN == "" || c.LDAP.BindPassword == "" || c.LDAP.SubjectAttribute == "" || c.LDAP.Instance == "" {
+		if e != nil || (u.Scheme != "ldaps" && u.Scheme != "ldap") || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || c.LDAP.BaseDN == "" || c.LDAP.BindDN == "" || c.LDAP.BindPassword == "" || c.LDAP.SubjectAttribute == "" || c.LDAP.Instance == "" || !strings.Contains(c.LDAP.Filter, "{login}") {
 			return fmt.Errorf("invalid LDAP config")
 		}
 	}
@@ -126,7 +126,11 @@ func (e Engine) providerStart(w http.ResponseWriter, r *http.Request, kind strin
 		u.RawQuery = q.Encode()
 		target = u.String()
 	}
-	_, err = e.Auth.DB.ExecContext(r.Context(), "INSERT INTO auth_pending(state_hash,provider,nonce,verifier,expires_at) VALUES(?,?,?,?,?)", stateHash(state), kind, nonce, verifier, time.Now().UTC().Add(5*time.Minute).Format(time.RFC3339Nano))
+	version := e.providerVersion
+	if version == "" {
+		version = "static"
+	}
+	_, err = e.Auth.DB.ExecContext(r.Context(), "INSERT INTO auth_pending(state_hash,provider,nonce,verifier,expires_at,config_version) VALUES(?,?,?,?,?,?)", stateHash(state), kind, nonce, verifier, time.Now().UTC().Add(5*time.Minute).Format(time.RFC3339Nano), version)
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -150,15 +154,30 @@ func (e Engine) providerCallback(w http.ResponseWriter, r *http.Request, kind st
 		return
 	}
 	http.SetCookie(w, &http.Cookie{Name: "rollbook_auth_state", Path: "/api/auth/", MaxAge: -1, HttpOnly: true, Secure: e.secureRequest(r), SameSite: http.SameSiteLaxMode})
-	var pendingKind, nonce, verifier, expiry string
+	if e.ProviderRegistry != nil {
+		e.ProviderRegistry.mu.RLock()
+		defer e.ProviderRegistry.mu.RUnlock()
+	}
+	var pendingKind, nonce, verifier, expiry, version string
 	tx, err := e.Auth.DB.BeginTx(r.Context(), nil)
 	if err != nil {
 		fail()
 		return
 	}
 	defer tx.Rollback()
-	err = tx.QueryRowContext(r.Context(), "SELECT provider,nonce,verifier,expires_at FROM auth_pending WHERE state_hash=?", stateHash(cookie.Value)).Scan(&pendingKind, &nonce, &verifier, &expiry)
+	err = tx.QueryRowContext(r.Context(), "SELECT provider,nonce,verifier,expires_at,config_version FROM auth_pending WHERE state_hash=?", stateHash(cookie.Value)).Scan(&pendingKind, &nonce, &verifier, &expiry, &version)
 	if err != nil || pendingKind != kind {
+		fail()
+		return
+	}
+	currentVersion := e.providerVersion
+	if currentVersion == "" {
+		currentVersion = "static"
+	}
+	if e.ProviderRegistry != nil {
+		currentVersion = e.ProviderRegistry.version
+	}
+	if version != currentVersion {
 		fail()
 		return
 	}

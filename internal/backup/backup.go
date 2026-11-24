@@ -218,6 +218,12 @@ func apply(ctx context.Context, conn *sql.Conn, f File) error {
 			return err
 		}
 	}
+	if f.Kind == "full" {
+		// YAML 不含页面身份源凭据；清除目标库残留，防止导入后沿用另一套凭据。
+		if _, err := tx.ExecContext(ctx, "DELETE FROM auth_provider_settings"); err != nil {
+			return err
+		}
+	}
 	// FTS 是派生索引；会话和待导入申请不会进入备份。
 	if _, err := tx.ExecContext(ctx, "DELETE FROM search_documents"); err != nil {
 		return err
@@ -281,7 +287,9 @@ func apply(ctx context.Context, conn *sql.Conn, f File) error {
 	if _, err := tx.ExecContext(ctx, "DELETE FROM sessions"); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, "DELETE FROM auth_pending"); err != nil { return err }
+	if _, err := tx.ExecContext(ctx, "DELETE FROM auth_pending"); err != nil {
+		return err
+	}
 	if _, err := tx.ExecContext(ctx, "DELETE FROM version_check_lease"); err != nil {
 		return err
 	}
@@ -334,6 +342,13 @@ func Validate(ctx context.Context, f File) error {
 	return validateRelations(ctx, d)
 }
 func (s Service) Restore(ctx context.Context, f File) error {
+	if f.Kind == "full" {
+		for _, row := range f.Tables["auth_settings"] {
+			if row["name"] == "local_login_enabled" && fmt.Sprint(row["value"]) == "0" {
+				return fmt.Errorf("%w: 完整 YAML 不含页面身份源凭据；先在本机启用本地登录，或使用完整数据卷快照恢复", ErrInvalid)
+			}
+		}
+	}
 	if err := Validate(ctx, f); err != nil {
 		return err
 	}

@@ -222,10 +222,23 @@ func (e Engine) backup(w http.ResponseWriter, r *http.Request, p auth.Principal)
 			WriteError(w, catalog.ErrInvalid)
 			return
 		}
+		var kind string
+		if action == "approve" && e.ProviderRegistry != nil {
+			if err := e.Auth.DB.QueryRowContext(r.Context(), "SELECT kind FROM pending_imports WHERE id=? AND state='pending'", id).Scan(&kind); err != nil {
+				WriteError(w, err)
+				return
+			}
+		}
 		err := service.Review(r.Context(), id, action == "approve", p.Login)
 		if err != nil {
 			WriteError(w, err)
 			return
+		}
+		if kind == "full" {
+			if err = e.ProviderRegistry.Reload(r.Context()); err != nil {
+				WriteError(w, err)
+				return
+			}
 		}
 		WriteJSON(w, 200, map[string]bool{"ok": true})
 	default:

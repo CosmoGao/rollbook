@@ -2,6 +2,12 @@
 
 Rollbook is a self-hosted service and asset catalog for homes and small businesses. Run it on a trusted network. The UI follows the browser language until you select English or Chinese; that choice is saved in the browser. See the [Chinese README](README.md), [changelog](CHANGELOG.md), and [release checklist](docs/releasing.md).
 
+## Unreleased: authentication settings
+
+System Settings → Authentication Settings configures and toggles LDAP, OIDC and Feishu providers, users, explicit bindings, allow flags, local sign-in, and read-only authentication audit. Every signed-in web user has full management rights; Bearer API Keys cannot access these endpoints. Credentials are write-only and encrypted in a separate database table. Full and scheduled YAML backups exclude them and cannot restore page-managed provider credentials. If any environment variable for a provider (including a `_FILE` variant) exists, the startup environment owns that provider and the page is read-only. Any saved page configuration is shadowed. Removing the environment variable requires a restart; saving page configuration takes effect immediately.
+
+Before upgrading, stop the service and preserve a complete data-volume snapshot, the current `ROLLBOOK_AUTH_PEPPER` or its file, and the provider environment configuration. The original pepper is required to decrypt saved credentials. If it changes or is lost, use `rollbook auth local-login enable` on the server before replacing page credentials. A full YAML import removes any page-managed provider configuration in the target database and refuses a file with local sign-in disabled, avoiding a lockout. Use a file-level snapshot to restore provider credentials. To roll back, restore the complete pre-upgrade data volume and its pepper/environment configuration; an older image cannot safely read the migrated database. Real IdP integration testing remains outstanding.
+
 An empty catalog opens a first-run dialog. Press Escape to close it and return keyboard focus to the current navigation entry. The asset list shows “Permission denied” with a retry action when reading is forbidden. Offline reads show a load error; offline editing is unavailable.
 
 ## v0.9.0 sign-in and UI updates

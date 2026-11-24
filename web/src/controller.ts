@@ -1,6 +1,7 @@
 import { mountOverview, unmountOverview } from './Overview';
 import { mountAssets, unmountAssets } from './Assets';
 import { mountSettings, mountPersonalSettings, unmountSettings } from './Settings';
+import {mountAuthSettings,unmountAuthSettings} from './AuthSettings';
 import { mountSearch, unmountSearch } from './Search';
 import { mountPending, unmountPending } from './Pending';
 import { mountKeys, unmountKeys } from './Keys';
@@ -14,9 +15,9 @@ import { unmountBrowse } from './Browse';
 import { t, enumLabel, setLanguage, language } from './catalog-i18n';
 
 const root=document.getElementById('content')!;
-const labels:Record<string,string>={overview:'总览',topology:'拓扑',pendingHub:'待处理',agent:'Agent 接入',settings:'设置',search:'全局搜索',assets:'资产维护',sites:'站点',hosts:'设备与主机',networks:'网段',outdated:'有新版本',pending:'待确认',changes:'最近变更',contexts:'共享上下文',unverified:'待核实',keys:'Key 管理',backup:'备份与恢复'};
+const labels:Record<string,string>={overview:'总览',topology:'拓扑',pendingHub:'待处理',agent:'Agent 接入',settings:'设置',search:'全局搜索',assets:'资产维护',sites:'站点',hosts:'设备与主机',networks:'网段',outdated:'有新版本',pending:'待确认',changes:'最近变更',contexts:'共享上下文',unverified:'待核实',keys:'Key 管理',backup:'备份与恢复',authSettings:'认证设置'};
 const types:Record<string,string>={location:'站点',uplink:'网络接入',host:'设备与主机',network:'网段',ip:'IP 地址',service:'服务',port:'端口',endpoint:'访问入口',version:'版本',credential:'凭据引用',note:'笔记',change:'变更',dependency:'依赖'};
-const routePaths:Record<string,string>={overview:'/',assets:'/assets',services:'/assets/services',sites:'/assets/sites',hosts:'/assets/hosts',networks:'/assets/networks',topology:'/topology',pendingHub:'/pending',pending:'/pending',unverified:'/pending?tab=unverified',outdated:'/pending?tab=outdated',agent:'/agent',keys:'/agent',settings:'/settings',personal:'/settings/personal',backup:'/settings/backup',changes:'/changes',contexts:'/contexts',search:'/search'};
+const routePaths:Record<string,string>={overview:'/',assets:'/assets',services:'/assets/services',sites:'/assets/sites',hosts:'/assets/hosts',networks:'/assets/networks',topology:'/topology',pendingHub:'/pending',pending:'/pending',unverified:'/pending?tab=unverified',outdated:'/pending?tab=outdated',agent:'/agent',keys:'/agent',settings:'/settings',personal:'/settings/personal',backup:'/settings/backup',authSettings:'/settings/auth',changes:'/changes',contexts:'/contexts',search:'/search'};
 let pendingSearchTerm='',firstRunOpen=false;
 const cookie=(name:string)=>document.cookie.split('; ').find(value=>value.startsWith(name+'='))?.slice(name.length+1)||'';
 export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
@@ -29,13 +30,13 @@ export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
   if(!response.ok){if(response.status===401&&path!=='/api/auth/login')window.dispatchEvent(new Event('rollbook:unauthorized'));const fields=(data.fields||[]).map((field:{field:string;reason:string;expected?:string;references?:string[]})=>`${field.field}: ${field.reason}${field.expected?' ('+t('期望：')+field.expected+')':''}${field.references?.length?'; '+t('引用方：')+field.references.join(', '):''}`);throw new Error(t(fields.join('\n')||data.message||`请求失败 (${response.status})`))}
   return data as T;
 }
-const unmountAll=()=>{unmountOverview();unmountAssets();unmountSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();unmountAudit();unmountTopology();unmountDetail();unmountBrowse()};
+const unmountAll=()=>{unmountOverview();unmountAssets();unmountSettings();unmountAuthSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();unmountAudit();unmountTopology();unmountDetail();unmountBrowse()};
 const error=(value:unknown)=>{const element=document.createElement('div');element.className='error';element.textContent=value instanceof Error?value.message:String(value);root.replaceChildren(element)};
 export function openObject(id:string,type?:string){unmountAll();document.querySelectorAll('#nav button').forEach(button=>button.classList.remove('active'));document.querySelectorAll('#nav button').forEach(button=>button.removeAttribute('aria-current'));root.replaceChildren();mountDetail(root,{id,type,api,t,enumLabel,types,open:openObject,navigate})}
 const assetForm=(type:string)=>openAssetForm(type,null,api,t,enumLabel,types,openObject);
 export async function navigate(view:string,push=true){
   unmountAll();const target=routePaths[view];if(push&&target&&target!==location.pathname+location.search)history.pushState({},'',target);
-  const menuView=['pending','unverified','outdated'].includes(view)?'pendingHub':['services','sites','hosts','networks'].includes(view)?'assets':view;
+  const menuView=['pending','unverified','outdated'].includes(view)?'pendingHub':['services','sites','hosts','networks'].includes(view)?'assets':view==='authSettings'||view==='backup'?'settings':view;
 
   document.querySelectorAll<HTMLButtonElement>('#nav button[data-view]').forEach(button=>{const active=button.dataset.view===menuView;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')});window.dispatchEvent(new CustomEvent('rollbook:view',{detail:menuView}));
   root.replaceChildren();
@@ -49,7 +50,8 @@ export async function navigate(view:string,push=true){
     case 'topology':mountTopology(root,api,openObject);break;
     case 'pendingHub':case 'pending':case 'unverified':case 'outdated':mountPending(root,api,openObject,navigate,view==='pendingHub'?'pending':view);break;
     case 'agent':case 'keys':mountKeys(root,api);break;
-    case 'settings':mountSettings(root,()=>navigate('backup'));break;
+    case 'settings':mountSettings(root,()=>navigate('backup'),()=>navigate('authSettings'));break;
+    case 'authSettings':mountAuthSettings(root);break;
     case 'personal':mountPersonalSettings(root);break;
     case 'backup':mountBackup(root,api,()=>window.dispatchEvent(new Event('rollbook:unauthorized')));break;
     case 'search':mountSearch(root,api,openObject,pendingSearchTerm);pendingSearchTerm='';break;

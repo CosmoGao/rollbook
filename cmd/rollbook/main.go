@@ -179,6 +179,11 @@ func serve() error {
 	if err != nil {
 		return err
 	}
+	engine.ProviderRegistry, err = httpapi.NewProviderRegistry(ctx, database, pepper, engine.Providers, environmentProviderOwnership())
+	if err != nil {
+		return err
+	}
+	engine.Auth.EnabledProvider = engine.ProviderRegistry.Enabled
 	if allowInsecureHTTP {
 		log.Print("警告：已允许通过 HTTP 登录；实际为 HTTP 的请求会显示风险提示，口令和 API Key 可能在网络中明文传输，仅可用于可信内网。")
 	}
