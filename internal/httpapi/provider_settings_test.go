@@ -194,6 +194,32 @@ func TestProviderSettingsBrowserBoundaryAndHotConfig(t *testing.T) {
 	if w := call("GET", "/api/auth/settings", "", "", token, nil); w.Code != 403 {
 		t.Fatal("key accepted", w.Code)
 	}
+	if err = e.Auth.CreateExternalUser(ctx, "external"); err != nil {
+		t.Fatal(err)
+	}
+	identities := call("GET", "/api/auth/settings/identities", "", "", "", cookies)
+	if identities.Code != 200 {
+		t.Fatal(identities.Code, identities.Body.String())
+	}
+	var listed struct {
+		Users []struct {
+			Login            string `json:"login"`
+			HasLocalPassword bool   `json:"has_local_password"`
+		} `json:"users"`
+	}
+	if err = json.Unmarshal(identities.Body.Bytes(), &listed); err != nil {
+		t.Fatal(err)
+	}
+	if len(listed.Users) != 2 || listed.Users[0].Login != "external" || listed.Users[0].HasLocalPassword || listed.Users[1].Login != "owner" || !listed.Users[1].HasLocalPassword {
+		t.Fatal("incorrect password presence", listed.Users)
+	}
+	var hash string
+	if err = e.Auth.DB.QueryRowContext(ctx, "SELECT password_hash FROM users WHERE login='owner'").Scan(&hash); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(identities.Body.String(), hash) {
+		t.Fatal("password hash exposed")
+	}
 	secret := "SENSITIVE-FAKE-SECRET-123"
 	body := `{"enabled":true,"config":{"client_id":"app","redirect_url":"https://rollbook.example/api/auth/feishu/callback"},"secret_action":"replace","secret":"` + secret + `"}`
 	if w := call("PUT", "/api/auth/settings/feishu", body, csrf, "", cookies); w.Code != 200 || strings.Contains(w.Body.String(), secret) {
