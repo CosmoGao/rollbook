@@ -2,6 +2,8 @@
 
 本页记录 2026-11-25 在 Chromium 中访问实际路由所得的控件矩阵。浏览器使用本地构建和脱敏 API 模拟数据；没有连接正式实例，也没有读取私人截图。完整的每控件 selector、type、border-box、computed style、浅/深色及 1280/390px 测量见 `control-geometry-evidence/verified.json`。复现前的「筛选记录」测量见 `baseline-pending.json`。
 
+此修复由 [PR #71](https://github.com/CosmoGao/rollbook/pull/71) 合入，拟归档在 `v0.12.0`；截至本文更新，正式 tag、Release、镜像和 CLI 尚未生成，现有实例不会自动更新。截图是 #71 对应源码的本地浏览器证据，不是正式镜像或生产环境截图。目标版本的 Release 与产物须发布后再按实际结果核对。
+
 ## 外框策略
 
 - 独立的 `input`（排除 checkbox/radio）、`select`、`textarea` 自己拥有 `border-box` 外框；键盘焦点改该边框颜色，并在框内用 inset 加粗，总计 2px 可见焦点强度。`aria-invalid=true` 保持错误色边框，蓝色内线仍标出焦点。强制颜色模式用向内的 2px `Highlight` outline。
@@ -33,6 +35,8 @@
 | 移动菜单抽屉、首次使用弹窗 | 无可见文本控件；检查键盘焦点仍保留在按钮上 | 不适用 |
 
 资产详情的编辑、删除、笔记、停用和恢复弹窗依对象类型及数据而显示；浏览器测试覆盖了资产新建弹窗。原生 `prompt` 与 select 的操作系统展开层不属于页面 CSS 控制范围。剪贴板回退时临时创建的隐藏 textarea 不属于可见页面控件。
+
+本轮仅修复可见控件的焦点与外框几何；快捷键、主题选择、认证凭据只写不读、登录策略和权限行为不变。真实 LDAP、OIDC、飞书 IdP 尚未联调，也没有新增全站 RBAC 或群组映射。升级和回退按 [README](../README.md#升级和回退) 的文件级快照步骤办理。
 
 ## 复现与证据
 
