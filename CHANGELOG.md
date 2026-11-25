@@ -8,7 +8,7 @@
 
 ## [v0.11.0](https://github.com/CosmoGao/rollbook/releases/tag/v0.11.0)
 
-Release 链接将在文档 PR 通过、合并并推送正式 tag 后由发布工作流生成；目前尚未发布。本节依据 `v0.10.0..main` 的已合并 [#67](https://github.com/CosmoGao/rollbook/pull/67)、[#68](https://github.com/CosmoGao/rollbook/pull/68) 归档；[#66](https://github.com/CosmoGao/rollbook/pull/66) 仅补齐上一版 Release 链接。
+本版已正式发布：[v0.11.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.11.0)；tag 指向 `6600811f2468a31565ca6dc6886e8168ce163f11`。本节依据 `v0.10.0..v0.11.0` 的已合并 [#67](https://github.com/CosmoGao/rollbook/pull/67)、[#68](https://github.com/CosmoGao/rollbook/pull/68) 归档；[#66](https://github.com/CosmoGao/rollbook/pull/66) 仅补齐上一版 Release 链接。正式发布不等于现有实例已部署。
 
 ### 改进
 

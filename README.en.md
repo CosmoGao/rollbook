@@ -4,7 +4,7 @@ Rollbook is a self-hosted service and asset catalog for homes and small business
 
 ## v0.11.0 HEADER controls and settings navigation
 
-This section describes the planned `v0.11.0` release. The [target Release link](https://github.com/CosmoGao/rollbook/releases/tag/v0.11.0) will be created by the tag workflow only after this documentation PR is reviewed and merged. Publishing an image and CLI does not upgrade an existing instance.
+This version is officially published: [v0.11.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.11.0). Publishing an image and CLI does not upgrade an existing instance.
 
 The desktop HEADER `form.top-search`, narrow-screen `form.mobile-search`, and `header.topbar label.theme-control` now draw one border and a focus indicator aligned with the outer control. Inner inputs, buttons, and the select no longer draw a complete duplicate border or offset focus ring. Ctrl/⌘+K, search submission, theme selection, and browser persistence keep their behavior. See the [HEADER control verification](docs/HEADER-CONTROLS-VERIFICATION.md) for the exact controls and screenshots.
 
@@ -72,7 +72,7 @@ Assets lets you create and browse sites, hosts, networks, services, and other re
 
 ## Install and version
 
-Tagged releases provide a multi-architecture GHCR image, Linux/macOS/Windows amd64 and arm64 CLI archives, `SHA256SUMS`, and `install.sh`. Linux/macOS users can download and run the release's `install.sh` to install under `~/.local/bin`; set `ROLLBOOK_VERSION=v0.10.0` to pin the currently verified release or `ROLLBOOK_INSTALL_DIR` to choose a destination. Windows users should choose an archive and verify its checksum. The installer only replaces the local CLI. `rollbook version`, the sign-in screen, footer, `GET /api/version`, and MCP `initialize.serverInfo` report the same build version.
+Tagged releases provide a multi-architecture GHCR image, Linux/macOS/Windows amd64 and arm64 CLI archives, `SHA256SUMS`, and `install.sh`. Linux/macOS users can download and run the release's `install.sh` to install under `~/.local/bin`; set `ROLLBOOK_VERSION=v0.11.0` to pin the currently verified release or `ROLLBOOK_INSTALL_DIR` to choose a destination. Windows users should choose an archive and verify its checksum. The installer only replaces the local CLI. `rollbook version`, the sign-in screen, footer, `GET /api/version`, and MCP `initialize.serverInfo` report the same build version.
 
 YAML backups use `schema_version: 1`; unsupported versions are rejected. Newer databases may not be readable by older binaries. Make a full file-level snapshot before upgrading. The CLI uses REST. Run `rollbook login` to enter a server URL and key without echoing the key; the profile is stored in the user config directory with mode `0600`. `rollbook --profile home login` creates another profile. `ROLLBOOK_URL` and `ROLLBOOK_KEY` override the chosen profile for a process. With no configured URL, it defaults to `http://127.0.0.1:8080`. `--output json|yaml|table` controls REST output; `export` always writes YAML. `rollbook completion bash|zsh|fish` generates shell completion.
 
@@ -103,7 +103,7 @@ Set a service's `upstream_json` to a supported public provider, for example `{"p
 
 ## Docker Compose deployment
 
-Requires Docker Engine and Compose. In the repository root, pin a verified release in `.env` for production (currently `v0.10.0`; use `v0.11.0` only after its formal artifacts are verified); the example defaults to `latest` for a trial. Run:
+Requires Docker Engine and Compose. In the repository root, pin a verified release in `.env` for production (`v0.11.0` is now verified); the example defaults to `latest` for a trial. Run:
 
 ```sh
 cp .env.example .env
@@ -135,7 +135,7 @@ For direct HTTP testing only on a trusted network, set `ROLLBOOK_BIND_ADDR` to t
 
 ### Upgrade and rollback
 
-Before upgrading from `v0.10.0` to the planned `v0.11.0`, preserve `.env`, the original `ROLLBOOK_AUTH_PEPPER` or `ROLLBOOK_AUTH_PEPPER_FILE` file, provider environment variables or their `_FILE` files, and the key material needed to decrypt provider settings. Stop the service before copying the full `/data` volume; keep the SQLite database with its `-wal` and `-shm` files. Save `/backups` when used separately. A full YAML backup contains account and Key hashes and needs protected storage, but excludes page-managed provider credentials and cannot replace a file-level snapshot. Compose example (protect the resulting directories):
+Before upgrading from `v0.10.0` to `v0.11.0`, preserve `.env`, the original `ROLLBOOK_AUTH_PEPPER` or `ROLLBOOK_AUTH_PEPPER_FILE` file, provider environment variables or their `_FILE` files, and the key material needed to decrypt provider settings. Stop the service before copying the full `/data` volume; keep the SQLite database with its `-wal` and `-shm` files. Save `/backups` when used separately. A full YAML backup contains account and Key hashes and needs protected storage, but excludes page-managed provider credentials and cannot replace a file-level snapshot. Compose example (protect the resulting directories):
 
 ```sh
 docker compose stop rollbook
@@ -144,7 +144,7 @@ docker compose cp rollbook:/data/. ./snapshot-data/
 docker compose cp rollbook:/backups/. ./snapshot-backups/
 ```
 
-Verify that the snapshot can be restored in an isolated environment and that the original pepper and provider configuration are preserved. Compared with `v0.10.0`, this release adds no database migration and changes no key scheme; do not rerun or invent `017_auth_providers.sql`. Only after the formal tag, Release, and image are verified, set `ROLLBOOK_VERSION=v0.11.0` in `.env`, run `docker compose pull && docker compose up -d`, and check `docker compose ps`, `/healthz`, and web sign-in. Do not run two versions against one database. Page credentials require the original pepper-derived key. If the pepper changes or is lost, run `rollbook auth local-login enable` locally to preserve recovery access, then re-enter page credentials; use `rollbook reset-password <existing-login>` if a local password must be restored. A full YAML import clears page-managed providers in the target database and rejects a file with local sign-in disabled.
+Verify that the snapshot can be restored in an isolated environment and that the original pepper and provider configuration are preserved. Compared with `v0.10.0`, this release adds no database migration and changes no key scheme; do not rerun or invent `017_auth_providers.sql`. After confirming the formal tag, Release, and image, set `ROLLBOOK_VERSION=v0.11.0` in `.env`, run `docker compose pull && docker compose up -d`, and check `docker compose ps`, `/healthz`, and web sign-in. Do not run two versions against one database. Page credentials require the original pepper-derived key. If the pepper changes or is lost, run `rollbook auth local-login enable` locally to preserve recovery access, then re-enter page credentials; use `rollbook reset-password <existing-login>` if a local password must be restored. A full YAML import clears page-managed providers in the target database and rejects a file with local sign-in disabled.
 
 **Database migrations only run forward.** To roll back, stop the service, restore the complete pre-upgrade `/data` and separately used `/backups` snapshots, original `.env`, pepper, provider environment configuration, and key material, then start the official `v0.10.0` image. Do not point the old image at upgraded data. Full YAML cannot restore page credentials; catalog YAML exports contain assets only. The GitHub Actions tag pipeline publishes the official image and CLI; it does not deploy your instance.
 
