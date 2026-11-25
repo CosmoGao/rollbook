@@ -15,7 +15,7 @@ async function checkFrame(page,{theme,width,state,focused}){
   return {borders:[outer.borderTopWidth,outer.borderRightWidth,outer.borderBottomWidth,outer.borderLeftWidth],color:outer.borderTopColor,focus,outline:outer.outlineWidth,shadow:outer.boxShadow,radii:[outer.borderTopLeftRadius,outer.borderTopRightRadius,outer.borderBottomRightRadius,outer.borderBottomLeftRadius],submitRadius:getComputedStyle(form.querySelector('button[type=submit]')).borderTopRightRadius,rect:rect.toJSON(),children,overflow:document.documentElement.scrollWidth-innerWidth};
  });
  assert.deepEqual(styles.borders,['1px','1px','1px','1px'],JSON.stringify({theme,width,state,styles}));
- assert.equal(styles.outline,'0px',JSON.stringify({theme,width,state,styles}));assert.equal(styles.shadow,'none');
+ assert.equal(styles.outline,'0px',JSON.stringify({theme,width,state,styles}));if(focused)assert.ok(styles.shadow.includes('inset'),JSON.stringify({theme,width,state,styles}));else assert.equal(styles.shadow,'none');
  assert.deepEqual(styles.radii,['8px','8px','8px','8px']);assert.equal(styles.submitRadius,'7px');
  if(focused)assert.equal(styles.color,styles.focus,JSON.stringify({theme,width,state,styles}));
  for(const child of styles.children){assert.deepEqual(child.borders,['0px','0px','0px','0px']);assert.equal(child.outline,'0px');assert.equal(child.shadow,'none');assert.ok(child.rect.left>=styles.rect.left && child.rect.right<=styles.rect.right+0.1)}

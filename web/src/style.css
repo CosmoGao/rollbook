@@ -113,6 +113,10 @@ button.primary:active,.search-box button:active,.mobile-search button:active,.ui
 .ui-button-danger:hover{background:var(--color-danger-hover)!important}.ui-button-danger:active{background:var(--color-danger-active)!important}
 :focus-visible{outline:var(--focus-width) solid var(--color-focus)!important;outline-offset:var(--focus-offset)!important}
 :focus:not(:focus-visible){outline:none}
+/* 独立文本控件以自身 border-box 为唯一外框；错误边保留红色，内侧蓝线标记焦点。 */
+:is(input:not([type=checkbox]):not([type=radio]),select,textarea):focus-visible:not(:disabled){outline:0!important;outline-offset:0!important;border-color:var(--color-focus)!important;box-shadow:inset 0 0 0 calc(var(--focus-width) - var(--border-width)) var(--color-focus)!important}
+:is(input:not([type=checkbox]):not([type=radio]),select,textarea)[aria-invalid=true]:focus-visible:not(:disabled){border-color:var(--color-danger-text)!important}
+@media(forced-colors:active){:is(input:not([type=checkbox]):not([type=radio]),select,textarea):focus-visible:not(:disabled){border-color:Highlight!important;box-shadow:none!important;outline:var(--focus-width) solid Highlight!important;outline-offset:calc(-1 * var(--focus-width))!important}}
 .card,.section,.overview-card,.flow-container,.detail-entry,.tree-node,.modal,.login-card{border-radius:var(--radius-card)!important}
 .modal{width:min(var(--dialog-max),calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow-y:auto;box-shadow:var(--shadow-overlay)!important}
 .modal-backdrop,.mobile-overlay{background:var(--color-overlay)}
@@ -135,6 +139,9 @@ button.primary:active,.search-box button:active,.mobile-search button:active,.ui
 .theme-control select{min-height:var(--control-h);width:auto;max-width:100%;padding:0 4px;border:0!important;background:transparent!important;color:inherit!important;cursor:pointer}
 .theme-control select:focus-visible{outline:var(--focus-width) solid var(--color-focus)!important;outline-offset:var(--focus-offset)!important}
 .login-theme{right:124px;display:inline-flex;min-width:0;z-index:2}
+.login-theme:focus-within{border-color:var(--color-focus)!important;box-shadow:inset 0 0 0 calc(var(--focus-width) - var(--border-width)) var(--color-focus)}
+.login-theme select:focus-visible{outline:0!important;outline-offset:0!important;box-shadow:none!important}
+@media(forced-colors:active){.login-theme:focus-within{border-color:Highlight!important;outline:var(--focus-width) solid Highlight!important;outline-offset:calc(-1 * var(--focus-width))!important}}
 @media(max-width:767px){.theme-control,.theme-control select{min-height:var(--control-h-touch)}.top-controls .theme-control select{min-height:var(--control-h-touch);font-size:16px}.login-theme{top:16px}}
 @media(max-width:420px){.topbar{grid-template-rows:44px 44px 44px}.top-controls{grid-column:1/-1;grid-row:2;justify-content:flex-end}.mobile-search{grid-row:3}}
 .mobile-drawer nav{display:flex;flex-direction:column;gap:4px;overflow-y:auto;min-height:0}.mobile-drawer nav button{text-align:left;border:0;border-radius:var(--radius-control)}
@@ -198,17 +205,18 @@ header.topbar form.mobile-search button[type="submit"]:focus-visible{outline:0!i
 .search-box{min-width:0;max-width:100%;overflow:hidden}
 .search-box:hover{border-color:var(--color-control-border-hover)!important}
 .search-box:active{border-color:var(--color-control-border-active)!important}
-.search-box:focus-within{border-color:var(--color-focus)!important;outline:0!important;box-shadow:none!important}
+.search-box:focus-within{border-color:var(--color-focus)!important;outline:0!important;box-shadow:inset 0 0 0 calc(var(--focus-width) - var(--border-width)) var(--color-focus)!important}
 .search-box input[type="search"]{width:0;min-width:0;flex:1 1 auto;border:0!important;border-radius:0!important;outline:0!important;box-shadow:none!important;background:transparent!important}
 .search-box input::-webkit-search-cancel-button{display:none}
 .search-box button{flex:none;border:0!important;border-radius:0!important;outline:0!important;box-shadow:none!important}
 .search-box button[type="submit"]{border-radius:0 calc(var(--radius-control) - var(--border-width)) calc(var(--radius-control) - var(--border-width)) 0!important}
 .search-box input[type="search"]:focus-visible,.search-box button:focus-visible{outline:0!important;box-shadow:none!important}
+.search-box input[type="search"]:focus-visible:not(:disabled),header.topbar form.top-search input:focus-visible:not(:disabled),header.topbar form.mobile-search input:focus-visible:not(:disabled),:is(header.topbar,.login-wrap) label.theme-control select:focus-visible:not(:disabled){box-shadow:none!important}
 .search-box button:focus-visible{text-decoration:underline;text-underline-offset:3px}
 .search-box .search-clear{min-width:var(--control-h);padding:0 8px;background:transparent!important;color:var(--color-text-muted)!important;font-size:22px;line-height:1}
 .search-box .search-clear:hover,.search-box .search-clear:focus-visible{background:var(--color-surface-hover)!important;color:var(--color-text)!important}
 @media(pointer:coarse){.search-box .search-clear,.search-box button[type="submit"]{min-height:var(--control-h-touch)}}
-@media(forced-colors:active){.search-box{border-color:CanvasText!important}.search-box:focus-within{border-color:Highlight!important}.search-box button:focus-visible{text-decoration:underline!important}}
+@media(forced-colors:active){.search-box{border-color:CanvasText!important}.search-box:focus-within{border-color:Highlight!important;box-shadow:none!important;outline:var(--focus-width) solid Highlight!important;outline-offset:calc(-1 * var(--focus-width))!important}.search-box button:focus-visible{text-decoration:underline!important}}
 .search-answer{cursor:pointer}
 .search-answer:focus-visible,.tree-node summary:focus-visible{outline:var(--focus-width) solid var(--color-focus)!important;outline-offset:var(--focus-offset)!important}
 .row button,.copy-button{font-size:var(--font-size-body)}
