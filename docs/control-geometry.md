@@ -2,7 +2,7 @@
 
 本页记录 2026-11-25 在 Chromium 中访问实际路由所得的控件矩阵。浏览器使用本地构建和脱敏 API 模拟数据；没有连接正式实例，也没有读取私人截图。完整的每控件 selector、type、border-box、computed style、浅/深色及 1280/390px 测量见 `control-geometry-evidence/verified.json`。复现前的「筛选记录」测量见 `baseline-pending.json`。
 
-此修复由 [PR #71](https://github.com/CosmoGao/rollbook/pull/71) 合入，拟归档在 `v0.12.0`；截至本文更新，正式 tag、Release、镜像和 CLI 尚未生成，现有实例不会自动更新。截图是 #71 对应源码的本地浏览器证据，不是正式镜像或生产环境截图。目标版本的 Release 与产物须发布后再按实际结果核对。
+此修复由 [PR #71](https://github.com/CosmoGao/rollbook/pull/71) 合入，已归档在 [v0.12.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.12.0)；正式 tag 指向 `47f96d343eb91c06c6ceb23122de7a1bd058a3af`。现有实例不会自动更新。截图仍是 #71 对应源码的本地浏览器证据，不是正式镜像或生产环境截图；此发版后说明只进入后续 `main`，不在不可变的正式 tag 内。
 
 ## 外框策略
 
