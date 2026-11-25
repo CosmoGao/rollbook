@@ -2,6 +2,8 @@
 
 本次仅改 `web/src/style.css` 中的 HEADER 桌面搜索、窄屏搜索和主题控件。沿用现有 `control-border`、`control-border-hover`、`focus`、`radius-control` token；搜索和主题的 DOM、快捷键、提交与持久化逻辑未改。通用输入与全站焦点规则保持原样。
 
+本记录与截图来自已合并的 HEADER 修复 PR #67，并作为计划中 `v0.11.0` 的控件证据。后续 PR #68 增加认证设置导航及其样式，未修改这些 HEADER 控件的选择器与样式规则；正式 tag 尚待发布流程生成。截图使用模拟空库与演示会话，不包含真实账号或密钥。
+
 ## 浏览器证据
 
 使用 Playwright 1.65 的真实 Chromium；模拟已登录会话，语言为中文，初始路由 `/`，搜索提交后路由 `/search`。截图在 `docs/header-controls-screenshots/`；文件名包含主题、视口 CSS px、准确选择器和状态：
