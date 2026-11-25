@@ -4,9 +4,20 @@
 
 ## 未发布
 
+暂无新条目。
+
+## v0.12.0（待发布）
+
+目标版本依据 `v0.11.0..main` 的 [#70](https://github.com/CosmoGao/rollbook/pull/70) 与 [#71](https://github.com/CosmoGao/rollbook/pull/71) 归档。#70 仅补齐 `v0.11.0` 的文档状态和截图证据，不是本版功能；#71 是本版用户可见修复。正式 tag、Release、镜像与 CLI 尚未创建，发布后再核对实际链接、提交及产物；合入代码也不会自动升级现有实例。
+
 ### 修复
 
-- 全站文本输入、选择框及多行输入的焦点反馈改为与控件外框重合；保留错误边框、键盘焦点强度和强制颜色模式。补齐路由控件矩阵与浏览器回归证据。
+- 全站独立文本 `input`、`textarea`、`select` 的焦点反馈与自身 `border-box` 外框重合；搜索框和 HEADER 组合控件由外层绘制唯一外框。保留错误态、可辨识的键盘焦点和 forced-colors 支持；原生 select 的系统展开层不属于页面 CSS 修复范围。路由矩阵及脱敏浏览器截图见 [文本控件证据](docs/control-geometry.md)（[#71](https://github.com/CosmoGao/rollbook/pull/71)）。
+
+### 升级注意事项
+
+- 相对 `v0.11.0` 无新增数据库迁移、无密钥方案变更。升级前停服并保存完整 `/data` 文件级快照（含 SQLite 数据库、`-wal`、`-shm`）；独立使用 `/backups` 时也保存该卷。保留原环境变量、`ROLLBOOK_AUTH_PEPPER` 或其 `_FILE` 文件、身份源环境变量或 `_FILE` 文件及认证配置加密所需密钥材料，在隔离环境验证快照可恢复。完整 YAML 不能代替快照，也不能恢复页面身份源凭据。
+- 回退先停服，恢复升级前完整快照、原配置与密钥，再运行 `v0.11.0` 正式镜像；不能只换旧镜像读取升级后的数据。页面密文只能用原 pepper 解密；若丢失或更换，须先在本机运行 `rollbook auth local-login enable` 保留本地恢复入口，再重新填写页面凭据。真实 LDAP、OIDC、飞书 IdP 尚未联调，没有新增全站 RBAC 或群组映射；现有登录策略保持不变。
 
 ## [v0.11.0](https://github.com/CosmoGao/rollbook/releases/tag/v0.11.0)
 
