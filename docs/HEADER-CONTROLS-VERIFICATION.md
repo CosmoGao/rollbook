@@ -2,7 +2,7 @@
 
 本次仅改 `web/src/style.css` 中的 HEADER 桌面搜索、窄屏搜索和主题控件。沿用现有 `control-border`、`control-border-hover`、`focus`、`radius-control` token；搜索和主题的 DOM、快捷键、提交与持久化逻辑未改。通用输入与全站焦点规则保持原样。
 
-本记录与截图来自已合并的 HEADER 修复 PR #67，并作为计划中 `v0.11.0` 的控件证据。后续 PR #68 增加认证设置导航及其样式，未修改这些 HEADER 控件的选择器与样式规则；正式 tag 尚待发布流程生成。截图使用模拟空库与演示会话，不包含真实账号或密钥。
+本记录始于已合并的 HEADER 修复 PR #67。正式 [v0.11.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.11.0) 的 tag 指向 `6600811f2468a31565ca6dc6886e8168ce163f11`；在该 tag 对应源码构建后，使用下方浏览器用例重新生成本目录中无 `before-` 前缀的截图。它们与 #67 提交的对应截图逐字节一致，说明 #68 的认证设置导航及样式未改变这里展示的 HEADER 外观。带 `before-` 前缀的两张仅是修复前对照，不代表正式版界面。截图使用模拟空库与演示会话，不包含真实账号或密钥。
 
 ## 浏览器证据
 
@@ -23,6 +23,7 @@
 ```sh
 npm run typecheck --prefix web
 npm run build --prefix web
+docker run --rm -u 1000:1000 -e ROLLBOOK_SCREENSHOT_DIR=docs/header-controls-screenshots -v "$PWD":/work -w /work mcr.microsoft.com/playwright:v1.65.0-noble node --test web/header-controls.browser.test.cjs
 docker run --rm -u 1000:1000 -v "$PWD":/work -w /work/web mcr.microsoft.com/playwright:v1.65.0-noble node --test header-controls.browser.test.cjs search-control.browser.test.cjs
 docker run --rm -u 1000:1000 -v "$PWD":/work -w /work rollbook-playwright-go:latest sh -lc 'go test ./...'
 docker run --rm -u 1000:1000 -v "$PWD":/work -w /work rollbook-playwright-go:latest sh -lc 'go vet ./...'
