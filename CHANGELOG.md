@@ -4,9 +4,24 @@
 
 ## 未发布
 
+暂无条目。
+
+## [v0.11.0](https://github.com/CosmoGao/rollbook/releases/tag/v0.11.0)
+
+Release 链接将在文档 PR 通过、合并并推送正式 tag 后由发布工作流生成；目前尚未发布。本节依据 `v0.10.0..main` 的已合并 [#67](https://github.com/CosmoGao/rollbook/pull/67)、[#68](https://github.com/CosmoGao/rollbook/pull/68) 归档；[#66](https://github.com/CosmoGao/rollbook/pull/66) 仅补齐上一版 Release 链接。
+
 ### 改进
 
-- 系统认证设置改为六组导航，支持分组深链、独立保存反馈与未保存更改保护；同步更新中英文说明。
+- 系统认证设置改为本地登录、LDAP、OIDC、飞书、账号与绑定、认证审计六组导航，支持分组深链、独立保存反馈与未保存更改保护（[#68](https://github.com/CosmoGao/rollbook/pull/68)）。备份与个人设置仍在独立路径。
+
+### 修复
+
+- HEADER 的桌面 `form.top-search`、窄屏 `form.mobile-search` 和 `header.topbar label.theme-control` 由组合控件绘制单层边框与贴合边界的焦点反馈，内部输入、按钮和 select 不再绘制重复完整边框或偏移焦点环（[#67](https://github.com/CosmoGao/rollbook/pull/67)）。搜索快捷键、提交和主题持久化保持原有行为。
+
+### 升级注意事项
+
+- 相对 `v0.10.0` 无新增数据库迁移、无密钥方案变更。升级前仍须停服并保存完整 `/data` 文件级快照，包括 SQLite 数据库及 `-wal`、`-shm`；独立使用 `/backups` 时也保存该卷。保留原环境变量、`ROLLBOOK_AUTH_PEPPER` 或其 `_FILE` 文件、身份源环境变量或 `_FILE` 文件及认证配置加密所需密钥材料，并在隔离环境验证快照可恢复。完整 YAML 不能代替快照，也不含页面身份源凭据。
+- 回退须先停服，恢复升级前完整快照、当时配置及密钥，再启动 `v0.10.0` 正式镜像；不能只换旧镜像读取升级后的数据。页面密文只能用原 pepper 解密；若丢失或更换，须先在本机运行 `rollbook auth local-login enable` 保留恢复通道，再重新填写页面凭据。真实 LDAP、OIDC、飞书 IdP 尚未联调；没有新增全站 RBAC 或群组映射。
 
 ## [v0.10.0](https://github.com/CosmoGao/rollbook/releases/tag/v0.10.0)
 
