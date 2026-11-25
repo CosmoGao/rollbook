@@ -6,9 +6,9 @@
 
 暂无新条目。
 
-## v0.12.0（待发布）
+## [v0.12.0](https://github.com/CosmoGao/rollbook/releases/tag/v0.12.0)
 
-目标版本依据 `v0.11.0..main` 的 [#70](https://github.com/CosmoGao/rollbook/pull/70) 与 [#71](https://github.com/CosmoGao/rollbook/pull/71) 归档。#70 仅补齐 `v0.11.0` 的文档状态和截图证据，不是本版功能；#71 是本版用户可见修复。正式 tag、Release、镜像与 CLI 尚未创建，发布后再核对实际链接、提交及产物；合入代码也不会自动升级现有实例。
+本版已正式发布：[v0.12.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.12.0)；tag 指向 `47f96d343eb91c06c6ceb23122de7a1bd058a3af`。本节依据 `v0.11.0..v0.12.0` 的 [#70](https://github.com/CosmoGao/rollbook/pull/70)、[#71](https://github.com/CosmoGao/rollbook/pull/71)、[#72](https://github.com/CosmoGao/rollbook/pull/72) 与正式 Release 归档。#70 仅补齐上一版文档和截图证据，#72 为本版发布文档，均不是新功能；#71 是本版用户可见修复。已核验正式镜像 `ghcr.io/cosmogao/rollbook:v0.12.0`（index `sha256:ccb1ead248f7d00d365473a581eab8eeb4d01a6407ba11c25dca041415077f49`）及 Release 的六平台 CLI、`install.sh` 和校验清单。正式发布不会自动升级现有实例。本段发版后文档补正属于后续 `main`，不在不可变的 `v0.12.0` tag 内。
 
 ### 修复
 
