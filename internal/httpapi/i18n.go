@@ -85,6 +85,7 @@ func requestLanguage(r *http.Request) string {
 }
 
 var errorMessages = map[string][2]string{
+	"email_invalid": {"邮箱格式无效", "Invalid email address"}, "email_taken": {"邮箱已被使用", "Email already in use"}, "binding_conflict": {"飞书绑定冲突", "Feishu binding conflict"}, "binding_disabled": {"此飞书绑定已禁用", "This Feishu binding is disabled"}, "email_unmatched": {"邮箱未匹配，请先用本地账号登录并绑定飞书", "No matching email. Sign in locally and bind Feishu"},
 	"validation": {"校验失败", "Validation failed"}, "unauthorized": {"请先登录", "Authentication required"},
 	"forbidden": {"权限不足", "Permission denied"}, "conflict": {"数据冲突，请刷新后重试", "Conflict; refresh and retry"},
 	"invalid": {"输入无效", "Invalid input"}, "not_found": {"未找到", "Not found"},
@@ -92,6 +93,7 @@ var errorMessages = map[string][2]string{
 	"internal":               {"服务器内部错误", "Internal error"}, "method_not_allowed": {"不支持此请求方法", "Method not allowed"},
 }
 var reasonMessages = map[string]string{
+	"邮箱格式无效": "Invalid email address", "邮箱已被使用": "Email already in use",
 	"IP 地址已被主机占用": "IP address is already assigned to a host",
 	"名称必填":        "Name is required", "未知对象类型": "Unknown object type", "ID 缺失或类型前缀不符": "ID is missing or has the wrong type prefix",
 	"必填字段缺失": "Required field is missing", "关联对象不存在": "Referenced object does not exist",

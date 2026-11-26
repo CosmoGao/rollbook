@@ -203,6 +203,16 @@ func Error(err error) (int, APIError) {
 		return 422, APIError{Code: "validation", Message: "Validation failed", Fields: validation.Fields}
 	}
 	switch {
+	case errors.Is(err, auth.ErrEmailInvalid):
+		return 422, APIError{Code: "email_invalid", Message: "邮箱格式无效", Fields: []catalog.FieldError{{Field: "email", Reason: "邮箱格式无效"}}}
+	case errors.Is(err, auth.ErrEmailTaken):
+		return 409, APIError{Code: "email_taken", Message: "邮箱已被使用", Fields: []catalog.FieldError{{Field: "email", Reason: "邮箱已被使用"}}}
+	case errors.Is(err, auth.ErrBindingConflict):
+		return 409, APIError{Code: "binding_conflict", Message: "飞书身份已绑定其他账号或当前账号已有其他飞书身份"}
+	case errors.Is(err, auth.ErrBindingDisabled):
+		return 403, APIError{Code: "binding_disabled", Message: "此飞书绑定已禁用"}
+	case errors.Is(err, auth.ErrEmailUnmatched):
+		return 401, APIError{Code: "email_unmatched", Message: "邮箱未匹配，请先用本地账号登录并绑定飞书"}
 	case errors.Is(err, auth.ErrUnauthorized):
 		return 401, APIError{Code: "unauthorized", Message: "Authentication required"}
 	case errors.Is(err, auth.ErrForbidden):

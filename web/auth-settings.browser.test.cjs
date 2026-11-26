@@ -38,7 +38,7 @@ test('认证设置：浅深主题、320/1280、键盘、只写凭据和失败反
    assert.equal(new URL(page.url()).pathname,'/settings/auth');
    await page.getByRole('heading',{name:'认证设置'}).waitFor();
    await page.getByRole('button',{name:'账号与绑定'}).click();await page.getByText('暂无绑定。').waitFor();
-   const users=page.locator('.auth-settings table').first();assert.deepEqual(await users.locator('thead th').allTextContents(),['账号','状态','本地口令','操作']);assert.deepEqual(await users.locator('tbody tr').first().locator('td').nth(2).allTextContents(),['无']);
+   const users=page.locator('.auth-settings table').first();assert.deepEqual(await users.locator('thead th').allTextContents(),['账号','邮箱','状态','本地口令','操作']);assert.deepEqual(await users.locator('tbody tr').first().locator('td').nth(3).allTextContents(),['无']);
    const scroll=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);assert.equal(scroll,0);
    const out=process.env.AUTH_SETTINGS_SCREENSHOTS;if(out){fs.mkdirSync(out,{recursive:true});await page.screenshot({path:path.join(out,`auth-${theme}-${width}.png`),fullPage:true})}
   }
@@ -86,10 +86,10 @@ test('认证设置：浅深主题、320/1280、键盘、只写凭据和失败反
   await page.reload();
   await page.getByRole('heading',{name:'Accounts and bindings'}).waitFor();
   const accountRows=page.locator('.auth-settings table').first().locator('tbody tr');
-  assert.equal(await accountRows.first().locator('td').nth(1).innerText(),'Disabled');
-  assert.equal(await accountRows.first().getByRole('button').innerText(),'Enable');
-  assert.equal(await accountRows.nth(1).locator('td').nth(1).innerText(),'Enabled');
-  assert.equal(await accountRows.nth(1).getByRole('button').innerText(),'Disable');
+  assert.equal(await accountRows.first().locator('td').nth(2).innerText(),'Disabled');
+  assert.equal(await accountRows.first().getByRole('button').last().innerText(),'Enable');
+  assert.equal(await accountRows.nth(1).locator('td').nth(2).innerText(),'Enabled');
+  assert.equal(await accountRows.nth(1).getByRole('button').last().innerText(),'Disable');
   await page.getByRole('button',{name:'Authentication audit'}).click();
   assert.equal(await page.locator('.auth-panel .controls span').innerText(),'Page 1');
   await page.getByRole('button',{name:'LDAP / LDAPS'}).click();

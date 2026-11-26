@@ -57,6 +57,7 @@ func random() (string, error) {
 	}
 	return base64.RawURLEncoding.EncodeToString(b), nil
 }
+func (s Service) SessionHash(value string) []byte { return s.digest("session", value) }
 func (s Service) digest(domain, value string) []byte {
 	h := hmac.New(sha256.New, s.Pepper)
 	h.Write([]byte(domain))

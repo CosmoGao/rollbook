@@ -196,6 +196,37 @@ func (e Engine) admin(w http.ResponseWriter, r *http.Request, p auth.Principal) 
 		}
 		WriteJSON(w, 200, map[string]any{"login": p.Login, "identity_type": kind, "can_change_password": canChange, "auth_provider": p.Provider})
 		return
+	case path == "/api/auth/profile" && r.Method == http.MethodGet:
+		e = e.withProviders()
+		email, err := e.Auth.UserEmail(r.Context(), p.UserID)
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+		bound := false
+		if e.Providers.Enabled("feishu") {
+			bound, err = e.Auth.FeishuBinding(r.Context(), p.UserID, e.Providers.Feishu.ClientID)
+			if err != nil {
+				WriteError(w, err)
+				return
+			}
+		}
+		WriteJSON(w, 200, map[string]any{"email": email, "feishu_enabled": e.Providers.Enabled("feishu"), "feishu_bound": bound, "local_session": p.Provider == "local"})
+		return
+	case path == "/api/auth/profile" && r.Method == http.MethodPut:
+		var input struct {
+			Email string `json:"email"`
+		}
+		if err := decodeBody(w, r, &input); err != nil {
+			WriteError(w, err)
+			return
+		}
+		if err := e.Auth.SetEmail(r.Context(), p.UserID, input.Email); err != nil {
+			WriteError(w, err)
+			return
+		}
+		WriteJSON(w, 200, map[string]bool{"saved": true})
+		return
 	case path == "/api/auth/change-password" && r.Method == http.MethodPost:
 		var input struct {
 			OldPassword string `json:"old_password"`

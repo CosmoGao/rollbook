@@ -1,5 +1,14 @@
 # 外部身份登录
 
+## 开发中：飞书邮箱绑定与个人授权
+
+当前研发版本在个人设置提供邮箱读写和「绑定飞书」。绑定仅允许当前有效的本地会话发起，state、同站 cookie、五分钟有效期、用途、身份源配置版本和原会话摘要在回调中核验，state 消费一次；绑定成功保持原会话，不签发其他用户会话。已归属其他用户、禁用绑定或当前用户已有其他飞书主体时拒绝。管理员手动绑定功能仍在，但它会撤销相关会话。账号列表也能设置邮箱；邮箱可空，非空时规范化并全局唯一，格式或冲突返回 `email` 字段错误。旧版完整 YAML 中没有邮箱时导入按空值处理。
+
+飞书登录先查 `(provider, instance, open_id)` 的现有绑定。允许且用户启用时保持登录能力，但若同时返回邮箱且唯一匹配另一用户则拒绝冲突；禁用绑定不能通过邮箱绕过。无绑定时，只有 `data.email` 唯一匹配启用的已有用户才创建绑定并登录。缺失、不匹配或无法唯一对应时不开户、不发会话，应先本地登录再点绑定。只使用邮箱，不使用姓名。飞书应用需启用并发布 `auth:user.id:read` 与 `contact:user.email:readonly`，授权 URL 请求这两个 scope；后者允许读取用户邮箱，接口只读取 `data.email`（不使用 `enterprise_email`）。若飞书权限未生效或邮箱缺失，则按无匹配处理。参阅飞书[权限列表](https://open.larkoffice.com/document/ukTMukTMukTM/uYTM5UjL2ETO14iNxkTN/scope-list)与[用户信息接口](https://open.feishu.cn/document/server-docs/authentication-management/login-state-management/get)。公开 HTTPS 回调须与应用登记完全一致，包含非标准端口（如 `:5443`）；登录与绑定共用该回调。
+
+本次仅开发及独立验收，不发版、不部署、不变更现网应用权限或登录策略。迁移 `018_feishu_email.sql` 只能向前。升级前停服，保存完整 `/data`（SQLite 数据库、`-wal`、`-shm`）和独立 `/backups` 文件级快照，保留原环境、pepper 或其 `_FILE`、身份源与认证加密材料；在隔离环境验证恢复。完整 YAML 不能代替快照。回退先停服、恢复升级前完整快照及当时配置密钥，再启动上一正式镜像；不能只换镜像。
+
+
 ## v0.13.0 已发布修复
 
 飞书设置页 `/settings/auth?section=feishu` 显示的带端口 HTTPS 回调现在可保存。App ID、凭据动作及回调校验失败分别返回中英文字段级 `422 validation`（`client_id`、`secret_action`、`redirect_url`）；密文解密失败仍为 `409 credential_unavailable`。公开 origin 使用直连 Host/TLS 或可信直接代理的单值转发头；伪造、冲突、多值与逗号链拒绝。未启用时登录页没有飞书入口。LDAP/OIDC 的 HTTPS、固定回调、显式绑定和安全失败约束保持不变。代理配置见[公开地址与校验](public-auth-origin.md)；详见[本版发布记录](release-notes-v0.13.0.md)与[正式 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.13.0)。
