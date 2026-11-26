@@ -6,6 +6,25 @@
 
 暂无新条目。
 
+## v0.14.0（待发布）
+
+本节归档 `v0.13.0..main` 的 [#76](https://github.com/CosmoGao/rollbook/pull/76)、[#77](https://github.com/CosmoGao/rollbook/pull/77)、[#78](https://github.com/CosmoGao/rollbook/pull/78)。`v0.14.0` 的 tag、Release 与正式产物尚未创建；合入发布文档 PR 后仍须独立验收、打 tag 和核验产物，发版不等于部署。详见[发布草稿](docs/release-notes-v0.14.0.md)。
+
+### 新增
+
+- 个人设置可登记本地账号邮箱并发起飞书授权绑定；认证设置的账号列表可编辑邮箱。飞书登录在尚无主体绑定时，仅可用飞书返回的邮箱唯一匹配已启用的现有用户并原子绑定；缺失、无匹配或不唯一时不自动开户、不发会话，可先本地登录再绑定。已有允许的稳定主体绑定优先；邮箱指向其他用户、主体已归属他人、禁用绑定或停用用户均拒绝静默重绑或绕过（[#77](https://github.com/CosmoGao/rollbook/pull/77)）。
+
+### 修复与验证
+
+- HEADER 桌面和窄屏搜索、主题控件的强制颜色焦点验收稳定：保留 `forcedColors: active` 下外层 `outlineStyle=solid`、`outlineOffset=0px` 的断言（[#78](https://github.com/CosmoGao/rollbook/pull/78)）。
+- [#76](https://github.com/CosmoGao/rollbook/pull/76) 仅补齐上一正式版 `v0.13.0` 的发版后文档与 Release 链接，不是本版新功能。
+
+### 升级注意事项
+
+- 相对 `v0.13.0`，前向迁移 `018_feishu_email.sql` 为 `users` 添加 `email`，建立非空邮箱的规范化唯一索引，并为 `auth_pending` 添加 `purpose`、`user_id`、`session_hash`。飞书绑定与登录用 `state` 和 `purpose` 隔离。邮箱自动匹配依赖飞书应用已启用并发布 `contact:user.email:readonly` 权限；缺权限或上游不返回 `data.email` 时无唯一匹配，不发会话，可本地登录后使用绑定按钮。这不是正式发版阻塞条件。未引入新的 pepper 或密钥方案；认证后端与页面绑定流程已有变化。
+- 升级前停服，保存包含 SQLite 数据库及 `-wal`、`-shm` 的完整 `/data` 文件级快照，另存独立使用的 `/backups` 卷；保留原环境配置、`ROLLBOOK_AUTH_PEPPER` 或 `_FILE`、身份源环境变量或 `_FILE` 以及认证配置加密所需密钥材料，并在隔离环境验证恢复。完整 YAML 不能代替文件级快照，也不含页面身份源凭据。
+- 回退时先停服，恢复升级前完整快照及当时的配置与密钥，再启动上一正式镜像 `ghcr.io/cosmogao/rollbook:v0.13.0@sha256:9946132f927915687972e257b27bca8e74505d526427e0aa5cc3003f5be18e5c`；不能只切换镜像读取迁移后的数据库。原 pepper 丢失或更换会导致页面凭据无法解密，须先在本机运行 `rollbook auth local-login enable` 保留恢复入口，再重新填写凭据。保持现网登录策略，不因本次发版开关身份源。
+
 ## [v0.13.0](https://github.com/CosmoGao/rollbook/releases/tag/v0.13.0)
 
 本版已正式发布：[v0.13.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.13.0)；tag 解引用提交为 `8b478b4c8ab4199baf68ffc33411e3cdac23c92f`。正式镜像 `ghcr.io/cosmogao/rollbook:v0.13.0` 的多架构 index 为 `sha256:9946132f927915687972e257b27bca8e74505d526427e0aa5cc3003f5be18e5c`；六平台 CLI、`install.sh` 和 `SHA256SUMS` 已核验。本节依据 `v0.12.0..v0.13.0` 的 [#73](https://github.com/CosmoGao/rollbook/pull/73)、[#74](https://github.com/CosmoGao/rollbook/pull/74) 与发布文档 [#75](https://github.com/CosmoGao/rollbook/pull/75) 归档；#73 仅补齐上一版文档与链接，#74 才是本版用户可见修复。本段发版后事实补正只进入后续 `main`，不在不可变的 `v0.13.0` tag 内。正式发布不等于现有实例已部署。
