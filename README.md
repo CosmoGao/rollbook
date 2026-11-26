@@ -2,6 +2,16 @@
 
 Rollbook 是面向家庭与小企业的自建服务和资产清册。请只在可信内网运行。英文说明见 [README.en.md](README.en.md)，版本变化见 [CHANGELOG.md](CHANGELOG.md)，发版检查见 [docs/releasing.md](docs/releasing.md)。
 
+## v0.13.0 飞书设置校验与公开回调修复（待发布）
+
+本版尚无正式 tag、Release 或镜像，不能用于生产升级；目前可核验的正式版仍是 `v0.12.0`。发布文档草稿见 [v0.13.0 说明](docs/release-notes-v0.13.0.md)。合入 `main` 不等于正式发布或部署。
+
+系统「设置 → 认证设置 → 飞书」（`/settings/auth?section=feishu`）显示的非 443 HTTPS 公开回调现在可以保存。飞书 App ID 缺失、凭据动作无效或缺少新凭据、回调地址与公开入口不符时，服务端返回中英文字段级 `422 validation`（`client_id`、`secret_action`、`redirect_url`）。公开 origin 取自直连 Host/TLS，或仅采信可信直接代理的单值转发头；伪造、冲突、多值转发头会被拒绝。未启用飞书时登录页不显示入口。代理配置和错误处理见[公开地址与校验](docs/public-auth-origin.md)、[外部身份登录说明](docs/external-auth.md)。LDAP/OIDC 的 HTTPS、固定回调、显式绑定与安全失败约束保持不变。
+
+搜索快捷键、主题、认证凭据只写不读、防锁死恢复路径、现有 Key 权限和已登录网页用户权限保持不变。真实 LDAP、OIDC、飞书 IdP 尚未联调；没有新增全站 RBAC 或群组映射。本地登录开关和生产身份源配置保持不变，不要为本次升级启用外部身份源。
+
+相对 `v0.12.0` 无新增数据库迁移、无密钥方案变更；HTTP API 公开 origin 与设置校验确有变化。升级前停服并保存完整 `/data` 文件级快照（含 SQLite 数据库、`-wal`、`-shm`）及独立使用的 `/backups` 卷；保留原环境变量、`ROLLBOOK_AUTH_PEPPER` 或其 `_FILE` 文件、身份源环境变量或 `_FILE` 文件及认证配置加密所需密钥材料，在隔离环境验证恢复。完整 YAML 不能代替快照或恢复页面凭据。回退先停服，恢复升级前完整快照、原配置和密钥，再运行 `v0.12.0` 正式镜像；不能只换旧镜像读取升级后的数据。原 pepper 丢失或更换时，先在本机运行 `rollbook auth local-login enable` 保留本地恢复入口，再重新填写页面凭据。详见[升级和回退](#升级和回退)中的停服与快照示例；该节的 `v0.12.0` 升级步骤是上一版历史记录。
+
 ## v0.12.0 全站文本控件焦点修复
 
 本版已正式发布：[v0.12.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.12.0)。tag 指向 `47f96d343eb91c06c6ceb23122de7a1bd058a3af`；正式镜像 `ghcr.io/cosmogao/rollbook:v0.12.0` 和六平台 CLI、`install.sh` 已核验。此处发版后文档补正只进入后续 `main`，不在已发布的 tag 内。正式发布不等于生产部署，现有实例不会自动更新；升级前仍须按下文核对产物并备份。
@@ -206,6 +216,8 @@ sudo chown -R 10001:10001 /srv/rollbook/data /srv/rollbook/backups
 然后在 `compose.yaml` 将相应卷映射改为 `/srv/rollbook/data:/data` 和 `/srv/rollbook/backups:/backups`。密钥文件保持仅部署管理员可读；初始化后的密钥卷在服务中只读挂载。备份卷应定期复制到其他安全位置。
 
 ### 升级和回退
+
+`v0.13.0` 尚待发布，不能升级。正式产物核验后，从 `v0.12.0` 升级或回退须按上方 `v0.13.0` 章节保存升级前的完整 `/data`、独立 `/backups`、原配置与密钥材料，并在隔离环境验证恢复。下方命令只演示停服与文件级快照；其中旧版的 `ROLLBOOK_VERSION=v0.12.0` 是历史升级步骤，不是本次目标版本。
 
 从 `v0.11.0` 升级到已发布的 `v0.12.0` 前，先保存 `.env`、原 `ROLLBOOK_AUTH_PEPPER` 或 `ROLLBOOK_AUTH_PEPPER_FILE` 文件、身份源环境变量或其 `_FILE` 文件，以及认证配置加密所需密钥材料。先停服务，再复制完整 `/data` 数据卷；SQLite 数据库及 `-wal`、`-shm` 文件须一起保存，独立使用 `/backups` 时也保存该卷。完整 YAML 含账号及 Key 哈希，应作为敏感数据保护，但它不含页面身份源凭据，不能代替文件级快照。Compose 示例（目录须自行妥善保护）：
 
