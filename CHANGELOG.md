@@ -6,6 +6,20 @@
 
 暂无新条目。
 
+## v0.13.0（待发布）
+
+版本号按 [发版检查](docs/releasing.md) 及现有次版本归档方式选择。正式 tag、Release 和产物尚未创建；本节以 `v0.12.0..main` 的 [#73](https://github.com/CosmoGao/rollbook/pull/73)、[#74](https://github.com/CosmoGao/rollbook/pull/74) 为依据，其中 #73 仅补齐上一版文档与 Release 链接。发布后再补真实 Release 链接；合入 `main` 不等于发布或部署。
+
+### 修复
+
+- 飞书认证设置保存时，缺少 App ID、凭据动作无效或缺少新凭据、回调地址不符，返回中英文可定位的字段级 `422 validation`（`client_id`、`secret_action`、`redirect_url`）；凭据仍不回显。设置页展示的非 443 HTTPS 公开回调可保存（[#74](https://github.com/CosmoGao/rollbook/pull/74)）。
+- HTTP API 公开 origin 使用直连 `Host`/TLS，或仅采信可信直接代理的单值转发头；伪造、冲突、多值或逗号链拒绝。LDAP/OIDC 同类安全约束保持。飞书未启用时登录页无飞书入口。详见[公开地址与校验](docs/public-auth-origin.md)。
+
+### 升级注意事项
+
+- 相对 `v0.12.0` 无新增数据库迁移、无密钥方案变更；本轮确有 HTTP API 公开 origin 与设置校验变化。真实 LDAP、OIDC、飞书 IdP 尚未联调，没有新增全站 RBAC 或群组映射。本地登录开关和生产身份源配置保持不变。
+- 升级前停服，保存完整 `/data` 文件级快照（包括 SQLite 数据库、`-wal`、`-shm`）及独立使用的 `/backups` 卷，保留原环境变量、`ROLLBOOK_AUTH_PEPPER` 或其 `_FILE`、身份源环境变量或 `_FILE` 与认证配置加密密钥材料；在隔离环境验证恢复。完整 YAML 不能代替快照或恢复页面凭据。回退先停服，恢复升级前完整快照、原配置和密钥，再运行 `v0.12.0` 正式镜像；不能只换旧镜像读取升级后数据。丢失或更换 pepper 时，先在本机运行 `rollbook auth local-login enable` 保留恢复入口，再重新填写页面凭据。
+
 ## [v0.12.0](https://github.com/CosmoGao/rollbook/releases/tag/v0.12.0)
 
 本版已正式发布：[v0.12.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.12.0)；tag 指向 `47f96d343eb91c06c6ceb23122de7a1bd058a3af`。本节依据 `v0.11.0..v0.12.0` 的 [#70](https://github.com/CosmoGao/rollbook/pull/70)、[#71](https://github.com/CosmoGao/rollbook/pull/71)、[#72](https://github.com/CosmoGao/rollbook/pull/72) 与正式 Release 归档。#70 仅补齐上一版文档和截图证据，#72 为本版发布文档，均不是新功能；#71 是本版用户可见修复。已核验正式镜像 `ghcr.io/cosmogao/rollbook:v0.12.0`（index `sha256:ccb1ead248f7d00d365473a581eab8eeb4d01a6407ba11c25dca041415077f49`）及 Release 的六平台 CLI、`install.sh` 和校验清单。正式发布不会自动升级现有实例。本段发版后文档补正属于后续 `main`，不在不可变的 `v0.12.0` tag 内。

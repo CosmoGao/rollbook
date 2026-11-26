@@ -1,6 +1,12 @@
-# 外部身份登录（v0.11.0）
+# 外部身份登录
 
-本节对应已正式发布的 [v0.11.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.11.0)。发布不会自动升级现有实例。
+## v0.13.0 待发布修复
+
+飞书设置页 `/settings/auth?section=feishu` 显示的带端口 HTTPS 回调现在可保存。App ID、凭据动作及回调校验失败分别返回中英文字段级 `422 validation`（`client_id`、`secret_action`、`redirect_url`）；密文解密失败仍为 `409 credential_unavailable`。公开 origin 使用直连 Host/TLS 或可信直接代理的单值转发头；伪造、冲突、多值与逗号链拒绝。未启用时登录页没有飞书入口。LDAP/OIDC 的 HTTPS、固定回调、显式绑定和安全失败约束保持不变。代理配置见[公开地址与校验](public-auth-origin.md)，[本版 Release 草稿](release-notes-v0.13.0.md) 尚不代表已发布。
+
+相对 `v0.12.0` 无新增数据库迁移或密钥方案变更，但 HTTP API 公开 origin 与设置校验已修复。真实 LDAP、OIDC、飞书 IdP 尚未联调；无新增全站 RBAC 或群组映射。升级时保持本地登录开关与生产身份源配置不变；先停服并保存含 SQLite `-wal`、`-shm` 的完整 `/data` 快照、独立 `/backups` 卷和原环境、pepper 或 `_FILE`、身份源及加密密钥材料，在隔离环境验证恢复。完整 YAML 不能代替快照或恢复页面凭据。回退先停服，恢复升级前完整快照、原配置及密钥，再运行 `v0.12.0` 正式镜像，不能让旧镜像直接读取升级后的数据。pepper 丢失或更换时先在本机运行 `rollbook auth local-login enable`，再重新填写页面凭据。
+
+以下既有操作说明对应已正式发布的 [v0.11.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.11.0)。发布不会自动升级现有实例。
 
 已发布的 [v0.12.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.12.0) 中，全站文本控件焦点修复仅改变界面描边；正式产物已核验，发布不等于生产部署，当前登录策略和身份源配置保持不变。相对 `v0.11.0` 无新增数据库迁移、无密钥方案变更。升级前停服并保存完整 `/data` 文件级快照（含 SQLite `-wal`、`-shm`），独立使用 `/backups` 时也保存该卷；保留原环境、pepper 或其 `_FILE`、身份源配置与密钥，并在隔离环境验证恢复。回退先停服、恢复完整快照与原配置，再运行 `v0.11.0` 正式镜像；不能只切换镜像。完整 YAML 不能代替快照或恢复页面身份源凭据。详见 [升级和回退](../README.md#升级和回退)。
 
