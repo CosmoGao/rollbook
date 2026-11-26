@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -153,6 +154,7 @@ func TestProviderSettingsBrowserBoundaryAndHotConfig(t *testing.T) {
 		r := httptest.NewRequest(method, path, strings.NewReader(body))
 		r.Host = "rollbook.example"
 		r.Header.Set("Origin", "https://rollbook.example")
+		r.TLS = &tls.ConnectionState{}
 		if csrf != "" {
 			r.Header.Set("X-CSRF-Token", csrf)
 		}
@@ -221,6 +223,31 @@ func TestProviderSettingsBrowserBoundaryAndHotConfig(t *testing.T) {
 		t.Fatal("password hash exposed")
 	}
 	secret := "SENSITIVE-FAKE-SECRET-123"
+	for _, tc := range []struct{ body, field, reason, english string }{
+		{`{"enabled":true,"config":{"redirect_url":"https://rollbook.example/api/auth/feishu/callback"},"secret_action":"replace","secret":"fake"}`, "client_id", "App ID 必填", "App ID is required"},
+		{`{"enabled":true,"config":{"client_id":"app","redirect_url":"https://rollbook.example/api/auth/feishu/callback"},"secret_action":"keep"}`, "secret_action", "启用前须覆盖凭据", "Replace the credential before enabling"},
+		{`{"enabled":true,"config":{"client_id":"app","redirect_url":"https://rollbook.example/api/auth/feishu/callback"},"secret_action":"bad"}`, "secret_action", "凭据动作无效", "Invalid credential action"},
+		{`{"enabled":true,"config":{"client_id":"app","redirect_url":"https://other.example/api/auth/feishu/callback"},"secret_action":"replace","secret":"fake"}`, "redirect_url", "回调地址与公开入口不符", "Callback URL differs from the public origin"},
+	} {
+		w := call("PUT", "/api/auth/settings/feishu", tc.body, csrf, "", cookies)
+		if w.Code != 422 || !strings.Contains(w.Body.String(), `"field":"`+tc.field+`"`) || !strings.Contains(w.Body.String(), tc.reason) {
+			t.Fatal("Chinese field error missing")
+		}
+		enReq := httptest.NewRequest("PUT", "/api/auth/settings/feishu", strings.NewReader(tc.body))
+		enReq.Host = "rollbook.example"
+		enReq.TLS = &tls.ConnectionState{}
+		enReq.Header.Set("Origin", "https://rollbook.example")
+		enReq.Header.Set("X-Rollbook-Language", "en")
+		enReq.Header.Set("X-CSRF-Token", csrf)
+		for _, c := range cookies {
+			enReq.AddCookie(c)
+		}
+		enRes := httptest.NewRecorder()
+		h.ServeHTTP(enRes, enReq)
+		if enRes.Code != 422 || !strings.Contains(enRes.Body.String(), `"field":"`+tc.field+`"`) || !strings.Contains(enRes.Body.String(), tc.english) || strings.Contains(enRes.Body.String(), "输入无效") {
+			t.Fatal("English field error missing")
+		}
+	}
 	body := `{"enabled":true,"config":{"client_id":"app","redirect_url":"https://rollbook.example/api/auth/feishu/callback"},"secret_action":"replace","secret":"` + secret + `"}`
 	if w := call("PUT", "/api/auth/settings/feishu", body, csrf, "", cookies); w.Code != 200 || strings.Contains(w.Body.String(), secret) {
 		t.Fatal(w.Code, w.Body.String())

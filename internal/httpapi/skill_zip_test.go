@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -34,6 +35,7 @@ func TestSkillZipSessionBoundaryAndContents(t *testing.T) {
 		r := httptest.NewRequest(method, path, nil)
 		r.Host = "rollbook.test"
 		r.Header.Set("Origin", "https://rollbook.test")
+		r.TLS = &tls.ConnectionState{}
 		if bearer != "" {
 			r.Header.Set("Authorization", "Bearer "+bearer)
 		}
@@ -53,6 +55,7 @@ func TestSkillZipSessionBoundaryAndContents(t *testing.T) {
 	login := httptest.NewRequest("POST", "/api/auth/login", strings.NewReader(`{"login":"owner","password":"strong password 12345"}`))
 	login.Host = "rollbook.test"
 	login.Header.Set("Origin", "https://rollbook.test")
+	login.TLS = &tls.ConnectionState{}
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, login)
 	if w.Code != 200 {
@@ -65,6 +68,7 @@ func TestSkillZipSessionBoundaryAndContents(t *testing.T) {
 	created := httptest.NewRequest("POST", "/api/keys", strings.NewReader(`{"name":"agent","level":"read"}`))
 	created.Host = "rollbook.test"
 	created.Header.Set("Origin", "https://rollbook.test")
+	created.TLS = &tls.ConnectionState{}
 	for _, c := range cookies {
 		created.AddCookie(c)
 		if c.Name == "rollbook_csrf" {

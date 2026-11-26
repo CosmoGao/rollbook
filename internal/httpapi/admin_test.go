@@ -2,6 +2,7 @@ package httpapi_test
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -33,6 +34,7 @@ func TestBrowserAdminAndKeyBoundary(t *testing.T) {
 		r := httptest.NewRequest(method, path, strings.NewReader(body))
 		r.Host = "rollbook.test"
 		r.Header.Set("Origin", "https://rollbook.test")
+		r.TLS = &tls.ConnectionState{}
 		if csrf != "" {
 			r.Header.Set("X-CSRF-Token", csrf)
 		}

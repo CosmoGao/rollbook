@@ -88,7 +88,8 @@ var errorMessages = map[string][2]string{
 	"validation": {"校验失败", "Validation failed"}, "unauthorized": {"请先登录", "Authentication required"},
 	"forbidden": {"权限不足", "Permission denied"}, "conflict": {"数据冲突，请刷新后重试", "Conflict; refresh and retry"},
 	"invalid": {"输入无效", "Invalid input"}, "not_found": {"未找到", "Not found"},
-	"internal": {"服务器内部错误", "Internal error"}, "method_not_allowed": {"不支持此请求方法", "Method not allowed"},
+	"public_origin_mismatch": {"公开地址与请求来源不符；请检查可信代理转发的 Host、Proto 和 Port", "Public origin differs from the request origin; check trusted proxy Host, Proto, and Port headers"},
+	"internal":               {"服务器内部错误", "Internal error"}, "method_not_allowed": {"不支持此请求方法", "Method not allowed"},
 }
 var reasonMessages = map[string]string{
 	"IP 地址已被主机占用": "IP address is already assigned to a host",
@@ -102,6 +103,7 @@ var reasonMessages = map[string]string{
 	"密码至少 8 个字符": "Password must have at least 8 characters", "密码不能超过 72 字节": "Password must not exceed 72 bytes",
 	"密码须包含大写、小写、数字、符号中的至少三类": "Password must use at least three of uppercase, lowercase, digits and symbols",
 	"密码不能包含用户名":              "Password must not contain the username", "密码过于常见": "Password is too common",
+	"凭据动作无效": "Invalid credential action", "配置字段无效": "Invalid configuration field", "覆盖凭据时须填写新凭据": "A replacement credential is required", "App ID 必填": "App ID is required", "启用前须覆盖凭据": "Replace the credential before enabling", "回调地址无效": "Invalid callback URL", "回调地址与公开入口不符；检查可信代理 Host、Proto 和 Port": "Callback URL differs from the public origin; check trusted proxy Host, Proto, and Port headers",
 }
 
 func passwordReason(reason auth.PasswordFailure) string {

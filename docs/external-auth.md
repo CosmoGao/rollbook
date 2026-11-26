@@ -14,6 +14,8 @@
 
 在认证设置页分别配置并启停 LDAP/LDAPS、通用 OIDC、飞书。LDAP 表单包含服务器 URL、实例名、Base DN、Bind DN、含 `{login}` 的搜索筛选器和稳定主体属性；Bind Password 在敏感凭据栏填写。OIDC 表单包含 Issuer、Client ID、固定回调 URL 与 Client Secret；飞书表单包含 App ID、固定回调 URL 与 App Secret。页面展示回调 URL，须在 IdP 后台登记完全相同的公开 HTTPS 地址；若服务在反向代理后，先确认浏览器访问的主机名正确。LDAP 使用受验证证书的 LDAPS 或 StartTLS，不提供跳过证书验证选项。
 
+公开 HTTPS 使用非 443 端口时，回调地址必须包含该端口。TLS 反代若将内层 `Host` 改为无端口的主机名，需将代理的直接地址设为可信代理，并覆盖客户端转发头，传入 `X-Forwarded-Proto: https` 与带公开端口的 `X-Forwarded-Host`，或另传 `X-Forwarded-Port`；否则设置页会显示浏览器与服务端公开地址差异，保存时拒绝。`Forwarded` 的单值 `host`/`proto` 也可用；冲突、多值或伪造的转发头不被接受。操作示例、错误码和兼容行为见[外部认证公开地址与校验](public-auth-origin.md)。
+
 页面仅显示敏感凭据「已配置／未配置」，支持明确选择保持、覆盖或清除；不会读回明文。服务端以现有 `ROLLBOOK_AUTH_PEPPER` 派生密钥加密后保存于 `auth_provider_settings`，凭据不以明文落库，也不进入完整 YAML 导出、定时 YAML 备份、前端 API 响应、日志或错误回显。应保护 pepper 与数据卷；更换 pepper 后原密文无法解密。
 
 身份源按源整体判定来源：任一对应环境变量或 `_FILE` 存在时，该源由启动环境接管，页面显示来源为「启动环境」且只读，之前保存的页面配置被遮蔽。移除环境变量后须重启服务才能切换来源；未被环境接管的页面配置保存及启停热生效，无需重启容器。页面「测试连通」只校验网络与参数，不进行用户登录，不写 `identity_bindings.verified_at`；必须用真实外部身份试登录并核对清册账号与权限，才能满足关闭本地入口的条件。认证审计当前只显示时间、操作、目标，不记录操作者或 IP。

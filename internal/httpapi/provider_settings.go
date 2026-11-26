@@ -276,6 +276,9 @@ func (p *ProviderRegistry) save(ctx context.Context, kind string, input provider
 		return auth.ErrInvalid
 	}
 	if input.SecretAction != "keep" && input.SecretAction != "replace" && input.SecretAction != "clear" {
+		if kind == "feishu" {
+			return providerField("secret_action", "凭据动作无效")
+		}
 		return auth.ErrInvalid
 	}
 	allowed := map[string]map[string]bool{
@@ -285,6 +288,9 @@ func (p *ProviderRegistry) save(ctx context.Context, kind string, input provider
 	}
 	for key, value := range input.Config {
 		if !allowed[kind][key] || len(value) > 2048 {
+			if kind == "feishu" {
+				return providerField("config", "配置字段无效")
+			}
 			return auth.ErrInvalid
 		}
 	}
@@ -309,6 +315,9 @@ func (p *ProviderRegistry) save(ctx context.Context, kind string, input provider
 	switch input.SecretAction {
 	case "replace":
 		if input.Secret == "" {
+			if kind == "feishu" {
+				return providerField("secret_action", "覆盖凭据时须填写新凭据")
+			}
 			return auth.ErrInvalid
 		}
 		secret, err = p.seal(kind, input.Secret)
@@ -320,12 +329,23 @@ func (p *ProviderRegistry) save(ctx context.Context, kind string, input provider
 	}
 	part := providerFromMap(kind, input.Config, "")
 	if input.Enabled {
+		if kind == "feishu" {
+			if strings.TrimSpace(input.Config["client_id"]) == "" {
+				return providerField("client_id", "App ID 必填")
+			}
+			if secret == "" {
+				return providerField("secret_action", "启用前须覆盖凭据")
+			}
+		}
 		clear, err := p.open(kind, secret)
 		if err != nil {
 			return errCredential
 		}
 		part = providerFromMap(kind, input.Config, clear)
 		if part.Validate() != nil || !part.Enabled(kind) {
+			if kind == "feishu" {
+				return providerField("redirect_url", "回调地址无效")
+			}
 			return auth.ErrInvalid
 		}
 	}
@@ -362,6 +382,10 @@ func (p *ProviderRegistry) save(ctx context.Context, kind string, input provider
 	return nil
 }
 
+func providerField(field, reason string) error {
+	return &catalog.ValidationError{Fields: []catalog.FieldError{{Field: field, Reason: reason}}}
+}
+
 type providerUpdate struct {
 	Enabled      bool              `json:"enabled"`
 	Config       map[string]string `json:"config"`
@@ -388,8 +412,8 @@ func ensureProviderPath(ctx context.Context, tx *sql.Tx, c ProviderConfig) error
 	return nil
 }
 func (e Engine) providerSettings(w http.ResponseWriter, r *http.Request) {
-	if !sameOrigin(r) {
-		WriteError(w, auth.ErrForbidden)
+	if !e.sameOrigin(r) {
+		WriteJSON(w, 403, APIError{Code: "public_origin_mismatch", Message: "公开地址与请求来源不符；请检查可信代理转发的 Host、Proto 和 Port"})
 		return
 	}
 	if _, err := e.Principal(r); err != nil {
@@ -418,7 +442,8 @@ func (e Engine) providerSettings(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, err)
 			return
 		}
-		WriteJSON(w, 200, map[string]any{"providers": items, "local_enabled": local})
+		origin, _ := e.publicOrigin(r)
+		WriteJSON(w, 200, map[string]any{"providers": items, "local_enabled": local, "public_origin": origin})
 	case (path == "/api/auth/settings/ldap" || path == "/api/auth/settings/oidc" || path == "/api/auth/settings/feishu") && r.Method == http.MethodPut:
 		kind := strings.TrimPrefix(path, "/api/auth/settings/")
 		var input providerUpdate
@@ -426,8 +451,13 @@ func (e Engine) providerSettings(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, err)
 			return
 		}
-		if kind != "ldap" && input.Config["redirect_url"] != "https://"+r.Host+"/api/auth/"+kind+"/callback" {
-			WriteError(w, auth.ErrInvalid)
+		origin, validOrigin := e.publicOrigin(r)
+		if kind != "ldap" && (!validOrigin || input.Config["redirect_url"] != origin+"/api/auth/"+kind+"/callback" || !strings.HasPrefix(origin, "https://")) {
+			if kind == "feishu" {
+				WriteError(w, providerField("redirect_url", "回调地址与公开入口不符；检查可信代理 Host、Proto 和 Port"))
+			} else {
+				WriteError(w, auth.ErrInvalid)
+			}
 			return
 		}
 		if len(input.Config) > 12 {

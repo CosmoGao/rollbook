@@ -52,6 +52,12 @@ func TestHTTPCookiesAndCSRF(t *testing.T) {
 				r := httptest.NewRequest(method, tc.url+path, strings.NewReader(body))
 				r.RemoteAddr = tc.remote
 				r.Header.Set("Origin", tc.url)
+				if tc.trusted && tc.secure && !strings.HasPrefix(tc.url, "https:") {
+					r.Header.Set("Origin", "https://rollbook.test")
+				}
+				if tc.name == "conflicting headers" || tc.name == "ambiguous chain" || tc.name == "invalid value" {
+					r.Header.Del("Origin")
+				}
 				if tc.xProto != "" {
 					r.Header.Set("X-Forwarded-Proto", tc.xProto)
 				}

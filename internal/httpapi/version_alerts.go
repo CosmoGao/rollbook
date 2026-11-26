@@ -21,7 +21,7 @@ func (e Engine) versionAlerts(w http.ResponseWriter, r *http.Request, p auth.Pri
 		}
 		WriteJSON(w, 200, settings)
 	case http.MethodPut:
-		if !sameOrigin(r) {
+		if !e.sameOrigin(r) {
 			WriteError(w, auth.ErrForbidden)
 			return
 		}

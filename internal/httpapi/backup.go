@@ -15,7 +15,7 @@ import (
 )
 
 func (e Engine) backup(w http.ResponseWriter, r *http.Request, p auth.Principal) {
-	if p.IsUser() && !sameOrigin(r) {
+	if p.IsUser() && !e.sameOrigin(r) {
 		WriteError(w, auth.ErrForbidden)
 		return
 	}

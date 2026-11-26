@@ -28,7 +28,7 @@ export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
   if(options.method&&options.method!=='GET')headers.set('X-CSRF-Token',cookie('rollbook_csrf'));
   const response=await fetch(path,{...options,credentials:'same-origin',headers});
   const data=await response.json().catch(()=>({}));
-  if(!response.ok){if(response.status===401&&path!=='/api/auth/login')window.dispatchEvent(new Event('rollbook:unauthorized'));const fields=(data.fields||[]).map((field:{field:string;reason:string;expected?:string;references?:string[]})=>`${field.field}: ${field.reason}${field.expected?' ('+t('期望：')+field.expected+')':''}${field.references?.length?'; '+t('引用方：')+field.references.join(', '):''}`);throw new Error(t(fields.join('\n')||data.message||`请求失败 (${response.status})`))}
+  if(!response.ok){if(response.status===401&&path!=='/api/auth/login')window.dispatchEvent(new Event('rollbook:unauthorized'));const fieldNames:Record<string,string>={client_id:path.includes('/feishu')?'App ID':'Client ID',redirect_url:'回调 URL',secret_action:'敏感凭据'};const fields=(data.fields||[]).map((field:{field:string;reason:string;expected?:string;references?:string[]})=>`${t(fieldNames[field.field]||field.field)}: ${field.reason}${field.expected?' ('+t('期望：')+field.expected+')':''}${field.references?.length?'; '+t('引用方：')+field.references.join(', '):''}`);throw new Error(t(fields.join('\n')||data.message||`请求失败 (${response.status})`))}
   return data as T;
 }
 const unmountAll=()=>{unmountOverview();unmountAssets();unmountSettings();unmountAuthSettings();unmountSearch();unmountPending();unmountKeys();unmountBackup();unmountAudit();unmountTopology();unmountDetail();unmountBrowse()};
