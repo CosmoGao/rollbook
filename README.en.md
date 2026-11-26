@@ -2,9 +2,9 @@
 
 Rollbook is a self-hosted service and asset catalog for homes and small businesses. Run it on a trusted network. The UI follows the browser language until you select English or Chinese; that choice is saved in the browser. See the [Chinese README](README.md), [changelog](CHANGELOG.md), and [release checklist](docs/releasing.md).
 
-## v0.13.0 Feishu settings validation and public callback fix (pending release)
+## v0.13.0 Feishu settings validation and public callback fix
 
-There is no official tag, Release, or image for this version yet; do not use it for a production upgrade. `v0.12.0` remains the verified official release. See the [v0.13.0 release draft](docs/release-notes-v0.13.0.md). Merging into `main` does not publish or deploy a release.
+This version is officially published: [v0.13.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.13.0). The tag resolves to `8b478b4c8ab4199baf68ffc33411e3cdac23c92f`; the official `ghcr.io/cosmogao/rollbook:v0.13.0` image, six platform CLI archives, and `install.sh` have been verified. See the [release notes](docs/release-notes-v0.13.0.md). This post-release documentation correction enters later `main` only and is not part of the immutable tag. Publication does not deploy to existing instances; back up and verify restoration before upgrading.
 
 At System Settings → Authentication Settings → Feishu (`/settings/auth?section=feishu`), a displayed HTTPS public callback with a non-443 port can now be saved. Missing App ID, an invalid credential action or missing replacement secret, and a callback that differs from the public entry return localized field-level `422 validation` errors (`client_id`, `secret_action`, `redirect_url`). The public origin comes from direct Host/TLS or single-value headers from a trusted immediate proxy; spoofed, conflicting, or multiple forwarded values are rejected. The sign-in page has no Feishu option while Feishu is disabled. See [public origin and validation](docs/public-auth-origin.md) and [external sign-in setup](docs/external-auth.md) for proxy and error handling. LDAP/OIDC HTTPS, fixed callbacks, explicit bindings, and failure handling retain their security constraints.
 
@@ -90,7 +90,7 @@ Assets lets you create and browse sites, hosts, networks, services, and other re
 
 ## Install and version
 
-Tagged releases provide a multi-architecture GHCR image, Linux/macOS/Windows amd64 and arm64 CLI archives, `SHA256SUMS`, and `install.sh`. Linux/macOS users can download and run the release's `install.sh` to install under `~/.local/bin`; set `ROLLBOOK_VERSION=v0.12.0` to pin the verified release or `ROLLBOOK_INSTALL_DIR` to choose a destination. Windows users should choose an archive and verify its checksum. The installer only replaces the local CLI. `rollbook version`, the sign-in screen, footer, `GET /api/version`, and MCP `initialize.serverInfo` report the same build version.
+Tagged releases provide a multi-architecture GHCR image, Linux/macOS/Windows amd64 and arm64 CLI archives, `SHA256SUMS`, and `install.sh`. Linux/macOS users can download and run the release's `install.sh` to install under `~/.local/bin`; set `ROLLBOOK_VERSION=v0.13.0` to pin the verified release or `ROLLBOOK_INSTALL_DIR` to choose a destination. Windows users should choose an archive and verify its checksum. The installer only replaces the local CLI. `rollbook version`, the sign-in screen, footer, `GET /api/version`, and MCP `initialize.serverInfo` report the same build version.
 
 YAML backups use `schema_version: 1`; unsupported versions are rejected. Newer databases may not be readable by older binaries. Make a full file-level snapshot before upgrading. The CLI uses REST. Run `rollbook login` to enter a server URL and key without echoing the key; the profile is stored in the user config directory with mode `0600`. `rollbook --profile home login` creates another profile. `ROLLBOOK_URL` and `ROLLBOOK_KEY` override the chosen profile for a process. With no configured URL, it defaults to `http://127.0.0.1:8080`. `--output json|yaml|table` controls REST output; `export` always writes YAML. `rollbook completion bash|zsh|fish` generates shell completion.
 
@@ -121,7 +121,7 @@ Set a service's `upstream_json` to a supported public provider, for example `{"p
 
 ## Docker Compose deployment
 
-Requires Docker Engine and Compose. In the repository root, pin a verified release in `.env` for production (`v0.12.0` is now verified); the example defaults to `latest` for a trial. Run:
+Requires Docker Engine and Compose. In the repository root, pin a verified release in `.env` for production (`v0.13.0` is now verified); the example defaults to `latest` for a trial. Run:
 
 ```sh
 cp .env.example .env
@@ -153,7 +153,7 @@ For direct HTTP testing only on a trusted network, set `ROLLBOOK_BIND_ADDR` to t
 
 ### Upgrade and rollback
 
-`v0.13.0` is pending release; do not upgrade yet. Once its official artifacts are verified, an upgrade from `v0.12.0` or rollback must preserve the complete pre-upgrade `/data`, separate `/backups`, original configuration, and key material described in the `v0.13.0` section above, and verify recovery in an isolated environment. The commands below only illustrate stopping the service and taking a file-level snapshot; the old `ROLLBOOK_VERSION=v0.12.0` instruction is historical, not this release's target.
+Before upgrading from `v0.12.0` to the published [v0.13.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.13.0), preserve the complete `/data`, separate `/backups`, original configuration, and key material described in the `v0.13.0` section above, and verify recovery in an isolated environment. The commands below illustrate stopping the service and taking a file-level snapshot. After verifying recovery, set `ROLLBOOK_VERSION=v0.13.0` in `.env`, run `docker compose pull && docker compose up -d`, and check `docker compose ps`, `/healthz`, and web sign-in. To roll back, stop the service, restore the complete pre-upgrade snapshot, original configuration, and keys, then start the official `v0.12.0` image; do not point the old image at upgraded data. The `ROLLBOOK_VERSION=v0.12.0` instruction below is historical.
 
 Before upgrading from `v0.11.0` to the published `v0.12.0`, preserve `.env`, the original `ROLLBOOK_AUTH_PEPPER` or `ROLLBOOK_AUTH_PEPPER_FILE` file, provider environment variables or their `_FILE` files, and the key material needed to decrypt provider settings. Stop the service before copying the full `/data` volume; keep the SQLite database with its `-wal` and `-shm` files. Save `/backups` when used separately. A full YAML backup contains account and Key hashes and needs protected storage, but excludes page-managed provider credentials and cannot replace a file-level snapshot. Compose example (protect the resulting directories):
 

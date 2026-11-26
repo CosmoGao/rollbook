@@ -1,8 +1,8 @@
 # 外部身份登录
 
-## v0.13.0 待发布修复
+## v0.13.0 已发布修复
 
-飞书设置页 `/settings/auth?section=feishu` 显示的带端口 HTTPS 回调现在可保存。App ID、凭据动作及回调校验失败分别返回中英文字段级 `422 validation`（`client_id`、`secret_action`、`redirect_url`）；密文解密失败仍为 `409 credential_unavailable`。公开 origin 使用直连 Host/TLS 或可信直接代理的单值转发头；伪造、冲突、多值与逗号链拒绝。未启用时登录页没有飞书入口。LDAP/OIDC 的 HTTPS、固定回调、显式绑定和安全失败约束保持不变。代理配置见[公开地址与校验](public-auth-origin.md)，[本版 Release 草稿](release-notes-v0.13.0.md) 尚不代表已发布。
+飞书设置页 `/settings/auth?section=feishu` 显示的带端口 HTTPS 回调现在可保存。App ID、凭据动作及回调校验失败分别返回中英文字段级 `422 validation`（`client_id`、`secret_action`、`redirect_url`）；密文解密失败仍为 `409 credential_unavailable`。公开 origin 使用直连 Host/TLS 或可信直接代理的单值转发头；伪造、冲突、多值与逗号链拒绝。未启用时登录页没有飞书入口。LDAP/OIDC 的 HTTPS、固定回调、显式绑定和安全失败约束保持不变。代理配置见[公开地址与校验](public-auth-origin.md)；详见[本版发布记录](release-notes-v0.13.0.md)与[正式 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.13.0)。
 
 相对 `v0.12.0` 无新增数据库迁移或密钥方案变更，但 HTTP API 公开 origin 与设置校验已修复。真实 LDAP、OIDC、飞书 IdP 尚未联调；无新增全站 RBAC 或群组映射。升级时保持本地登录开关与生产身份源配置不变；先停服并保存含 SQLite `-wal`、`-shm` 的完整 `/data` 快照、独立 `/backups` 卷和原环境、pepper 或 `_FILE`、身份源及加密密钥材料，在隔离环境验证恢复。完整 YAML 不能代替快照或恢复页面凭据。回退先停服，恢复升级前完整快照、原配置及密钥，再运行 `v0.12.0` 正式镜像，不能让旧镜像直接读取升级后的数据。pepper 丢失或更换时先在本机运行 `rollbook auth local-login enable`，再重新填写页面凭据。
 
