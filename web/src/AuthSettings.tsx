@@ -7,7 +7,7 @@ import {useTranslation} from 'react-i18next';
 type Kind='ldap'|'oidc'|'feishu';
 type Section='local'|Kind|'accounts'|'audit';
 type Provider={kind:Kind;enabled:boolean;source:'environment'|'page';shadowed:boolean;config:Record<string,string>;secret_configured:boolean;error?:string};
-type Settings={providers:Provider[];local_enabled:boolean};
+type Settings={providers:Provider[];local_enabled:boolean;public_origin?:string};
 type User={login:string;enabled:boolean;has_local_password:boolean};
 type Binding={provider:Kind;instance:string;subject:string;login:string;allowed:boolean;verified_at:string};
 type IdentityList={users:User[];bindings:Binding[]};
@@ -19,7 +19,7 @@ const fields:Record<Kind,[string,string][]>={ldap:[['url','服务器 URL'],['ins
 const readSection=():Section=>{const value=new URLSearchParams(location.search).get('section');return sections.includes(value as Section)?value as Section:'local'};
 const path=(section:Section)=>section==='local'?'/settings/auth':`/settings/auth?section=${section}`;
 const same=(a:Draft,b:Draft)=>a.enabled===b.enabled&&a.action===b.action&&a.secret===b.secret&&Object.keys({...a.config,...b.config}).every(key=>(a.config[key]||'')===(b.config[key]||''));
-const initialDraft=(p:Provider):Draft=>({config:{...p.config,...(p.kind!=='ldap'&&!p.config.redirect_url?{redirect_url:`https://${location.host}/api/auth/${p.kind}/callback`}:{})},enabled:p.enabled,secret:'',action:'keep'});
+const initialDraft=(p:Provider):Draft=>({config:{...p.config,...(p.kind!=='ldap'&&p.source==='page'?{redirect_url:`https://${location.host}/api/auth/${p.kind}/callback`}:{})},enabled:p.enabled,secret:'',action:'keep'});
 let root:Root|undefined;
 let guard:undefined|(()=>boolean);
 let activeLocation='/settings/auth';
@@ -70,6 +70,7 @@ function AuthSettings(){
  {section==='local'&&settings&&<><p className="muted">{t('关闭前须有当前启用身份源下、允许且用户启用、近一小时真实试登录的绑定；连通测试不算试登录。关闭会撤销本地浏览器会话。若失去入口，请在服务器运行 rollbook auth local-login enable。')}</p><p>{t('当前')}{colon}{t(settings.local_enabled?'已启用':'已关闭')}</p><Button type="button" variant="outline" disabled={!!busy} onClick={()=>{if(window.confirm(t(settings.local_enabled?'确定关闭本地登录？关闭后将撤销本地会话。':'确定启用本地登录？')))action('local',()=>api('/api/auth/settings/local',{method:'PUT',body:JSON.stringify({enabled:!settings.local_enabled})}),'settings')}}>{t(settings.local_enabled?'关闭本地登录':'启用本地登录')}</Button></>}
  {kind&&current&&draft&&<><p className="muted">{t('任一同源环境变量存在时，该源由启动环境接管，页面只读。已保存页面配置会被遮蔽；移除环境变量后须重启才会切换来源。凭据仅能覆盖或明确清除，页面与 YAML 备份均不回显或恢复凭据。')}</p><form className="auth-provider" onSubmit={event=>{event.preventDefault();saveProvider(kind)}}><p>{t('来源')}{colon}{t(current.source==='environment'?'启动环境（只读）':'页面配置')}{separator}{t('当前')}{colon}{t(current.enabled?'已启用':'已关闭')}{separator}{t('凭据')}{colon}{t(current.secret_configured?'已配置':'未配置')}{current.shadowed?`${separator}${t('已保存页面配置被环境遮蔽')}`:''}</p>{current.error&&<p className="error" role="alert">{current.error}</p>}
  {kind==='ldap'&&<p className="muted">{t('仅允许 LDAPS 或带有效证书校验的 StartTLS；不可跳过证书验证。')}</p>}{kind!=='ldap'&&<p className="muted">{t('请在身份提供方登记固定公开 HTTPS 回调：')}<code>{`${location.origin}/api/auth/${kind}/callback`.replace(/^http:/,'https:')}</code></p>}
+ {kind!=='ldap'&&settings?.public_origin&&settings.public_origin!==location.origin&&<p className="error" role="alert">{t('浏览器公开地址与服务端识别的地址不一致。请让可信反向代理转发完整 Host、Proto 和 Port：')}<code>{settings.public_origin}</code></p>}
  <div className="auth-fields">{fields[kind].map(([key,label])=><label key={key}>{t(label)}<input value={draft.config[key]||''} readOnly={current.source==='environment'||key==='redirect_url'} onChange={event=>update({config:{...draft.config,[key]:event.target.value}})}/></label>)}</div>
  {current.source==='page'&&<><label className="auth-check"><input type="checkbox" checked={draft.enabled} onChange={event=>update({enabled:event.target.checked})}/>{t('启用此身份源')}</label><fieldset><legend>{t('敏感凭据')}{colon}{t(current.secret_configured?'已配置':'未配置')}</legend>{(['keep','replace','clear'] as const).map(a=><label key={a}><input type="radio" name="secret-action" checked={draft.action===a} onChange={()=>update({action:a,secret:a==='replace'?draft.secret:''})}/>{t(({keep:'保持现有凭据',replace:'覆盖凭据',clear:'清除凭据'} as const)[a])}</label>)}{draft.action==='replace'&&<label>{t('新凭据')}<input type="password" value={draft.secret} onChange={event=>update({secret:event.target.value})} autoComplete="new-password" required/></label>}</fieldset><Button type="submit" disabled={!!busy} aria-busy={busy===kind}>{busy===kind?t('保存中…'):t('保存身份源')}</Button></>}
  {current.secret_configured&&<Button type="button" variant="outline" disabled={!!busy} onClick={()=>action('test',()=>api(`/api/auth/settings/${kind}/test`,{method:'POST'}),'settings','连通测试已完成')}>{t('测试连通')}</Button>}</form></>}

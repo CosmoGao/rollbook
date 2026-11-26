@@ -218,7 +218,8 @@ func (e Engine) callbackHost(r *http.Request, kind string) bool {
 		raw = e.Providers.Feishu.RedirectURL
 	}
 	u, err := url.Parse(raw)
-	return err == nil && r.Host == u.Host
+	origin, ok := e.publicOrigin(r)
+	return err == nil && ok && origin == u.Scheme+"://"+u.Host
 }
 func (e Engine) oidcSubject(ctx context.Context, code, nonce, verifier string) (string, error) {
 	cfg := e.Providers.OIDC
@@ -309,7 +310,7 @@ func (e Engine) ldapLogin(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if !sameOrigin(r) || (!e.secureRequest(r) && !e.AllowInsecureHTTP) {
+	if !e.sameOrigin(r) || (!e.secureRequest(r) && !e.AllowInsecureHTTP) {
 		WriteError(w, auth.ErrForbidden)
 		return
 	}

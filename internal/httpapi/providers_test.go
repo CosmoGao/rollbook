@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"io"
@@ -44,6 +45,7 @@ func testEngine(t *testing.T) Engine {
 func reqWithCookie(path string, c *http.Cookie) *http.Request {
 	r := httptest.NewRequest("GET", path, nil)
 	r.Host = "rollbook.example"
+	r.TLS = &tls.ConnectionState{}
 	if c != nil {
 		r.AddCookie(c)
 	}

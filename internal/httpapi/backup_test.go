@@ -2,6 +2,7 @@ package httpapi_test
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -48,6 +49,7 @@ func TestBackupPermissionAndApproval(t *testing.T) {
 		r := httptest.NewRequest(method, path, strings.NewReader(body))
 		r.Host = "rollbook.test"
 		r.Header.Set("Origin", "https://rollbook.test")
+		r.TLS = &tls.ConnectionState{}
 		if token != "" {
 			r.Header.Set("Authorization", "Bearer "+token)
 		}

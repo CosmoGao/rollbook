@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
-	"net/url"
 	"strings"
 	"time"
 
@@ -15,14 +14,6 @@ import (
 	"github.com/CosmoGao/rollbook/internal/catalog"
 )
 
-func sameOrigin(r *http.Request) bool {
-	origin := r.Header.Get("Origin")
-	if origin == "" {
-		return true
-	}
-	u, err := url.Parse(origin)
-	return err == nil && u.Host == r.Host && (u.Scheme == "http" || u.Scheme == "https")
-}
 func decodeBody(w http.ResponseWriter, r *http.Request, v any) error {
 	body := http.MaxBytesReader(w, r.Body, 1<<20)
 	defer body.Close()
@@ -45,7 +36,7 @@ func (e Engine) login(w http.ResponseWriter, r *http.Request) {
 		WriteJSON(w, 405, APIError{Code: "method_not_allowed", Message: "Method not allowed"})
 		return
 	}
-	if !sameOrigin(r) {
+	if !e.sameOrigin(r) {
 		WriteError(w, auth.ErrForbidden)
 		return
 	}
@@ -91,7 +82,7 @@ func (e Engine) login(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, 200, map[string]string{"login": p.Login})
 }
 func (e Engine) admin(w http.ResponseWriter, r *http.Request, p auth.Principal) {
-	if !sameOrigin(r) {
+	if !e.sameOrigin(r) {
 		WriteError(w, auth.ErrForbidden)
 		return
 	}
