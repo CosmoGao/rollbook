@@ -2,7 +2,7 @@
 
 本文记录已正式发布的 [v0.13.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.13.0) 中 HTTP API 公开 origin 和飞书设置校验修复；产物和升级说明见[本版发布记录](release-notes-v0.13.0.md)。本轮相对 `v0.12.0` 无新增数据库迁移或密钥方案变更；正式发布不会自动部署，生产本地登录和身份源配置保持不变。本段发版后补正只进入后续 `main`，不在不可变的 `v0.13.0` tag 内。
 
-`v0.14.0` 发布草稿见[本版说明](release-notes-v0.14.0.md)。待发布的飞书登录与个人授权绑定共用回调，非 443 公开端口（如 `:5443`）仍须完整保留；两流程用 `state` 与 `purpose` 隔离。该版本尚未创建正式 tag、Release 或镜像，也尚未部署。下文 `v0.13.0` 的已发布结论只适用于上一版。
+`v0.14.0` 已正式发布，见[本版说明](release-notes-v0.14.0.md)与 [Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.14.0)。飞书登录与个人授权绑定共用回调，非 443 公开端口（如 `:5443`）仍须完整保留；两流程用 `state` 与 `purpose` 隔离。本发版流程未部署；下文 `v0.13.0` 的已发布结论只适用于上一版。
 
 认证设置页面的只读回调 URL 以浏览器 `location.host` 组成 HTTPS 地址，路径固定为 `/api/auth/{oidc|feishu}/callback`。服务端解析请求的公开 origin 后，用它检查设置保存的 `Origin`、只读回调 URL，以及 OAuth start/callback 的入口地址。直接连接以 `Host` 和 TLS 为准；只有 TCP 直接对端落入既有 `TrustedProxyCIDRs` 时，才接受单值的 `X-Forwarded-Proto`、`X-Forwarded-Host`、`X-Forwarded-Port` 或 `Forwarded` 的 `proto`、`host`。未提供的部分沿用直接连接信息。两套头冲突、多值、逗号链、无效主机或端口均拒绝。普通客户端的转发头不能覆盖直接连接信息。
 

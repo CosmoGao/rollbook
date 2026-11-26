@@ -6,9 +6,9 @@
 
 暂无新条目。
 
-## v0.14.0（待发布）
+## [v0.14.0](https://github.com/CosmoGao/rollbook/releases/tag/v0.14.0)
 
-本节归档 `v0.13.0..main` 的 [#76](https://github.com/CosmoGao/rollbook/pull/76)、[#77](https://github.com/CosmoGao/rollbook/pull/77)、[#78](https://github.com/CosmoGao/rollbook/pull/78)。`v0.14.0` 的 tag、Release 与正式产物尚未创建；合入发布文档 PR 后仍须独立验收、打 tag 和核验产物，发版不等于部署。详见[发布草稿](docs/release-notes-v0.14.0.md)。
+本节归档 `v0.13.0..v0.14.0` 的 [#76](https://github.com/CosmoGao/rollbook/pull/76)、[#77](https://github.com/CosmoGao/rollbook/pull/77)、[#78](https://github.com/CosmoGao/rollbook/pull/78)。正式 tag 解引用提交为 `29a4ddb62d018a08efa161cbad67bf22d0eeb753`；[Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.14.0) 与镜像、CLI 产物均已核验。正式镜像针：`ghcr.io/cosmogao/rollbook:v0.14.0@sha256:5b116dabebd401bcda38197db329680f7ca05fc2c277fd9f4ecb6998f39a01bc`。发版不等于部署。详见[发布说明](docs/release-notes-v0.14.0.md)。
 
 ### 新增
 
