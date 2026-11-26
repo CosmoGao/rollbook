@@ -81,11 +81,25 @@ test('HEADER 搜索与主题控件在浅深、宽窄视口保持单一外框和�
    await page.reload();
    await page.waitForFunction(expected=>document.documentElement.dataset.theme===expected,theme==='light'?'dark':'light');
    assert.equal(await page.locator('html').getAttribute('data-theme'),theme==='light'?'dark':'light');
+   // 搜索页挂载时会自动聚焦页面搜索框，先等它完成，再检查 HEADER 的焦点环。
+   await page.locator('.search-box input').waitFor({state:'visible'});
+   if(width===1280)await page.waitForFunction(()=>document.activeElement===document.querySelector('.search-box input'));
    await page.emulateMedia({forcedColors:'active'});
    const forcedSearch=page.locator(search);
    await forcedSearch.locator('input').focus();
-   const forcedFocus=await forcedSearch.evaluate(el=>({outline:getComputedStyle(el).outlineStyle,offset:getComputedStyle(el).outlineOffset}));
-   assert.equal(forcedFocus.outline,'solid');assert.equal(forcedFocus.offset,'0px');
+   const forcedFocus=await forcedSearch.evaluate(el=>({
+    outline:getComputedStyle(el).outlineStyle,
+    offset:getComputedStyle(el).outlineOffset,
+    active:document.activeElement?.outerHTML,
+    focusWithin:el.matches(':focus-within'),
+    forcedColors:matchMedia('(forced-colors: active)').matches,
+    styles:[...document.styleSheets].map(sheet=>({href:sheet.href,disabled:sheet.disabled})),
+   }));
+   const forcedContext=JSON.stringify({theme,width,search,forcedFocus});
+   assert.equal(forcedFocus.forcedColors,true,forcedContext);
+   assert.equal(forcedFocus.focusWithin,true,forcedContext);
+   assert.equal(forcedFocus.outline,'solid',forcedContext);
+   assert.equal(forcedFocus.offset,'0px',forcedContext);
    await page.locator('header.topbar label.theme-control select').focus();
    const forcedTheme=await page.locator('header.topbar label.theme-control').evaluate(el=>({outline:getComputedStyle(el).outlineStyle,offset:getComputedStyle(el).outlineOffset}));
    assert.equal(forcedTheme.outline,'solid');assert.equal(forcedTheme.offset,'0px');
