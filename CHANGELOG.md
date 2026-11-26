@@ -6,9 +6,9 @@
 
 暂无新条目。
 
-## v0.13.0（待发布）
+## [v0.13.0](https://github.com/CosmoGao/rollbook/releases/tag/v0.13.0)
 
-版本号按 [发版检查](docs/releasing.md) 及现有次版本归档方式选择。正式 tag、Release 和产物尚未创建；本节以 `v0.12.0..main` 的 [#73](https://github.com/CosmoGao/rollbook/pull/73)、[#74](https://github.com/CosmoGao/rollbook/pull/74) 为依据，其中 #73 仅补齐上一版文档与 Release 链接。发布后再补真实 Release 链接；合入 `main` 不等于发布或部署。
+本版已正式发布：[v0.13.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.13.0)；tag 解引用提交为 `8b478b4c8ab4199baf68ffc33411e3cdac23c92f`。正式镜像 `ghcr.io/cosmogao/rollbook:v0.13.0` 的多架构 index 为 `sha256:9946132f927915687972e257b27bca8e74505d526427e0aa5cc3003f5be18e5c`；六平台 CLI、`install.sh` 和 `SHA256SUMS` 已核验。本节依据 `v0.12.0..v0.13.0` 的 [#73](https://github.com/CosmoGao/rollbook/pull/73)、[#74](https://github.com/CosmoGao/rollbook/pull/74) 与发布文档 [#75](https://github.com/CosmoGao/rollbook/pull/75) 归档；#73 仅补齐上一版文档与链接，#74 才是本版用户可见修复。本段发版后事实补正只进入后续 `main`，不在不可变的 `v0.13.0` tag 内。正式发布不等于现有实例已部署。
 
 ### 修复
 
