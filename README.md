@@ -1,10 +1,10 @@
 # Rollbook 清册
 
-## v0.14.0 飞书邮箱与授权绑定（待发布）
+## v0.14.0 飞书邮箱与授权绑定
 
-待发布版本在「个人设置」（`/settings/personal`）新增邮箱与飞书绑定入口、「设置 → 认证设置 → 账号与绑定」（`/settings/auth?section=accounts`）邮箱编辑，以及按飞书邮箱自动绑定登录。邮箱可空；非空时去首尾空格并按 ASCII 大小写折叠，全局唯一。飞书登录优先沿用已允许的稳定主体绑定；若返回的邮箱唯一对应另一用户则拒绝。尚无主体绑定时，仅当飞书返回邮箱且唯一匹配启用的现有清册用户，才原子绑定并登录；缺失或不匹配时，请先本地登录并在个人设置绑定。禁用绑定、停用用户不能绕过，不按姓名匹配，不自动开户。本地登录保留。飞书应用须启用 `auth:user.id:read` 与 `contact:user.email:readonly` 并发布对应权限；授权请求包含两者。邮箱权限未开通或上游未返回 `data.email` 时，不进行邮箱匹配；无唯一匹配不发 session，可先本地登录后绑定，权限缺失不阻塞正式发版。绑定入口沿用同一应用和回调，公开 HTTPS 地址须精确包含非标准端口，例如 `:5443`。详见[外部身份登录](docs/external-auth.md)。
+`v0.14.0` 在「个人设置」（`/settings/personal`）新增邮箱与飞书绑定入口、「设置 → 认证设置 → 账号与绑定」（`/settings/auth?section=accounts`）邮箱编辑，以及按飞书邮箱自动绑定登录。邮箱可空；非空时去首尾空格并按 ASCII 大小写折叠，全局唯一。飞书登录优先沿用已允许的稳定主体绑定；若返回的邮箱唯一对应另一用户则拒绝。尚无主体绑定时，仅当飞书返回邮箱且唯一匹配启用的现有清册用户，才原子绑定并登录；缺失或不匹配时，请先本地登录并在个人设置绑定。禁用绑定、停用用户不能绕过，不按姓名匹配，不自动开户。本地登录保留。飞书应用须启用 `auth:user.id:read` 与 `contact:user.email:readonly` 并发布对应权限；授权请求包含两者。邮箱权限未开通或上游未返回 `data.email` 时，不进行邮箱匹配；无唯一匹配不发 session，可先本地登录后绑定，权限缺失不阻塞正式发版。绑定入口沿用同一应用和回调，公开 HTTPS 地址须精确包含非标准端口，例如 `:5443`。详见[外部身份登录](docs/external-auth.md)。
 
-此变更含 `018_feishu_email.sql` 前向迁移：新增 `users.email` 及非空唯一索引、`auth_pending.purpose`、`user_id`、`session_hash`；认证后端与绑定流程有变更，未新增 pepper 或密钥方案。本发布文档 PR 仍待 CI 与独立验收；`v0.14.0` 的 tag、Release 和产物尚未创建，本 PR 不部署。以后升级前先停服，保存完整 `/data` 文件级快照（SQLite、`-wal`、`-shm`）及独立 `/backups` 快照，保留当时的环境配置、pepper 或其 `_FILE`、身份源与认证加密材料，并在隔离环境验证恢复。完整 YAML 不能代替快照，也不含页面凭据。回退时先停服，恢复升级前完整快照及当时密钥配置，再启动上一正式镜像；不能只换旧镜像读取迁移后的数据库。
+此变更含 `018_feishu_email.sql` 前向迁移：新增 `users.email` 及非空唯一索引、`auth_pending.purpose`、`user_id`、`session_hash`；认证后端与绑定流程有变更，未新增 pepper 或密钥方案。[v0.14.0 正式 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.14.0)、镜像与 CLI 已核验；正式镜像针为 `ghcr.io/cosmogao/rollbook:v0.14.0@sha256:5b116dabebd401bcda38197db329680f7ca05fc2c277fd9f4ecb6998f39a01bc`。发版本身不部署，也不改变现网登录策略。升级前先停服，保存完整 `/data` 文件级快照（SQLite、`-wal`、`-shm`）及独立 `/backups` 快照，保留当时的环境配置、pepper 或其 `_FILE`、身份源与认证加密材料，并在隔离环境验证恢复。完整 YAML 不能代替快照，也不含页面凭据。回退时先停服，恢复升级前完整快照及当时密钥配置，再启动上一正式镜像；不能只换旧镜像读取迁移后的数据库。
 
 
 Rollbook 是面向家庭与小企业的自建服务和资产清册。请只在可信内网运行。英文说明见 [README.en.md](README.en.md)，版本变化见 [CHANGELOG.md](CHANGELOG.md)，发版检查见 [docs/releasing.md](docs/releasing.md)。
@@ -224,7 +224,7 @@ sudo chown -R 10001:10001 /srv/rollbook/data /srv/rollbook/backups
 
 ### 升级和回退
 
-从 `v0.13.0` 升级到待发布的 `v0.14.0` 前，先等待正式 tag、Release 和镜像核验，不使用 `main`、`latest` 或 `sha-*` 作为正式版。停服后按下方命令保存完整 `/data`（含 SQLite、`-wal`、`-shm`）及独立 `/backups` 文件级快照，保留原配置、pepper 与身份源密钥，并在隔离环境验证恢复。`018_feishu_email.sql` 是前向迁移；回退先恢复升级前快照与当时配置密钥，再用 `ghcr.io/cosmogao/rollbook:v0.13.0@sha256:9946132f927915687972e257b27bca8e74505d526427e0aa5cc3003f5be18e5c`，不可让旧镜像读取新库。完整 YAML 不含页面凭据，也不能代替快照。以下 `v0.13.0` 升级段是上一版历史步骤。
+从 `v0.13.0` 升级到已发布的 `v0.14.0` 前，使用已核验的正式镜像 `ghcr.io/cosmogao/rollbook:v0.14.0@sha256:5b116dabebd401bcda38197db329680f7ca05fc2c277fd9f4ecb6998f39a01bc`，不使用 `main`、`latest` 或 `sha-*` 作为正式版。停服后按下方命令保存完整 `/data`（含 SQLite、`-wal`、`-shm`）及独立 `/backups` 文件级快照，保留原配置、pepper 与身份源密钥，并在隔离环境验证恢复。`018_feishu_email.sql` 是前向迁移；回退先恢复升级前快照与当时配置密钥，再用 `ghcr.io/cosmogao/rollbook:v0.13.0@sha256:9946132f927915687972e257b27bca8e74505d526427e0aa5cc3003f5be18e5c`，不可让旧镜像读取新库。完整 YAML 不含页面凭据，也不能代替快照。以下 `v0.13.0` 升级段是上一版历史步骤。
 
 从 `v0.12.0` 升级到已发布的 [v0.13.0 Release](https://github.com/CosmoGao/rollbook/releases/tag/v0.13.0) 前，须按上方 `v0.13.0` 章节保存完整 `/data`、独立 `/backups`、原配置与密钥材料，并在隔离环境验证恢复。下方命令演示停服与文件级快照；确认快照可恢复后，将 `.env` 的 `ROLLBOOK_VERSION` 设为 `v0.13.0`，运行 `docker compose pull && docker compose up -d`，检查 `docker compose ps`、`/healthz` 和网页登录。回退须先停服，恢复升级前完整快照与原配置密钥，再启动 `v0.12.0` 正式镜像，不能让旧镜像读取升级后的数据。下方 `ROLLBOOK_VERSION=v0.12.0` 是上一版历史升级步骤。
 
