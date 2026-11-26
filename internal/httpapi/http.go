@@ -68,7 +68,7 @@ func (e Engine) Handler() http.Handler {
 			return
 		}
 		for _, kind := range []string{"oidc", "feishu"} {
-			if r.URL.Path == "/api/auth/"+kind+"/start" {
+			if r.URL.Path == "/api/auth/"+kind+"/start" || (kind == "feishu" && r.URL.Path == "/api/auth/feishu/bind/start") {
 				e.withProviders().providerStart(w, r, kind)
 				return
 			}

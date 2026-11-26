@@ -538,6 +538,25 @@ func (e Engine) providerSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		WriteJSON(w, 200, map[string]bool{"saved": true})
+	case path == "/api/auth/settings/users/email" && r.Method == http.MethodPut:
+		var input struct {
+			Login string `json:"login"`
+			Email string `json:"email"`
+		}
+		if err := decodeBody(w, r, &input); err != nil {
+			WriteError(w, err)
+			return
+		}
+		var userID string
+		if err := e.Auth.DB.QueryRowContext(r.Context(), "SELECT id FROM users WHERE lower(login)=lower(?)", input.Login).Scan(&userID); err != nil {
+			WriteError(w, err)
+			return
+		}
+		if err := e.Auth.SetEmail(r.Context(), userID, input.Email); err != nil {
+			WriteError(w, err)
+			return
+		}
+		WriteJSON(w, 200, map[string]bool{"saved": true})
 	case path == "/api/auth/settings/bindings" && r.Method == http.MethodPut:
 		var input struct {
 			Provider string `json:"provider"`
@@ -575,18 +594,18 @@ func (e Engine) providerSettings(w http.ResponseWriter, r *http.Request) {
 func (e Engine) identityLists(ctx context.Context) ([]map[string]any, []map[string]any, error) {
 	users := []map[string]any{}
 	bindings := []map[string]any{}
-	rows, err := e.Auth.DB.QueryContext(ctx, "SELECT login,enabled,(password_hash IS NOT NULL AND password_hash<>'') FROM users ORDER BY login LIMIT 500")
+	rows, err := e.Auth.DB.QueryContext(ctx, "SELECT login,enabled,(password_hash IS NOT NULL AND password_hash<>''),coalesce(email,'') FROM users ORDER BY login LIMIT 500")
 	if err != nil {
 		return nil, nil, err
 	}
 	for rows.Next() {
-		var login string
+		var login, email string
 		var enabled, hasLocalPassword bool
-		if err = rows.Scan(&login, &enabled, &hasLocalPassword); err != nil {
+		if err = rows.Scan(&login, &enabled, &hasLocalPassword, &email); err != nil {
 			rows.Close()
 			return nil, nil, err
 		}
-		users = append(users, map[string]any{"login": login, "enabled": enabled, "has_local_password": hasLocalPassword})
+		users = append(users, map[string]any{"login": login, "enabled": enabled, "has_local_password": hasLocalPassword, "email": email})
 	}
 	err = rows.Err()
 	rows.Close()

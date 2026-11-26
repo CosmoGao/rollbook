@@ -277,3 +277,131 @@ func TestSessionIdentityContract(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestFeishuBindPreservesLocalSessionAndPort(t *testing.T) {
+	e := testEngine(t)
+	ctx := context.Background()
+	e.Providers.Feishu = OAuthProviderConfig{ClientID: "cli_test", ClientSecret: "test-only", RedirectURL: "https://rollbook.example:5443/api/auth/feishu/callback"}
+	e.Providers.HTTPClient = &http.Client{Transport: transportFunc(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Path == "/oauth/v3/token" {
+			return response(200, `{"code":0,"access_token":"test-token"}`), nil
+		}
+		if r.URL.Path == "/open-apis/authen/v1/user_info" {
+			return response(200, `{"code":0,"data":{"open_id":"ou_bind","email":"owner@example.com"}}`), nil
+		}
+		return response(404, ""), nil
+	})}
+	token, _, p, err := e.Auth.Login(ctx, "owner", "initial password 123")
+	if err != nil {
+		t.Fatal(err)
+	}
+	localCookie := &http.Cookie{Name: "rollbook_session", Value: token}
+	makeRequest := func(path string, state *http.Cookie) *http.Request {
+		r := reqWithCookie(path, localCookie)
+		r.Host = "rollbook.example:5443"
+		if state != nil {
+			r.AddCookie(state)
+		}
+		return r
+	}
+	start := httptest.NewRecorder()
+	e.Handler().ServeHTTP(start, makeRequest("/api/auth/feishu/bind/start", nil))
+	state := stateCookie(start)
+	if start.Code != 302 || state == nil {
+		t.Fatalf("start: %d", start.Code)
+	}
+	if loc := start.Header().Get("Location"); !strings.Contains(loc, "rollbook.example%3A5443") {
+		t.Fatalf("redirect port missing: %s", loc)
+	}
+	callback := httptest.NewRecorder()
+	e.Handler().ServeHTTP(callback, makeRequest("/api/auth/feishu/callback?state="+url.QueryEscape(state.Value)+"&code=good", state))
+	if callback.Code != 303 || callback.Header().Get("Location") != "/settings/personal?bind=ok" {
+		t.Fatalf("callback: %d %s", callback.Code, callback.Header().Get("Location"))
+	}
+	if _, err = e.Auth.Session(ctx, token, "", false); err != nil {
+		t.Fatalf("original session revoked: %v", err)
+	}
+	bound, err := e.Auth.FeishuBinding(ctx, p.UserID, "cli_test")
+	if err != nil || !bound {
+		t.Fatalf("binding absent: %v", err)
+	}
+	replay := httptest.NewRecorder()
+	e.Handler().ServeHTTP(replay, makeRequest("/api/auth/feishu/callback?state="+url.QueryEscape(state.Value)+"&code=good", state))
+	if replay.Header().Get("Location") == "/settings/personal?bind=ok" {
+		t.Fatal("replay accepted")
+	}
+}
+
+func TestFeishuEmailCallbackScenarios(t *testing.T) {
+	e := testEngine(t)
+	ctx := context.Background()
+	e.Providers.Feishu = OAuthProviderConfig{ClientID: "cli_test", ClientSecret: "test-only", RedirectURL: "https://rollbook.example/api/auth/feishu/callback"}
+	var subject, email string
+	e.Providers.HTTPClient = &http.Client{Transport: transportFunc(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Path == "/oauth/v3/token" {
+			return response(200, `{"code":0,"access_token":"test-token"}`), nil
+		}
+		if r.URL.Path == "/open-apis/authen/v1/user_info" {
+			data, _ := json.Marshal(map[string]any{"code": 0, "data": map[string]string{"open_id": subject, "email": email}})
+			return response(200, string(data)), nil
+		}
+		return response(404, ""), nil
+	})}
+	ownerID, err := func() (string, error) {
+		var id string
+		err := e.Auth.DB.QueryRow("SELECT id FROM users WHERE login='owner'").Scan(&id)
+		return id, err
+	}()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = e.Auth.SetEmail(ctx, ownerID, "owner@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	if err = e.Auth.CreateExternalUser(ctx, "other"); err != nil {
+		t.Fatal(err)
+	}
+	var otherID string
+	if err = e.Auth.DB.QueryRow("SELECT id FROM users WHERE login='other'").Scan(&otherID); err != nil {
+		t.Fatal(err)
+	}
+	if err = e.Auth.SetEmail(ctx, otherID, "other@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	callback := func(sub, mail string) *httptest.ResponseRecorder {
+		subject, email = sub, mail
+		start := httptest.NewRecorder()
+		e.Handler().ServeHTTP(start, reqWithCookie("/api/auth/feishu/start", nil))
+		state := stateCookie(start)
+		if state == nil {
+			t.Fatal("missing state")
+		}
+		result := httptest.NewRecorder()
+		e.Handler().ServeHTTP(result, reqWithCookie("/api/auth/feishu/callback?state="+url.QueryEscape(state.Value)+"&code=test", state))
+		return result
+	}
+	if got := callback("ou_unmatched", "nobody@example.com").Header().Get("Location"); got != "/?auth_error=unmatched" {
+		t.Fatal(got)
+	}
+	if got := callback("ou_auto", " OWNER@EXAMPLE.COM ").Header().Get("Location"); got != "/" {
+		t.Fatal(got)
+	}
+	if got := callback("ou_auto", "owner@example.com").Header().Get("Location"); got != "/" {
+		t.Fatal(got)
+	}
+	if got := callback("ou_auto", "other@example.com").Header().Get("Location"); got != "/?auth_error=conflict" {
+		t.Fatal(got)
+	}
+	if err = e.Auth.ManageBinding(ctx, "feishu", "cli_test", "ou_disabled", "owner", false); err != nil {
+		t.Fatal(err)
+	}
+	if got := callback("ou_disabled", "owner@example.com").Header().Get("Location"); got != "/?auth_error=disabled" {
+		t.Fatal(got)
+	}
+	if err = e.Auth.SetUserEnabled(ctx, "owner", false); err != nil {
+		t.Fatal(err)
+	}
+	if got := callback("ou_auto", "owner@example.com").Header().Get("Location"); got == "/" {
+		t.Fatal("disabled user signed in")
+	}
+}

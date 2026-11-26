@@ -1,12 +1,15 @@
 package httpapi
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/tls"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -79,6 +82,24 @@ func randomToken() (string, error) {
 }
 func stateHash(state string) []byte { sum := sha256.Sum256([]byte(state)); return sum[:] }
 func (e Engine) providerStart(w http.ResponseWriter, r *http.Request, kind string) {
+	purpose := "login"
+	userID := ""
+	var sessionHash []byte
+	if kind == "feishu" && r.URL.Path == "/api/auth/feishu/bind/start" {
+		purpose = "bind"
+		principal, err := e.Principal(r)
+		if err != nil || !principal.IsUser() || principal.Provider != "local" {
+			WriteError(w, auth.ErrForbidden)
+			return
+		}
+		cookie, err := r.Cookie("rollbook_session")
+		if err != nil {
+			WriteError(w, auth.ErrUnauthorized)
+			return
+		}
+		userID = principal.UserID
+		sessionHash = e.Auth.SessionHash(cookie.Value)
+	}
 	if r.Method != http.MethodGet || !e.Providers.Enabled(kind) {
 		http.NotFound(w, r)
 		return
@@ -122,7 +143,7 @@ func (e Engine) providerStart(w http.ResponseWriter, r *http.Request, kind strin
 		q.Set("redirect_uri", cfg.RedirectURL)
 		q.Set("state", state)
 		q.Set("response_type", "code")
-		q.Set("scope", "auth:user.id:read")
+		q.Set("scope", "auth:user.id:read contact:user.email:readonly")
 		u.RawQuery = q.Encode()
 		target = u.String()
 	}
@@ -130,7 +151,7 @@ func (e Engine) providerStart(w http.ResponseWriter, r *http.Request, kind strin
 	if version == "" {
 		version = "static"
 	}
-	_, err = e.Auth.DB.ExecContext(r.Context(), "INSERT INTO auth_pending(state_hash,provider,nonce,verifier,expires_at,config_version) VALUES(?,?,?,?,?,?)", stateHash(state), kind, nonce, verifier, time.Now().UTC().Add(5*time.Minute).Format(time.RFC3339Nano), version)
+	_, err = e.Auth.DB.ExecContext(r.Context(), "INSERT INTO auth_pending(state_hash,provider,nonce,verifier,expires_at,config_version,purpose,user_id,session_hash) VALUES(?,?,?,?,?,?,?,?,?)", stateHash(state), kind, nonce, verifier, time.Now().UTC().Add(5*time.Minute).Format(time.RFC3339Nano), version, purpose, userID, sessionHash)
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -158,17 +179,22 @@ func (e Engine) providerCallback(w http.ResponseWriter, r *http.Request, kind st
 		e.ProviderRegistry.mu.RLock()
 		defer e.ProviderRegistry.mu.RUnlock()
 	}
-	var pendingKind, nonce, verifier, expiry, version string
+	var pendingKind, nonce, verifier, expiry, version, purpose string
+	var userID sql.NullString
+	var sessionHash []byte
 	tx, err := e.Auth.DB.BeginTx(r.Context(), nil)
 	if err != nil {
 		fail()
 		return
 	}
 	defer tx.Rollback()
-	err = tx.QueryRowContext(r.Context(), "SELECT provider,nonce,verifier,expires_at,config_version FROM auth_pending WHERE state_hash=?", stateHash(cookie.Value)).Scan(&pendingKind, &nonce, &verifier, &expiry, &version)
+	err = tx.QueryRowContext(r.Context(), "SELECT provider,nonce,verifier,expires_at,config_version,purpose,user_id,session_hash FROM auth_pending WHERE state_hash=?", stateHash(cookie.Value)).Scan(&pendingKind, &nonce, &verifier, &expiry, &version, &purpose, &userID, &sessionHash)
 	if err != nil || pendingKind != kind {
 		fail()
 		return
+	}
+	if purpose == "bind" {
+		fail = func() { http.Redirect(w, r, "/settings/personal?bind_error=failed", http.StatusSeeOther) }
 	}
 	currentVersion := e.providerVersion
 	if currentVersion == "" {
@@ -191,20 +217,60 @@ func (e Engine) providerCallback(w http.ResponseWriter, r *http.Request, kind st
 		fail()
 		return
 	}
-	var instance, subject string
+	if purpose == "bind" {
+		cookie, ex := r.Cookie("rollbook_session")
+		if ex != nil || !bytes.Equal(e.Auth.SessionHash(cookie.Value), sessionHash) {
+			http.Redirect(w, r, "/settings/personal?bind_error=session", http.StatusSeeOther)
+			return
+		}
+		principal, ex := e.Principal(r)
+		if ex != nil || principal.Provider != "local" || principal.UserID != userID.String {
+			http.Redirect(w, r, "/settings/personal?bind_error=session", http.StatusSeeOther)
+			return
+		}
+	}
+	var instance, subject, email string
 	if kind == "oidc" {
 		instance = e.Providers.OIDC.Issuer
 		subject, err = e.oidcSubject(r.Context(), r.URL.Query().Get("code"), nonce, verifier)
 	} else {
 		instance = e.Providers.Feishu.ClientID
-		subject, err = e.feishuSubject(r.Context(), r.URL.Query().Get("code"))
+		subject, email, err = e.feishuSubject(r.Context(), r.URL.Query().Get("code"))
 	}
 	if err != nil || subject == "" {
 		fail()
 		return
 	}
-	session, csrf, _, err := e.Auth.ExternalSession(r.Context(), kind, instance, subject)
+	if purpose == "bind" {
+		err = e.Auth.BindFeishu(r.Context(), userID.String, instance, subject)
+		target := "/settings/personal?bind=ok"
+		if errors.Is(err, auth.ErrBindingDisabled) {
+			target = "/settings/personal?bind_error=disabled"
+		} else if err != nil {
+			target = "/settings/personal?bind_error=conflict"
+		}
+		http.Redirect(w, r, target, http.StatusSeeOther)
+		return
+	}
+	var session, csrf string
+	if kind == "feishu" {
+		session, csrf, _, err = e.Auth.FeishuSession(r.Context(), instance, subject, email)
+	} else {
+		session, csrf, _, err = e.Auth.ExternalSession(r.Context(), kind, instance, subject)
+	}
 	if err != nil {
+		if kind == "feishu" {
+			reason := "failed"
+			if errors.Is(err, auth.ErrEmailUnmatched) {
+				reason = "unmatched"
+			} else if errors.Is(err, auth.ErrBindingConflict) {
+				reason = "conflict"
+			} else if errors.Is(err, auth.ErrBindingDisabled) {
+				reason = "disabled"
+			}
+			http.Redirect(w, r, "/?auth_error="+reason, http.StatusSeeOther)
+			return
+		}
 		fail()
 		return
 	}
@@ -252,58 +318,59 @@ func (e Engine) oidcSubject(ctx context.Context, code, nonce, verifier string) (
 	}
 	return id.Subject, nil
 }
-func (e Engine) feishuSubject(ctx context.Context, code string) (string, error) {
+func (e Engine) feishuSubject(ctx context.Context, code string) (string, string, error) {
 	cfg := e.Providers.Feishu
 	body := url.Values{"grant_type": {"authorization_code"}, "code": {code}, "client_id": {cfg.ClientID}, "client_secret": {cfg.ClientSecret}, "redirect_uri": {cfg.RedirectURL}}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://accounts.feishu.cn/oauth/v3/token", strings.NewReader(body.Encode()))
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := e.Providers.Client().Do(req)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return "", auth.ErrUnauthorized
+		return "", "", auth.ErrUnauthorized
 	}
 	var token struct {
 		AccessToken string `json:"access_token"`
 		Code        int    `json:"code"`
 	}
 	if err = json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&token); err != nil {
-		return "", err
+		return "", "", err
 	}
 	if token.Code != 0 || token.AccessToken == "" {
-		return "", auth.ErrUnauthorized
+		return "", "", auth.ErrUnauthorized
 	}
 	req, err = http.NewRequestWithContext(ctx, http.MethodGet, "https://open.feishu.cn/open-apis/authen/v1/user_info", nil)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
 	resp, err = e.Providers.Client().Do(req)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return "", auth.ErrUnauthorized
+		return "", "", auth.ErrUnauthorized
 	}
 	var user struct {
 		Code int `json:"code"`
 		Data struct {
 			OpenID string `json:"open_id"`
+			Email  string `json:"email"`
 		} `json:"data"`
 	}
 	if err = json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&user); err != nil {
-		return "", err
+		return "", "", err
 	}
 	if user.Code != 0 || user.Data.OpenID == "" {
-		return "", auth.ErrUnauthorized
+		return "", "", auth.ErrUnauthorized
 	}
-	return user.Data.OpenID, nil
+	return user.Data.OpenID, user.Data.Email, nil
 }
 func (e Engine) ldapLogin(w http.ResponseWriter, r *http.Request) {
 	if !e.Providers.Enabled("ldap") || r.Method != http.MethodPost {

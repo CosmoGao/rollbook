@@ -235,6 +235,11 @@ func apply(ctx context.Context, conn *sql.Conn, f File) error {
 		}
 		sort.Strings(cols)
 		for _, row := range f.Tables[name] {
+			if name == "users" && len(row) == len(cols)-1 {
+				if _, ok := row["email"]; !ok {
+					row["email"] = nil
+				}
+			}
 			if name == "identity_bindings" && len(row) == len(cols)-1 {
 				if _, ok := row["verified_at"]; !ok {
 					row["verified_at"] = nil

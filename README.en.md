@@ -1,5 +1,12 @@
 # Rollbook
 
+## In development: Feishu email and authorization binding
+
+Personal settings now offer an email field and a Feishu binding link; the account list can edit email. Email is optional, trimmed and ASCII case folded, and unique across local users. Existing allowed stable subject bindings remain authoritative; a returned email uniquely matching a different user causes a conflict. With no subject binding, only an email uniquely matching an enabled existing Rollbook user can create a binding and session. Missing or unmatched email requires local sign-in followed by Feishu binding. Disabled bindings and users cannot be bypassed. Names are never used to match and accounts are never created automatically. Local sign-in remains available. Enable and publish `auth:user.id:read` and `contact:user.email:readonly` on the existing Feishu app; both scopes are requested. Without email permission or `data.email`, email matching is unavailable. The same app and callback serve login and binding, and the public HTTPS callback must include any nonstandard port such as `:5443`. See [external authentication](docs/external-auth.md).
+
+This development change adds the forward migration `018_feishu_email.sql`; it does not deploy or change production settings. Before a future upgrade, stop the service, snapshot all of `/data` (including SQLite, `-wal`, and `-shm`) and any separate `/backups`, retain the original environment, pepper or `_FILE`, identity provider and encryption materials, and verify recovery in isolation. Full YAML is not a file level snapshot. To roll back, stop the service, restore the pre-upgrade snapshot and matching keys and configuration, then start the previous official image. Switching only the image cannot safely read a migrated database.
+
+
 Rollbook is a self-hosted service and asset catalog for homes and small businesses. Run it on a trusted network. The UI follows the browser language until you select English or Chinese; that choice is saved in the browser. See the [Chinese README](README.md), [changelog](CHANGELOG.md), and [release checklist](docs/releasing.md).
 
 ## v0.13.0 Feishu settings validation and public callback fix
