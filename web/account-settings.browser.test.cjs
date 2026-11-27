@@ -79,8 +79,8 @@ test('备份入口、退出失败反馈与当前会话退出',async()=>{
   });
   await installBundle(page);await page.goto('http://rollbook.test/');
   await page.locator('#nav button[data-view=settings]').click();
-  await page.getByRole('button',{name:'打开备份与恢复'}).click();
-  assert.equal(new URL(page.url()).pathname,'/settings/backup');
+  await page.getByRole('button',{name:'备份与恢复',exact:true}).click();
+  assert.equal(new URL(page.url()).pathname,'/settings');assert.equal(new URL(page.url()).searchParams.get('section'),'backup');
   await page.locator('.account-avatar').click();
   await page.getByRole('menuitem',{name:'退出登录'}).click();
   await page.getByRole('alert').getByText('测试失败').waitFor();

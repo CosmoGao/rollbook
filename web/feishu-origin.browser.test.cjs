@@ -23,7 +23,7 @@ test('飞书公开端口差异：浅深主题与宽窄屏提示',async()=>{
     return route.fulfill({status:404,json:{code:'not_found'}});
    });
    await installBundle(page);
-   await page.goto('https://rollbook.example:5443/settings/auth?section=feishu');
+   await page.goto('https://rollbook.example:5443/settings?section=feishu');
    await page.getByRole('heading',{name:'飞书'}).waitFor();
    await page.getByRole('alert').getByText(/浏览器公开地址与服务端识别的地址不一致/).waitFor();
    assert.equal(await page.getByLabel('回调 URL').inputValue(),'https://rollbook.example:5443/api/auth/feishu/callback');

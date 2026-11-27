@@ -28,10 +28,10 @@
 | `/contexts` | 内容区只有归档 checkbox；无文本框 | 不适用 |
 | `/topology` 与 `?site=...` | `.topology-toolbar label select` 三个：站点、聚焦对象、展开层级 | 各 select 自身 |
 | `/agent` | `.controls select.field` 权限级别；创建 Key 弹窗 `.modal input` text/datetime-local、`select`、`textarea` | 各控件自身；只展示一次的 Key 没有进入截图 |
-| `/settings` | 设置入口无内容区文本控件 | 不适用 |
+| `/settings` 与 `?section=ldap|oidc|feishu|accounts|audit` | `.settings-panel .auth-fields input`、`select`，账号邮箱行内输入与绑定表单 | 控件自身；表格只在 `.auth-table-scroll` 内横滚 |
 | `/settings/personal` | 改密码弹窗 `.modal input` password | 各 input 自身 |
-| `/settings/auth` | LDAP/OIDC/飞书页签中的 `.auth-panel .auth-fields input` text/password、`select`；只读环境值与勾选按实际状态检查 | 各控件自身；不同身份源条件显示 |
-| `/settings/backup` | `section.section form.controls select.field`、`input[type=file]`，分别属于 YAML 与 CSV 导入 | 各控件自身 |
+
+| `/settings?section=backup` | `.settings-import-form select.field`、`input[type=file]`，分别属于 YAML 与 CSV 导入 | 各控件自身 |
 | 移动菜单抽屉、首次使用弹窗 | 无可见文本控件；检查键盘焦点仍保留在按钮上 | 不适用 |
 
 资产详情的编辑、删除、笔记、停用和恢复弹窗依对象类型及数据而显示；浏览器测试覆盖了资产新建弹窗。原生 `prompt` 与 select 的操作系统展开层不属于页面 CSS 控制范围。剪贴板回退时临时创建的隐藏 textarea 不属于可见页面控件。
