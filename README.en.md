@@ -1,5 +1,9 @@
 # Rollbook
 
+## Current settings entry
+
+The sidebar Settings item opens `/settings` directly. Its sections cover local sign-in, LDAP / LDAPS, OIDC, Feishu, accounts and bindings, authentication audit, and backup and restore. Use `/settings?section=ldap|oidc|feishu|accounts|audit|backup` to open a section directly. Switching sections preserves drafts and marks unsaved sections; leaving Settings or refreshing prompts for confirmation. Open `/settings/personal` from the account menu to manage email, Feishu binding, password, and sessions.
+
 ## v0.14.0 Feishu email and authorization binding
 
 `v0.14.0` adds an email field and a Feishu binding link in Personal Settings (`/settings/personal`); System Settings → Authentication Settings → Accounts and bindings (`/settings/auth?section=accounts`) can edit email. Email is optional, trimmed and ASCII case folded, and unique across local users. Existing allowed stable subject bindings remain authoritative; a returned email uniquely matching a different user causes a conflict. With no subject binding, only an email uniquely matching an enabled existing Rollbook user can create a binding and session. Missing or unmatched email requires local sign-in followed by Feishu binding. Disabled bindings and users cannot be bypassed. Names are never used to match and accounts are never created automatically. Local sign-in remains available. Enable and publish `auth:user.id:read` and `contact:user.email:readonly` on the existing Feishu app; both scopes are requested. Without email permission or `data.email`, email matching is unavailable; no unique match means no session, and a user may sign in locally before binding. Missing email permission does not block the formal release. The same app and callback serve login and binding, and the public HTTPS callback must include any nonstandard port such as `:5443`. See [external authentication](docs/external-auth.md).

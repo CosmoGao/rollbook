@@ -5,7 +5,7 @@ const path=require('node:path');
 const {chromium}=require('playwright');
 const {installBundle}=require('./browser.bundle.cjs');
 
-const routes=['/','/assets','/assets/services','/assets/sites','/assets/hosts','/assets/networks','/search','/pending','/pending?tab=unverified','/pending?tab=outdated','/changes','/contexts','/topology','/agent','/settings','/settings/personal','/settings/auth','/settings/backup'];
+const routes=['/','/assets','/assets/services','/assets/sites','/assets/hosts','/assets/networks','/search','/pending','/pending?tab=unverified','/pending?tab=outdated','/changes','/contexts','/topology','/agent','/settings','/settings/personal','/settings?section=backup'];
 const evidence=path.join(__dirname,'../docs/control-geometry-evidence');
 const before=process.env.ROLLBOOK_BASELINE==='1';
 const captureEvidence=process.env.ROLLBOOK_GEOMETRY_EVIDENCE==='1';
@@ -104,7 +104,7 @@ test('登录、资产弹窗、Key 弹窗、个人密码与认证各组的控件�
    }
    const auth=await browser.newPage({viewport:{width,height:820},locale:'zh-CN'});
    await auth.addInitScript(value=>localStorage.setItem('rollbook.theme',value),theme);await setup(auth);
-   await auth.goto('http://rollbook.test/settings/auth');await auth.getByRole('heading',{name:'认证设置'}).waitFor();
+   await auth.goto('http://rollbook.test/settings');await auth.getByRole('heading',{name:'设置'}).waitFor();
    for(const section of ['LDAP / LDAPS','通用 OIDC','飞书']){
     await auth.getByRole('button',{name:section,exact:true}).click();
     const controls=auth.locator('.auth-panel input:not([type=checkbox]):not([type=radio]),.auth-panel select,.auth-panel textarea');

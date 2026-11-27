@@ -131,7 +131,7 @@ test('业务页面同数据浅深矩阵及窄屏布局',async()=>{
     page.setDefaultTimeout(10000);
     await page.addInitScript(value=>localStorage.setItem('rollbook.theme',value),theme);
     await setup(page);
-    for(const [route,name] of [['/','overview'],['/assets','assets'],['/assets/services','assets-services'],['/assets/sites','assets-sites'],['/assets/hosts','assets-hosts'],['/assets/networks','assets-networks'],['/topology','topology'],['/pending','pending'],['/pending?tab=unverified','pending-unverified'],['/pending?tab=outdated','pending-outdated'],['/agent','agent'],['/settings','settings'],['/settings/backup','backup'],['/changes','changes'],['/contexts','contexts'],['/search','search']]){
+    for(const [route,name] of [['/','overview'],['/assets','assets'],['/assets/services','assets-services'],['/assets/sites','assets-sites'],['/assets/hosts','assets-hosts'],['/assets/networks','assets-networks'],['/topology','topology'],['/pending','pending'],['/pending?tab=unverified','pending-unverified'],['/pending?tab=outdated','pending-outdated'],['/agent','agent'],['/settings','settings'],['/settings?section=backup','backup'],['/changes','changes'],['/contexts','contexts'],['/search','search']]){
      await page.goto('http://rollbook.test'+route);
      await page.locator('#content h1').first().waitFor();
      assert.equal(await page.locator('html').getAttribute('data-theme'),theme);

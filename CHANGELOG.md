@@ -4,7 +4,9 @@
 
 ## 未发布
 
-暂无新条目。
+### 改进
+
+- 系统设置统一至 `/settings`，七个分组支持深链与无弹窗草稿切换；修正二级导航、表单和备份预览布局。个人设置收紧为账号、邮箱与飞书、安全与会话三个区块。保留 `/settings/personal` 飞书绑定回调。
 
 ## [v0.14.0](https://github.com/CosmoGao/rollbook/releases/tag/v0.14.0)
 
