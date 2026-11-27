@@ -27,8 +27,10 @@ test('假飞书上游与真实浏览器：授权绑定、冲突及邮箱登录',
    if(bind){
     await page.locator('#login-form input[name="login"]').fill('owner');
     await page.locator('#login-form input[name="password"]').fill('initial password 123');
+    const loginResponse=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/auth/login',{timeout:15000});
     await page.locator('#login-form button[type="submit"]').click();
-    await page.locator('.account-avatar').waitFor();
+    assert.equal((await loginResponse).status(),200,await page.locator('#login-error').innerText());
+    await page.locator('.account-avatar').waitFor({timeout:15000});
     await page.goto(origin+'/settings/personal');
     await page.getByRole('link',{name:'绑定飞书'}).click();
     if(expect==='ok'){
