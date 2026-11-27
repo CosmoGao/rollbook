@@ -326,3 +326,10 @@ header.topbar form.mobile-search button[type="submit"]:focus-visible{outline:0!i
 @media(max-width:899px){.settings-layout{display:block}.settings-nav{position:static;display:flex;overflow-x:auto;overflow-y:hidden;flex-wrap:nowrap;gap:0;padding:4px;margin:0 0 16px;max-width:100%;scrollbar-width:thin}.settings-nav-group{display:flex;gap:4px;flex:none;align-items:center}.settings-nav-group+.settings-nav-group{border-left:1px solid var(--color-border);padding-left:8px;margin-left:8px}.settings-nav-group>span{display:none}.settings-nav button{flex:none}.settings-draft-hint{display:block}.settings-panel{max-width:var(--form-max)}}
 @media(max-width:767px),(pointer:coarse){.settings-nav button,.settings-import-form input,.settings-import-form select,.settings-import-form button,.settings-panel button{min-height:44px;font-size:16px}.settings-binding-form{grid-template-columns:1fr}.settings-meta{grid-template-columns:1fr}.settings-email-row{min-width:240px}}
 @media(forced-colors:active){.settings-unsaved{border:1px solid ButtonText}.settings-nav button[aria-current=page]{outline:1px solid Highlight}}
+
+/* 个人设置与系统设置共享内容左缘，卡片保持表单阅读宽度。 */
+.content>.personal-settings{max-width:var(--content-max)}
+.personal-settings>*{max-width:var(--form-max)}
+/* 账号表格可展宽，表格下的编辑区保持表单宽度。 */
+.settings-panel-wide .auth-inline,.settings-panel-wide .settings-binding-form{max-width:var(--form-max)}
+.settings-binding-form>button[type=submit]{grid-column:1/-1;justify-self:start;width:max-content}

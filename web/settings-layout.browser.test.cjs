@@ -17,6 +17,7 @@ test('统一设置分组草稿、结构化预览与窄屏导航',async()=>{
    if(p==='/api/config')return route.fulfill({json:{http_risk:false,login_methods:{local:true}}});
    if(p==='/api/version')return route.fulfill({json:{version:'test'}});
    if(p==='/api/auth/session')return route.fulfill({json:{login:'owner'}});
+   if(p==='/api/auth/profile')return route.fulfill({json:{email:'owner@example.test',feishu_enabled:false,feishu_bound:false,local_session:true}});
    if(p==='/api/browse')return route.fulfill({json:[{id:'site:a',type:'location',name:'A'}]});
    if(p==='/api/auth/settings')return route.fulfill({json:{providers,local_enabled:true}});
    if(p==='/api/auth/settings/identities')return route.fulfill({json:{users:[],bindings:[]}});
@@ -28,6 +29,20 @@ test('统一设置分组草稿、结构化预览与窄屏导航',async()=>{
   await installBundle(page);await page.goto('http://rollbook.test/settings?section=unknown');
   await page.getByRole('heading',{name:'本地登录'}).waitFor();assert.equal(new URL(page.url()).pathname+new URL(page.url()).search,'/settings');
   assert.equal(await page.locator('#content h1').count(),1);
+  const settingsLeft=await page.locator('#content h1').first().evaluate(el=>el.getBoundingClientRect().left);
+  await page.getByRole('button',{name:'账号与绑定'}).click();
+  const binding=await page.locator('.settings-binding-form').evaluate(el=>el.getBoundingClientRect().width);
+  const saveBinding=await page.getByRole('button',{name:'保存绑定'}).evaluate(el=>el.getBoundingClientRect().width);
+  assert.ok(binding<=800,`binding form too wide: ${binding}`);
+  const accountForm=await page.locator('.auth-inline').evaluate(el=>el.getBoundingClientRect().width);
+  assert.ok(accountForm<=800,`account form too wide: ${accountForm}`);
+  assert.ok(saveBinding<200,`save button stretched: ${saveBinding}`);
+  await page.goto('http://rollbook.test/settings/personal');
+  await page.getByRole('heading',{name:'个人设置'}).waitFor();
+  const personalLeft=await page.locator('#content h1').first().evaluate(el=>el.getBoundingClientRect().left);
+  assert.ok(Math.abs(settingsLeft-personalLeft)<=2,`personal title shifted: ${settingsLeft} vs ${personalLeft}`);
+  await page.goto('http://rollbook.test/settings');
+  await page.getByRole('heading',{name:'本地登录'}).waitFor();
   await page.getByRole('button',{name:'LDAP / LDAPS'}).click();await page.getByLabel('服务器 URL').fill('ldaps://draft.example');
   await page.getByRole('button',{name:'备份与恢复'}).click();
   assert.match(await page.locator('.settings-nav button').filter({hasText:'LDAP / LDAPS'}).innerText(),/未保存/);
