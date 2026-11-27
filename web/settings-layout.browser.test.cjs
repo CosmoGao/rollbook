@@ -37,6 +37,25 @@ test('统一设置分组草稿、结构化预览与窄屏导航',async()=>{
   const accountForm=await page.locator('.auth-inline').evaluate(el=>el.getBoundingClientRect().width);
   assert.ok(accountForm<=800,`account form too wide: ${accountForm}`);
   assert.ok(saveBinding<200,`save button stretched: ${saveBinding}`);
+  for(const width of [1440,390]){
+   await page.setViewportSize({width,height:900});
+   const geometry=await page.locator('.settings-binding-form .auth-check').evaluate(label=>{
+    const input=label.querySelector('input[type=checkbox]');
+    const range=document.createRange();range.selectNodeContents(label.lastChild);
+    const box=input.getBoundingClientRect(),text=range.getBoundingClientRect();
+    return {display:getComputedStyle(label).display,width:box.width,height:box.height,inputRight:box.right,inputMidY:box.top+box.height/2,textLeft:text.left,textMidY:text.top+text.height/2};
+   });
+   assert.equal(geometry.display,'flex',`checkbox label layout at ${width}px`);
+   assert.ok(geometry.width>=16&&geometry.width<=20&&geometry.height>=16&&geometry.height<=20,`checkbox size at ${width}px: ${JSON.stringify(geometry)}`);
+   assert.ok(geometry.textLeft>=geometry.inputRight&&Math.abs(geometry.textMidY-geometry.inputMidY)<=4,`checkbox and text alignment at ${width}px: ${JSON.stringify(geometry)}`);
+  }
+  await page.setViewportSize({width:1440,height:900});
+  for(const name of ['LDAP / LDAPS','通用 OIDC','飞书']){
+   await page.getByRole('button',{name,exact:true}).click();
+   const sizes=await page.locator('.auth-provider input[type=checkbox],.auth-provider input[type=radio]').evaluateAll(inputs=>inputs.map(input=>({type:input.type,width:input.getBoundingClientRect().width,height:input.getBoundingClientRect().height})));
+   assert.ok(sizes.some(size=>size.type==='checkbox')&&sizes.some(size=>size.type==='radio'),`missing controls for ${name}`);
+   assert.ok(sizes.every(size=>size.width<=20&&size.height<=20),`oversized controls for ${name}: ${JSON.stringify(sizes)}`);
+  }
   await page.goto('http://rollbook.test/settings/personal');
   await page.getByRole('heading',{name:'个人设置'}).waitFor();
   const personalLeft=await page.locator('#content h1').first().evaluate(el=>el.getBoundingClientRect().left);
